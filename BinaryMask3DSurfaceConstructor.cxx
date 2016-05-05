@@ -12,7 +12,6 @@
 #include <vtkPolyDataNormals.h>
 #include <itkImageToVTKImageFilter.h>
 
-//#include "agtkImageConverter.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
