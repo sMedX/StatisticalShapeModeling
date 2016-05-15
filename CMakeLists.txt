@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 
-project(StatisticalShapeModelling)
+project(StatisticalShapeModeling)
 
 # Find Statismo
 find_package(statismo REQUIRED)
