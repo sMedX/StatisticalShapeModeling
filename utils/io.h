@@ -8,9 +8,11 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkMeshFileWriter.h>
+#include <itkMeshFileReader.h>
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataWriter.h>
+#include "itkTransformFileWriter.h"
 
 //! Reads a templated image from a file via ITK ImageFileReader
 template <typename TImage>
@@ -120,5 +122,28 @@ bool writeVTKPolydata(vtkPolyData* surface, const std::string& fileName)
 
   return result;
 }
+
+//! Writes a mesh to a file
+template <typename TransformType>
+bool writeTransform(const TransformType* transform, const std::string& fileName)
+{
+  typedef TransformType::ScalarType ScalarType;
+
+  itk::TransformFileWriterTemplate<ScalarType>::Pointer writer = itk::TransformFileWriterTemplate<ScalarType>::New();
+  writer->SetInput(transform);
+  writer->SetFileName(fileName);
+
+  try {
+    writer->Update();
+  }
+  catch (itk::ExceptionObject& err) {
+    std::cerr << "Unable to write transform to file '" << fileName << "'" << std::endl;
+    std::cerr << "Error: " << err << std::endl;
+    return false;
+  }
+
+  return true;
+}
+
 
 #endif
