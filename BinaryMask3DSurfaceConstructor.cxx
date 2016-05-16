@@ -35,33 +35,35 @@ int main(int argc, char** argv) {
   float spacing = 2;
   parser->GetCommandLineArgument("-spacing", spacing);
 
-  int radius = 1;
-  parser->GetCommandLineArgument("-radius", radius);
-
   float sigma = 1;
   parser->GetCommandLineArgument("-sigma", sigma);
 
-  int smoothingIterations = 10;
-  parser->GetCommandLineArgument("-iteration", smoothingIterations);
+  float relaxationFactor = 0.2;
+  parser->GetCommandLineArgument("-relaxation", relaxationFactor);
 
-  std::cout << " image file " << imageFile << std::endl;
-  std::cout << "output file " << outputFile << std::endl;
+  int numberOfIterations = 10;
+  parser->GetCommandLineArgument("-iteration", numberOfIterations);
+
+  std::cout << "input parameters" << std::endl;
   std::cout << "    spacing " << spacing << std::endl;
-  std::cout << "     radius " << radius << std::endl;
   std::cout << "      sigma " << sigma << std::endl;
-  std::cout << " iterations " << smoothingIterations << std::endl;
+  std::cout << " relaxation " << relaxationFactor << std::endl;
+  std::cout << " iterations " << numberOfIterations << std::endl;
+  std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   // read image
 
-  BinaryImageType::Pointer itkImage = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(itkImage, imageFile)) {
+  BinaryImageType::Pointer image = BinaryImageType::New();
+  if (!readImage<BinaryImageType>(image, imageFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "information about the input image " << std::endl;
-  std::cout << itkImage->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << itkImage->GetSpacing() << std::endl;
+  std::cout << "input image " << imageFile << std::endl;
+  std::cout << "   size " << image->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "spacing " << image->GetSpacing() << std::endl;
+  std::cout << " origin " << image->GetOrigin() << std::endl;
+  std::cout << std::endl;
 
   // resampling of input image
   BinaryImageType::SpacingType outputSpacing;
@@ -70,58 +72,40 @@ int main(int argc, char** argv) {
   BinaryImageType::SizeType outputSize;
 
   for (int i = 0; i < Dimension; ++i) {
-    outputSize[i] = itkImage->GetLargestPossibleRegion().GetSize()[i] * itkImage->GetSpacing()[i] / spacing;
+    outputSize[i] = image->GetLargestPossibleRegion().GetSize()[i] * image->GetSpacing()[i] / spacing;
   }
+  
+  typedef itk::RecursiveGaussianImageFilter<BinaryImageType, FloatImageType> RecursiveGaussianImageFilterType;
+  RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
+  gaussian->SetSigma(sigma);
+  gaussian->SetInput(image);
+  gaussian->Update();
 
-  typedef itk::ResampleImageFilter<BinaryImageType, FloatImageType> ResampleImageFilterType;
+  typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
   ResampleImageFilterType::Pointer resampler = ResampleImageFilterType::New();
   resampler->SetDefaultPixelValue(0);
   resampler->SetSize(outputSize);
   resampler->SetOutputSpacing(outputSpacing);
-  resampler->SetOutputOrigin(itkImage->GetOrigin());
-  resampler->SetOutputDirection(itkImage->GetDirection());
-  resampler->SetInput(itkImage);
+  resampler->SetOutputOrigin(gaussian->GetOutput()->GetOrigin());
+  resampler->SetOutputDirection(gaussian->GetOutput()->GetDirection());
+  resampler->SetInput(gaussian->GetOutput());
   resampler->Update();
-
-  typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
-  RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
-  gaussian->SetInput(resampler->GetOutput());
-  gaussian->SetSigma(sigma);
-  gaussian->Update();
-
-  // Create structuring element
-  typedef itk::BinaryBallStructuringElement<FloatImageType::PixelType, FloatImageType::ImageDimension> StructuringElementType;  
-  StructuringElementType  strel;
-  strel.SetRadius(radius);
-  strel.CreateStructuringElement();
-
-  typedef itk::GrayscaleDilateImageFilter<FloatImageType, FloatImageType, StructuringElementType> GrayscaleDilateImageFilterType;
-  GrayscaleDilateImageFilterType::Pointer dilate = GrayscaleDilateImageFilterType::New();
-  dilate->SetInput(gaussian->GetOutput());
-  dilate->SetKernel(strel);
-  dilate->Update();
 
   typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
   GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
-  fillholes->SetInput(dilate->GetOutput());
+  fillholes->SetInput(resampler->GetOutput());
   fillholes->SetFullyConnected(true);
   fillholes->Update();
 
-  typedef itk::GrayscaleErodeImageFilter<FloatImageType, FloatImageType, StructuringElementType> GrayscaleErodeImageFilterType;
-  GrayscaleErodeImageFilterType::Pointer erode = GrayscaleErodeImageFilterType::New();
-  erode->SetInput(fillholes->GetOutput());
-  erode->SetKernel(strel);
-  erode->Update();
-  FloatImageType::Pointer processedImage = erode->GetOutput();
+  FloatImageType::Pointer processedImage = fillholes->GetOutput();
 
   typedef itk::MinimumMaximumImageCalculator <FloatImageType> MinimumMaximumImageCalculatorType;
   MinimumMaximumImageCalculatorType::Pointer calculator = MinimumMaximumImageCalculatorType::New();
-  calculator->SetImage(erode->GetOutput());
+  calculator->SetImage(processedImage);
   calculator->Compute();
-  float levelSetValue = 0.5*(calculator->GetMinimum() + calculator->GetMaximum());
+  float levelValue = 0.5*(calculator->GetMinimum() + calculator->GetMaximum());
 
   //convert ITK image to VTK image
-  //VtkImageDataPointer vtkImage = ItkVtkFloatImage3DConverter::itkToVtk(erode->GetOutput());
   typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
   ConvertorType::Pointer convertor = ConvertorType::New();
   convertor->SetInput(processedImage);
@@ -130,7 +114,7 @@ int main(int argc, char** argv) {
   typedef vtkSmartPointer<vtkMarchingCubes> MarchingCubes;
   MarchingCubes mcubes = MarchingCubes::New();
   mcubes->SetInputData(convertor->GetOutput());
-  mcubes->SetValue(0, levelSetValue);
+  mcubes->SetValue(0, levelValue);
 
   try {
     mcubes->Update();
@@ -140,12 +124,11 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  float smoothingRelaxation = 0.2;
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
   SmoothPolyData smoother = SmoothPolyData::New();
   smoother->SetInputData(mcubes->GetOutput());
-  smoother->SetNumberOfIterations(smoothingIterations);
-  smoother->SetRelaxationFactor(smoothingRelaxation);
+  smoother->SetNumberOfIterations(numberOfIterations);
+  smoother->SetRelaxationFactor(relaxationFactor);
 
   try {
     smoother->Update();
@@ -174,14 +157,15 @@ int main(int argc, char** argv) {
 
   vtkSmartPointer<vtkPolyData> polyData = normals->GetOutput();
 
-  // write surface to file
+  // write polydata to the file
   if (!writeVTKPolydata(polyData, outputFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "information about the output mesh " << std::endl;
+  std::cout << "output polydata " << outputFile << std::endl;
   std::cout << " number of cells " << polyData->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << polyData->GetNumberOfPoints() << std::endl;
+  std::cout << std::endl;
 
   return EXIT_SUCCESS;
 }
