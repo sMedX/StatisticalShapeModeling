@@ -9,8 +9,9 @@
 #include <itkStatisticalModel.h>
 #include <itkStatisticalShapeModelTransform.h>
 #include <itkPointSetToImageRegistrationMethod.h>
+#include <utils/itkPenalizingMeanSquaresPointSetToImageMetric.h>
 
-template <typename TInputImage, typename TOutputMesh>
+template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
 class ShapeModelToImageRegistration : public itk::ImageToMeshFilter<TInputImage, TOutputMesh>
 {
 public:
@@ -27,7 +28,7 @@ public:
   typedef itk::Image<unsigned char, TInputImage::ImageDimension> BinaryImageType;
   typedef itk::Image<float, TInputImage::ImageDimension> PotentialImageType;
   typedef itk::StatisticalModel<TOutputMesh> ModelType;
-  typedef itk::PointSetToImageMetric<PointSetType, PotentialImageType> MetricType;
+  typedef itk::PenalizingMeanSquaresPointSetToImageMetric<PointSetType, PotentialImageType> MetricType;
 
   itkNewMacro(Self);
   itkTypeMacro(ShapeModelToImageRegistration, itk::ImageToMeshFilter);
@@ -39,7 +40,9 @@ public:
   //Get PotentialImage
   itkGetConstObjectMacro(Optimizer, OptimizerType);
   itkGetConstObjectMacro(PotentialImage, PotentialImageType);
-  itkGetConstObjectMacro(Transform, TransformType);
+
+  itkSetConstObjectMacro(InputTransform, TInputTransformType);
+  itkGetConstObjectMacro(InputTransform, TInputTransformType);
 
   itkSetMacro(NumberOfIterations, unsigned int);
   itkGetMacro(NumberOfIterations, unsigned int);
@@ -60,18 +63,9 @@ public:
   itkSetMacro(ModelScale, double);
   itkGetMacro(ModelScale, double);
 
-  itkSetMacro(TranslationScale, double);
-  itkGetMacro(TranslationScale, double);
-
-  itkSetMacro(ScalingScale, double);
-  itkGetMacro(ScalingScale, double);
-
-  itkSetMacro(RotationScale, double);
-  itkGetMacro(RotationScale, double);
-
   void PrintReport(std::ostream& os) const;
   TOutputMesh* GetOutput() { return  dynamic_cast<TOutputMesh*>(this->ProcessObject::GetOutput(0)); }
-  TOutputMesh* GetDeformedOutput() { return  dynamic_cast<TOutputMesh*>(this->ProcessObject::GetOutput(1)); }
+  TOutputMesh* GetMovedOutput() { return  dynamic_cast<TOutputMesh*>(this->ProcessObject::GetOutput(1)); }
 
 protected:
   ShapeModelToImageRegistration();
@@ -80,7 +74,6 @@ protected:
   virtual void GenerateData() override;
   void InitializeTransform();
   void ComputePotentialImage();
-  void PointSetToImageRegistration();
   void GenerateOutputData();
 
   itkStaticConstMacro(ImageDimension, unsigned int, TInputImage::ImageDimension);
@@ -88,12 +81,13 @@ protected:
 
   OptimizerType::Pointer m_Optimizer;
   typename ModelType::ConstPointer m_ShapeModel;
-  typename TInputImage::ConstPointer m_Image;
   typename PotentialImageType::ConstPointer m_PotentialImage;
   typename TOutputMesh::Pointer m_Surface;
   typename PointSetType::Pointer m_PointSet;
-  typename TransformType::Pointer m_Transform;
   typename MetricType::Pointer m_Metric;
+
+  typename TransformType::Pointer m_Transform;
+  typename TInputTransformType::ConstPointer m_InputTransform;
   typename ModelTransformType::Pointer m_ModelTransform;
 
   int m_ModelTransformIndex;
@@ -106,10 +100,6 @@ protected:
 
   ScalesType m_Scales;
   double m_ModelScale = 3;
-  double m_TranslationScale = 1;
-  double m_ScalingScale = 1;
-  double m_RotationScale = 0.1;
-  double m_Margin = 5;
 };
 
 #ifndef ITK_MANUAL_INSTANTIATION

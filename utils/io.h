@@ -12,7 +12,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
 #include <vtkPolyDataWriter.h>
-#include "itkTransformFileWriter.h"
+#include <itkTransformFileWriter.h>
+#include <itkTransformFileReader.h>
 
 //! Reads a templated image from a file via ITK ImageFileReader
 template <typename TImage>
@@ -123,7 +124,7 @@ bool writeVTKPolydata(vtkPolyData* surface, const std::string& fileName)
   return result;
 }
 
-//! Writes a mesh to a file
+//! Writes a transform to a file
 template <typename TransformType>
 bool writeTransform(const TransformType* transform, const std::string& fileName)
 {
@@ -145,5 +146,27 @@ bool writeTransform(const TransformType* transform, const std::string& fileName)
   return true;
 }
 
+//! Writes a transform to a file  
+typedef itk::TransformFileReader::TransformListType * TransformListType;
+bool readTransform(TransformListType transforms, const std::string& fileName)
+{
+  itk::TransformFactoryBase::RegisterDefaultTransforms();
+  itk::TransformFileReader::Pointer reader = itk::TransformFileReader::New();
+  reader->SetFileName(fileName);
+
+  try {
+    reader->Update();
+  }
+  catch (itk::ExceptionObject& err) {
+    std::cerr << "Unable to read transform from file '" << fileName << "'" << std::endl;
+    std::cerr << "Error: " << err << std::endl;
+    return false;
+  }
+
+  transforms = reader->GetTransformList();
+  std::cout << transforms->size() << std::endl;
+
+  return true;
+}
 
 #endif

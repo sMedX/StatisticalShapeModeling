@@ -1,11 +1,8 @@
-﻿#include <iostream>
-#include <fstream>
-#include <string>
-#include <utility>
-#include <boost/filesystem.hpp>
+﻿#include <boost/filesystem.hpp>
 #include <itkStandardMeshRepresenter.h>
 
 #include "ShapeModelToImageRegistration.h"
+#include "PointSetToImageRegistration.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
@@ -20,14 +17,17 @@ int main(int argc, char** argv)
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string imageFile;
-  parser->GetCommandLineArgument("-image", imageFile);
+  std::string labelFile;
+  parser->GetCommandLineArgument("-image", labelFile);
 
   std::string modelFile;
   parser->GetCommandLineArgument("-model", modelFile);
 
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
+
+  std::string transformFile;
+  parser->GetCommandLineArgument("-transform", transformFile);
 
   double mscale = 1;
   parser->GetCommandLineArgument("-mscale", mscale);
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 
   std::cout << std::endl;
   std::cout << "shape model to image registration" << std::endl;
-  std::cout << "     image file " << imageFile << std::endl;
+  std::cout << "     image file " << labelFile << std::endl;
   std::cout << "     model file " << modelFile << std::endl;
   std::cout << "    output file " << outputFile << std::endl;
   std::cout << "    model scale " << mscale << std::endl;
@@ -50,16 +50,21 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // read image
-
-  BinaryImageType::Pointer image = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(image, imageFile)) {
+  BinaryImageType::Pointer label = BinaryImageType::New();
+  if (!readImage<BinaryImageType>(label, labelFile)) {
     return EXIT_FAILURE;
   }
+
+  std::cout << "input image " << labelFile << std::endl;
+  std::cout << "       size " << label->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "    spacing " << label->GetSpacing() << std::endl;
+  std::cout << "     origin " << label->GetOrigin() << std::endl;
+  std::cout << std::endl;
 
   // read statistical shape model
   typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
   RepresenterType::Pointer representer = RepresenterType::New();
-  
+
   typedef itk::StatisticalModel<MeshType> StatisticalModelType;
   StatisticalModelType::Pointer model = StatisticalModelType::New();
 
@@ -71,15 +76,48 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
+  std::cout << "input model " << modelFile << std::endl;
+  std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
+  std::cout << "    number of points " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
+  std::cout << std::endl;
+
+  // read transform
+  itk::TransformFactoryBase::RegisterDefaultTransforms();
+  itk::TransformFileReader::Pointer reader = itk::TransformFileReader::New();
+  reader->SetFileName(transformFile);
+
+  try {
+    reader->Update();
+  }
+  catch (itk::ExceptionObject& err) {
+    std::cerr << "Unable to read transform from file '" << transformFile << "'" << std::endl;
+    std::cerr << "Error: " << err << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  TransformListType transforms = reader->GetTransformList();
+  itk::TransformFileReader::TransformListType::const_iterator it = transforms->begin();
+
+  typedef PointSetToImageRegistration<MeshType>::TransformType TransformType;
+
+  TransformType::Pointer transform = static_cast<TransformType*>((*it).GetPointer());
+
+  std::cout << "input transform " << transformFile << std::endl;
+  std::cout << "   name of class " << transform->GetNameOfClass() << std::endl;
+  std::cout << "      parameters " << transform->GetParameters() << std::endl;
+  std::cout << "fixed parameters " << transform->GetFixedParameters() << std::endl;
+  std::cout << std::endl;
+
   //----------------------------------------------------------------------------
-  //perform GP model to image registration
-  typedef ShapeModelToImageRegistration<BinaryImageType, MeshType> ShapeModelToImageRegistrationType;
+  //shape model to image registration
+  typedef ShapeModelToImageRegistration<BinaryImageType, MeshType, TransformType> ShapeModelToImageRegistrationType;
   ShapeModelToImageRegistrationType::Pointer shapeModelToImageRegistration = ShapeModelToImageRegistrationType::New();
-  shapeModelToImageRegistration->SetShapeModel(model);
+  shapeModelToImageRegistration->SetNumberOfIterations(numberOfIterations);
   shapeModelToImageRegistration->SetModelScale(mscale);
   shapeModelToImageRegistration->SetRegularizationParameter(regularization);
-  shapeModelToImageRegistration->SetInput(image);
-  shapeModelToImageRegistration->SetNumberOfIterations(numberOfIterations);
+  shapeModelToImageRegistration->SetShapeModel(model);
+  shapeModelToImageRegistration->SetInput(label);
+  shapeModelToImageRegistration->SetInputTransform(transform);
 
   try {
     shapeModelToImageRegistration->Update();
@@ -92,16 +130,16 @@ int main(int argc, char** argv)
   shapeModelToImageRegistration->PrintReport(std::cout);
 
   // write surface
-  if (!writeMesh<MeshType>(shapeModelToImageRegistration->GetDeformedOutput(), outputFile)) {
+  if (!writeMesh<MeshType>(shapeModelToImageRegistration->GetOutput(), outputFile)) {
     return EXIT_FAILURE;
   }
 
-  // write posterior surface
-  if (parser->ArgumentExists("-deformed")) {
+  // write moved surface
+  if (parser->ArgumentExists("-moved")) {
     std::string outputFile;
-    parser->GetCommandLineArgument("-deformed", outputFile);
+    parser->GetCommandLineArgument("-moved", outputFile);
 
-    if (!writeMesh<MeshType>(shapeModelToImageRegistration->GetOutput(), outputFile)) {
+    if (!writeMesh<MeshType>(shapeModelToImageRegistration->GetMovedOutput(), outputFile)) {
       return EXIT_FAILURE;
     }
   }
@@ -115,7 +153,7 @@ int main(int argc, char** argv)
 
   //define point set
   typedef itk::PointSet<float, Dimension> PointSetType;
-  PointSetType::PointsContainer::Pointer points = shapeModelToImageRegistration->GetOutput()->GetPoints();
+  PointSetType::PointsContainer::Pointer points = shapeModelToImageRegistration->GetMovedOutput()->GetPoints();
 
   size_t numberOfPoints = 0;
   double mean = 0;
@@ -127,7 +165,7 @@ int main(int argc, char** argv)
     bool isInside = potentialImage->TransformPhysicalPointToContinuousIndex(it.Value(), index);
 
     if ( isInside ) {
-      double value = interpolator->EvaluateAtContinuousIndex(index);
+      double value = std::abs(interpolator->EvaluateAtContinuousIndex(index));
 
       numberOfPoints++;
       mean += value;
@@ -156,9 +194,9 @@ int main(int argc, char** argv)
     std::string dlm = ";";
     std::string header = dlm;
 
-    int idx1 = imageFile.find_last_of("\\/");
-    int idx2 = imageFile.find_last_of(".");
-    std::string scores = imageFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
+    int idx1 = labelFile.find_last_of("\\/");
+    int idx2 = labelFile.find_last_of(".");
+    std::string scores = labelFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
 
     header += "cost function" + dlm;
     scores += std::to_string(value) + dlm;
