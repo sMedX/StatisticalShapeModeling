@@ -26,9 +26,6 @@ include(${VTK_USE_FILE})
 add_executable(binaryMask3DSurfaceConstructor BinaryMask3DSurfaceConstructor.cxx)
 target_link_libraries(binaryMask3DSurfaceConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
-add_executable(binaryMask3DProcessing BinaryMask3DProcessing.cxx)
-target_link_libraries(binaryMask3DProcessing ${statismo_LIBRARIES} ${ITK_LIBRARIES})
-
 add_executable(surfaceToImageRegistration SurfaceToImageRegistration.cxx)
 target_link_libraries(surfaceToImageRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
