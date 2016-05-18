@@ -180,6 +180,10 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   //compute potential map image
+  if (!parser->ArgumentExists("-potential")) {
+    return EXIT_SUCCESS;
+  }
+
   typedef itk::AddImageFilter <FloatImageType, FloatImageType> AddImageFilterType;
   AddImageFilterType::Pointer addImageFilter = AddImageFilterType::New();
   addImageFilter->SetInput(processedImage);
