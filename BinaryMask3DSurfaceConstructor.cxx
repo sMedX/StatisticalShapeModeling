@@ -183,21 +183,18 @@ int main(int argc, char** argv) {
   if (!parser->ArgumentExists("-potential")) {
     return EXIT_SUCCESS;
   }
-
-  typedef itk::AddImageFilter <FloatImageType, FloatImageType> AddImageFilterType;
-  AddImageFilterType::Pointer addImageFilter = AddImageFilterType::New();
-  addImageFilter->SetInput(processedImage);
-  addImageFilter->SetConstant(-levelValue);
-  addImageFilter->Update();
-
-  typedef itk::ZeroCrossingImageFilter<FloatImageType, BinaryImageType > ZeroCrossingImageFilterType;
-  ZeroCrossingImageFilterType::Pointer zerocross = ZeroCrossingImageFilterType::New();
-  zerocross->SetInput(addImageFilter->GetOutput());
+  typedef itk::BinaryThresholdImageFilter <FloatImageType, BinaryImageType> BinaryThresholdImageFilterType;
+  BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
+  threshold->SetInput(processedImage);
+  threshold->SetLowerThreshold(levelValue);
+  threshold->SetUpperThreshold(std::numeric_limits<float>::max());
+  threshold->SetInsideValue(1);
+  threshold->SetOutsideValue(0);
 
   typedef itk::SignedMaurerDistanceMapImageFilter<BinaryImageType, FloatImageType> SignedMaurerDistanceMapImageFilterType;
   SignedMaurerDistanceMapImageFilterType::Pointer distancemap = SignedMaurerDistanceMapImageFilterType::New();
   distancemap->SetUseImageSpacing(true);
-  distancemap->SetInput(zerocross->GetOutput());
+  distancemap->SetInput(threshold->GetOutput());
   distancemap->Update();
 
   FloatImageType::Pointer potentialImage = distancemap->GetOutput();
