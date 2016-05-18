@@ -1,8 +1,8 @@
-#ifndef __ShapeModelToImageRegistration_h
-#define __ShapeModelToImageRegistration_h
+#ifndef __ShapeModelToSurfaceRegistrationFilter_h
+#define __ShapeModelToSurfaceRegistrationFilter_h
 
 #include <itkImage.h>
-#include <itkImageToMeshFilter.h>
+#include <itkMeshToMeshFilter.h>
 #include <itkLBFGSOptimizer.h>
 #include <itkCompositeTransform.h>
 #include <itkPointSet.h>
@@ -11,27 +11,26 @@
 #include <itkPointSetToImageRegistrationMethod.h>
 #include <utils/itkPenalizingMeanSquaresPointSetToImageMetric.h>
 
-template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
-class ShapeModelToImageRegistration : public itk::ImageToMeshFilter<TInputImage, TOutputMesh>
+template <typename TInputMesh, typename TOutputMesh = TInputMesh>
+class ShapeModelToSurfaceRegistrationFilter : public itk::MeshToMeshFilter<TInputMesh, TOutputMesh>
 {
 public:
   // Standard typedefs
-  typedef ShapeModelToImageRegistration Self;
-  typedef itk::ImageToMeshFilter<TInputImage, TOutputMesh> Superclass;
+  typedef ShapeModelToSurfaceRegistrationFilter Self;
+  typedef itk::MeshToMeshFilter<TInputMesh, TOutputMesh> Superclass;
   typedef itk::SmartPointer<Self> Pointer;
   typedef itk::SmartPointer<const Self> ConstPointer;
   typedef itk::LBFGSOptimizer OptimizerType;
   typedef typename itk::Optimizer::ScalesType ScalesType;
-  typedef itk::CompositeTransform<double, TInputImage::ImageDimension> TransformType;
-  typedef itk::StatisticalShapeModelTransform<TOutputMesh, double, TInputImage::ImageDimension> ModelTransformType;
-  typedef itk::PointSet<float, TInputImage::ImageDimension> PointSetType;
-  typedef itk::Image<unsigned char, TInputImage::ImageDimension> BinaryImageType;
-  typedef itk::Image<float, TInputImage::ImageDimension> PotentialImageType;
+  typedef itk::StatisticalShapeModelTransform<TOutputMesh, double, TInputMesh::PointDimension> ModelTransformType;
+  typedef itk::PointSet<float, TInputMesh::PointDimension> PointSetType;
+  typedef itk::Image<unsigned char, TInputMesh::PointDimension> BinaryImageType;
+  typedef itk::Image<float, TInputMesh::PointDimension> PotentialImageType;
   typedef itk::StatisticalModel<TOutputMesh> ModelType;
   typedef itk::PenalizingMeanSquaresPointSetToImageMetric<PointSetType, PotentialImageType> MetricType;
 
   itkNewMacro(Self);
-  itkTypeMacro(ShapeModelToImageRegistration, itk::ImageToMeshFilter);
+  itkTypeMacro(ShapeModelToSurfaceRegistrationFilter, itk::ImageToMeshFilter);
 
   //Set/Get shape model
   itkSetConstObjectMacro(ShapeModel, ModelType);
@@ -40,9 +39,6 @@ public:
   //Get PotentialImage
   itkGetConstObjectMacro(Optimizer, OptimizerType);
   itkGetConstObjectMacro(PotentialImage, PotentialImageType);
-
-  itkSetConstObjectMacro(InputTransform, TInputTransformType);
-  itkGetConstObjectMacro(InputTransform, TInputTransformType);
 
   itkSetMacro(NumberOfIterations, unsigned int);
   itkGetMacro(NumberOfIterations, unsigned int);
@@ -59,36 +55,37 @@ public:
   itkSetMacro(RegularizationParameter, double);
   itkGetMacro(RegularizationParameter, double);
 
+  itkSetMacro(Margin, double);
+  itkGetMacro(Margin, double);
+
+  itkSetMacro(Spacing, double);
+  itkGetMacro(Spacing, double);
+
   //Set/Get scaling
   itkSetMacro(ModelScale, double);
   itkGetMacro(ModelScale, double);
 
   void PrintReport(std::ostream& os) const;
-  TOutputMesh* GetOutput() { return  dynamic_cast<TOutputMesh*>(this->ProcessObject::GetOutput(0)); }
-  TOutputMesh* GetMovedOutput() { return  dynamic_cast<TOutputMesh*>(this->ProcessObject::GetOutput(1)); }
 
 protected:
-  ShapeModelToImageRegistration();
-  ~ShapeModelToImageRegistration() {}
+  ShapeModelToSurfaceRegistrationFilter();
+  ~ShapeModelToSurfaceRegistrationFilter() {}
 
   virtual void GenerateData() override;
   void InitializeTransform();
   void ComputePotentialImage();
   void GenerateOutputData();
 
-  itkStaticConstMacro(ImageDimension, unsigned int, TInputImage::ImageDimension);
-  static_assert(ImageDimension == 3U, "Invalid dimension of input image. Dimension 3 is supported.");
+  itkStaticConstMacro(Dimension, unsigned int, TInputMesh::PointDimension);
+  static_assert(Dimension == 3U, "Invalid dimension of input image. Dimension 3 is supported.");
 
   OptimizerType::Pointer m_Optimizer;
   typename ModelType::ConstPointer m_ShapeModel;
   typename PotentialImageType::ConstPointer m_PotentialImage;
-  typename TOutputMesh::Pointer m_Surface;
+  typename TInputMesh::Pointer m_Surface;
   typename PointSetType::Pointer m_PointSet;
   typename MetricType::Pointer m_Metric;
-
-  typename TransformType::Pointer m_Transform;
-  typename TInputTransformType::ConstPointer m_InputTransform;
-  typename ModelTransformType::Pointer m_ModelTransform;
+  typename ModelTransformType::Pointer m_Transform;
 
   int m_ModelTransformIndex;
 
@@ -100,10 +97,12 @@ protected:
 
   ScalesType m_Scales;
   double m_ModelScale = 3;
+  double m_Margin = 0.25;
+  double m_Spacing = 1;
 };
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ShapeModelToImageRegistration.hxx"
+#include "ShapeModelToSurfaceRegistrationFilter.hxx"
 #endif
 
 #endif

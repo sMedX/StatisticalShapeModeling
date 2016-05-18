@@ -32,5 +32,5 @@ target_link_libraries(binaryMask3DProcessing ${statismo_LIBRARIES} ${ITK_LIBRARI
 add_executable(surfaceToImageRegistration SurfaceToImageRegistration.cxx)
 target_link_libraries(surfaceToImageRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(shapeModelToImageRegistration ShapeModelToImageRegistration.cxx)
-target_link_libraries(shapeModelToImageRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(shapeModelToSurfaceRegistration ShapeModelToSurfaceRegistration.cxx)
+target_link_libraries(shapeModelToSurfaceRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})

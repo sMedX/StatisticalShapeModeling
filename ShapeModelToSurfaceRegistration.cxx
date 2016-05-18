@@ -16,8 +16,8 @@ int main(int argc, char** argv)
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string labelFile;
-  parser->GetCommandLineArgument("-image", labelFile);
+  std::string surfaceFile;
+  parser->GetCommandLineArgument("-surface", surfaceFile);
 
   std::string modelFile;
   parser->GetCommandLineArgument("-model", modelFile);
@@ -36,25 +36,24 @@ int main(int argc, char** argv)
 
   std::cout << std::endl;
   std::cout << "shape model to image registration" << std::endl;
-  std::cout << "     image file " << labelFile << std::endl;
-  std::cout << "     model file " << modelFile << std::endl;
-  std::cout << "    output file " << outputFile << std::endl;
-  std::cout << "    model scale " << mscale << std::endl;
-  std::cout << " regularization " << regularization << std::endl;
-  std::cout << "     iterations " << numberOfIterations << std::endl;
+  std::cout << "         model file " << modelFile << std::endl;
+  std::cout << " input surface file " << surfaceFile << std::endl;
+  std::cout << "output surface file " << outputFile << std::endl;
+  std::cout << "        model scale " << mscale << std::endl;
+  std::cout << "     regularization " << regularization << std::endl;
+  std::cout << "         iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // read image
-  BinaryImageType::Pointer label = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(label, labelFile)) {
+  // read surface
+  MeshType::Pointer surface = MeshType::New();
+  if (!readMesh<MeshType>(surface, surfaceFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "input image " << labelFile << std::endl;
-  std::cout << "       size " << label->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "    spacing " << label->GetSpacing() << std::endl;
-  std::cout << "     origin " << label->GetOrigin() << std::endl;
+  std::cout << "   input surface polydata " << outputFile << std::endl;
+  std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
   // read statistical shape model
@@ -77,56 +76,28 @@ int main(int argc, char** argv)
   std::cout << "    number of points " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
-  // read transform
-  itk::TransformFactoryBase::RegisterDefaultTransforms();
-  itk::TransformFileReader::Pointer reader = itk::TransformFileReader::New();
-  reader->SetFileName(transformFile);
-
-  try {
-    reader->Update();
-  }
-  catch (itk::ExceptionObject& err) {
-    std::cerr << "Unable to read transform from file '" << transformFile << "'" << std::endl;
-    std::cerr << "Error: " << err << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  TransformListType transforms = reader->GetTransformList();
-  itk::TransformFileReader::TransformListType::const_iterator it = transforms->begin();
-
-  typedef PointSetToImageRegistration<MeshType>::TransformType TransformType;
-
-  TransformType::Pointer transform = static_cast<TransformType*>((*it).GetPointer());
-
-  std::cout << "input transform " << transformFile << std::endl;
-  std::cout << "   name of class " << transform->GetNameOfClass() << std::endl;
-  std::cout << "      parameters " << transform->GetParameters() << std::endl;
-  std::cout << "fixed parameters " << transform->GetFixedParameters() << std::endl;
-  std::cout << std::endl;
-
   //----------------------------------------------------------------------------
   //shape model to image registration
-  typedef ShapeModelToImageRegistration<BinaryImageType, MeshType, TransformType> ShapeModelToImageRegistrationType;
-  ShapeModelToImageRegistrationType::Pointer shapeModelToImageRegistration = ShapeModelToImageRegistrationType::New();
-  shapeModelToImageRegistration->SetNumberOfIterations(numberOfIterations);
-  shapeModelToImageRegistration->SetModelScale(mscale);
-  shapeModelToImageRegistration->SetRegularizationParameter(regularization);
-  shapeModelToImageRegistration->SetShapeModel(model);
-  shapeModelToImageRegistration->SetInput(label);
-  shapeModelToImageRegistration->SetInputTransform(transform);
+  typedef ShapeModelToSurfaceRegistrationFilter<MeshType> ShapeModelToSurfaceRegistrationFilterType;
+  ShapeModelToSurfaceRegistrationFilterType::Pointer shapeModelToSurfaceRegistration = ShapeModelToSurfaceRegistrationFilterType::New();
+  shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
+  shapeModelToSurfaceRegistration->SetModelScale(mscale);
+  shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization);
+  shapeModelToSurfaceRegistration->SetShapeModel(model);
+  shapeModelToSurfaceRegistration->SetInput(surface);
 
   try {
-    shapeModelToImageRegistration->Update();
+    shapeModelToSurfaceRegistration->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
 
-  shapeModelToImageRegistration->PrintReport(std::cout);
+  shapeModelToSurfaceRegistration->PrintReport(std::cout);
 
   // write surface
-  if (!writeMesh<MeshType>(shapeModelToImageRegistration->GetOutput(), outputFile)) {
+  if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
     return EXIT_FAILURE;
   }
 
@@ -135,21 +106,21 @@ int main(int argc, char** argv)
     std::string outputFile;
     parser->GetCommandLineArgument("-moved", outputFile);
 
-    if (!writeMesh<MeshType>(shapeModelToImageRegistration->GetMovedOutput(), outputFile)) {
+    if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
       return EXIT_FAILURE;
     }
   }
 
   //define interpolator
-  typedef itk::LinearInterpolateImageFunction<ShapeModelToImageRegistrationType::PotentialImageType, double> InterpolatorType;
+  typedef itk::LinearInterpolateImageFunction<ShapeModelToSurfaceRegistrationFilterType::PotentialImageType, double> InterpolatorType;
   InterpolatorType::Pointer interpolator = InterpolatorType::New();
 
-  ShapeModelToImageRegistrationType::PotentialImageType::ConstPointer potentialImage = shapeModelToImageRegistration->GetPotentialImage();
+  ShapeModelToSurfaceRegistrationFilterType::PotentialImageType::ConstPointer potentialImage = shapeModelToSurfaceRegistration->GetPotentialImage();
   interpolator->SetInputImage(potentialImage);
 
   //define point set
   typedef itk::PointSet<float, Dimension> PointSetType;
-  PointSetType::PointsContainer::Pointer points = shapeModelToImageRegistration->GetMovedOutput()->GetPoints();
+  PointSetType::PointsContainer::Pointer points = shapeModelToSurfaceRegistration->GetOutput()->GetPoints();
 
   size_t numberOfPoints = 0;
   double mean = 0;
@@ -180,7 +151,7 @@ int main(int argc, char** argv)
 
   // write report to *.csv file
   if (parser->ArgumentExists("-report")) {
-    float value = shapeModelToImageRegistration->GetOptimizer()->GetValue();
+    float value = shapeModelToSurfaceRegistration->GetOptimizer()->GetValue();
 
     std::string report;
     parser->GetCommandLineArgument("-report", report);
@@ -190,9 +161,9 @@ int main(int argc, char** argv)
     std::string dlm = ";";
     std::string header = dlm;
 
-    int idx1 = labelFile.find_last_of("\\/");
-    int idx2 = labelFile.find_last_of(".");
-    std::string scores = labelFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
+    int idx1 = surfaceFile.find_last_of("\\/");
+    int idx2 = surfaceFile.find_last_of(".");
+    std::string scores = surfaceFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
 
     header += "cost function" + dlm;
     scores += std::to_string(value) + dlm;
@@ -207,7 +178,7 @@ int main(int argc, char** argv)
     scores += std::to_string(maxd) + dlm;
 
     header += "regularization" + dlm;
-    scores += std::to_string(shapeModelToImageRegistration->GetRegularizationParameter()) + dlm;
+    scores += std::to_string(shapeModelToSurfaceRegistration->GetRegularizationParameter()) + dlm;
 
     bool exist = boost::filesystem::exists(report);
     std::ofstream ofile;

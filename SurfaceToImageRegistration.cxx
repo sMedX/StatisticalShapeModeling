@@ -35,7 +35,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // read mesh
+  // read surface
   MeshType::Pointer surface = MeshType::New();
   if (!readMesh<MeshType>(surface, surfaceFile)) {
     return EXIT_FAILURE;

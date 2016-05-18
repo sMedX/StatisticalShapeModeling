@@ -1,33 +1,30 @@
-#ifndef __ShapeModelToImageRegistration_hxx
-#define __ShapeModelToImageRegistration_hxx
+#ifndef __ShapeModelToSurfaceRegistrationFilter_hxx
+#define __ShapeModelToSurfaceRegistrationFilter_hxx
 
 #include <itkLBFGSBOptimizer.h>
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
+#include <itkTriangleMeshToBinaryImageFilter.h>
+#include <itkBoundingBox.h>
 
-#include "ShapeModelToImageRegistration.h"
+#include "ShapeModelToSurfaceRegistrationFilter.h"
 
 //----------------------------------------------------------------------------
-template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
-ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType>::ShapeModelToImageRegistration()
+template <typename TInputMesh, typename TOutputMesh>
+ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::ShapeModelToSurfaceRegistrationFilter()
 {
   this->SetNumberOfRequiredInputs(1);
-  this->SetNumberOfRequiredOutputs(2);
+  this->SetNumberOfRequiredOutputs(1);
 
-  this->SetNthOutput(0, TOutputMesh::New());
-  this->SetNthOutput(1, TOutputMesh::New());
-
-  m_InputTransform = nullptr;
+  this->SetOutput(TOutputMesh::New());
 }
 //----------------------------------------------------------------------------
-template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
-void ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType>::GenerateData()
+template <typename TInputMesh, typename TOutputMesh>
+void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
 {
-  m_Surface = m_ShapeModel->GetRepresenter()->GetReference();
-
   //define point set
   m_PointSet = PointSetType::New();
-  m_PointSet->SetPoints(m_Surface->GetPoints());
+  m_PointSet->SetPoints(m_ShapeModel->GetRepresenter()->GetReference()->GetPoints());
 
   typename PointSetType::PointDataContainer::Pointer pointData = PointSetType::PointDataContainer::New();
   pointData->Reserve(m_PointSet->GetNumberOfPoints());
@@ -81,93 +78,89 @@ void ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType
   this->GenerateOutputData();
 }
 //----------------------------------------------------------------------------
-template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
-void ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType>::ComputePotentialImage()
+template <typename TInputMesh, typename TOutputMesh>
+void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::ComputePotentialImage()
 {
+  m_Surface = const_cast <TInputMesh*> (this->GetInput());
+
+  typename TInputMesh::BoundingBoxType::ConstPointer boundingBox = m_Surface->GetBoundingBox();
+  BinaryImageType::SpacingType diff = boundingBox->GetMaximum() - boundingBox->GetMinimum();
+  BinaryImageType::PointType origin;
+  BinaryImageType::SpacingType spacing;
+  spacing.Fill(m_Spacing);
+
+  BinaryImageType::SizeType size;
+
+  for (unsigned i = 0; i < Dimension; ++i) {
+    // margin on each side
+    double margin = m_Margin * diff[i];
+
+    //compute size and origin
+    size[i] = (diff[i] + 2*margin)/spacing[i];
+    origin[i] = boundingBox->GetMaximum()[i] - margin;
+  }
+
+  typedef itk::TriangleMeshToBinaryImageFilter<TInputMesh, BinaryImageType> TriangleMeshToBinaryImageFilterType;
+  TriangleMeshToBinaryImageFilterType::Pointer surfaceToImage = TriangleMeshToBinaryImageFilterType::New();
+  surfaceToImage->SetInsideValue(1);
+  surfaceToImage->SetSize(size);
+  surfaceToImage->SetSpacing(spacing);
+  surfaceToImage->SetInput(m_Surface);
+
+  try {
+    surfaceToImage->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    itkExceptionMacro(<< excep);
+  }
+
   typedef itk::SignedMaurerDistanceMapImageFilter<BinaryImageType, PotentialImageType> DistanceFilterType;
   DistanceFilterType::Pointer distanceMapFilter = DistanceFilterType::New();
   distanceMapFilter->SetUseImageSpacing(true);
-  distanceMapFilter->SetInput(this->GetInput());
+  distanceMapFilter->SetInput(surfaceToImage->GetOutput());
   distanceMapFilter->Update();
   m_PotentialImage = distanceMapFilter->GetOutput();
 }
 
 //----------------------------------------------------------------------------
-template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
-void ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType>::InitializeTransform()
+template <typename TInputMesh, typename TOutputMesh>
+void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransform()
 {
-  //TInputTransformType::Pointer inputTransform = const_cast<TInputTransformType *>(this->GetInputTransform());
-  m_InputTransform = this->GetInputTransform();
-
-  int numberOfInputParameters = m_InputTransform->GetNumberOfParameters();
-  int numberOfModelComponents = m_ShapeModel->GetNumberOfPrincipalComponents();
-  int numberOfOptimizationParameters = numberOfInputParameters + numberOfModelComponents;
+  int numberOfOptimizationParameters = m_ShapeModel->GetNumberOfPrincipalComponents();
 
   //initialize transforms of the model
   m_Scales.set_size(numberOfOptimizationParameters);
-  m_Scales.Fill(1);
+  m_Scales.Fill(1.0 / m_ModelScale);
 
   //shape model transform
-  m_ModelTransform = ModelTransformType::New();
-  m_ModelTransform->SetStatisticalModel(m_ShapeModel);
-  m_ModelTransform->SetIdentity();
-
-  for (int i = 0; i < numberOfModelComponents; ++i) {
-    m_Scales[numberOfInputParameters+i] = 1.0 / m_ModelScale;
-  }
-
-  // composite transform OutputPoint = m_InputTransform( m_ModelTransform(InputPoint) )
-  m_Transform = TransformType::New();
-
-  //first transform in queue
-  for (int n = 0; n < m_InputTransform->GetNumberOfTransforms(); ++n) {
-    m_Transform->AddTransform(m_InputTransform->GetNthTransform(n));
-    m_Transform->SetNthTransformToOptimize(0, false);
-  }
-
-  //second transform in queue
-  m_Transform->AddTransform(m_ModelTransform);
-  m_Transform->SetNthTransformToOptimize(0, true);
+  m_Transform = ModelTransformType::New();
+  m_Transform->SetStatisticalModel(m_ShapeModel);
+  m_Transform->SetIdentity();
 }
 //----------------------------------------------------------------------------
-template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
-void ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType>::GenerateOutputData()
+template <typename TInputMesh, typename TOutputMesh>
+void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::GenerateOutputData()
 {
   //compute output
   typedef itk::TransformMeshFilter<TOutputMesh, TOutputMesh, ModelTransformType> ModelTransformFilterType;
-  typename ModelTransformFilterType::Pointer modelTransformMesh = ModelTransformFilterType::New();
-  modelTransformMesh->SetInput(m_Surface);
-  modelTransformMesh->SetTransform(m_ModelTransform);
+  typename ModelTransformFilterType::Pointer transformModelSurface = ModelTransformFilterType::New();
+  transformModelSurface->SetInput(m_ShapeModel->GetRepresenter()->GetReference());
+  transformModelSurface->SetTransform(m_Transform);
 
   try {
-    modelTransformMesh->Update();
+    transformModelSurface->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cout << excep << std::endl;
     itkExceptionMacro(<< excep);
   }
 
-  this->GraftNthOutput(0, modelTransformMesh->GetOutput());
-
-  //compute moved output
-  typedef itk::TransformMeshFilter<TOutputMesh, TOutputMesh, TransformType> TransformFilterType;
-  typename TransformFilterType::Pointer transformMesh = TransformFilterType::New();
-  transformMesh->SetInput(m_Surface);
-  transformMesh->SetTransform(m_Transform);
-
-  try {
-    transformMesh->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cout << excep << std::endl;
-    itkExceptionMacro(<< excep);
-  }
-
-  this->GraftNthOutput(1, transformMesh->GetOutput());
+  this->GraftOutput(transformModelSurface->GetOutput());
 }
 //----------------------------------------------------------------------------
-template <typename TInputImage, typename TOutputMesh, typename TInputTransformType>
-void ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType>::PrintReport(std::ostream& os) const
+template <typename TInputMesh, typename TOutputMesh>
+void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::PrintReport(std::ostream& os) const
 {
   os << this->GetNameOfClass() << std::endl;
   os << std::endl;
@@ -182,17 +175,11 @@ void ShapeModelToImageRegistration<TInputImage, TOutputMesh, TInputTransformType
     os << std::endl;
   }
 
-  os << m_Transform->GetTransformTypeAsString() << std::endl;
-  os << "scales" << std::endl;
-  os << m_Scales << std::endl;
-
-  for (int n = 0; n < m_Transform->GetNumberOfTransforms(); ++n) {
-    os << std::endl;
-    os << n << ") " << m_Transform->GetNthTransformConstPointer(n)->GetTransformTypeAsString() << ", number of parameters ";
-    os << m_Transform->GetNthTransformConstPointer(n)->GetNumberOfParameters() << std::endl;
-    os << "transform category " << m_Transform->GetNthTransformConstPointer(n)->GetTransformCategory() << std::endl;
-    os << m_Transform->GetNthTransformConstPointer(n)->GetParameters() << std::endl;
-  }
+  os << std::endl;
+  os << m_Transform->GetTransformTypeAsString() << ", number of parameters ";
+  os << m_Transform->GetNumberOfParameters() << std::endl;
+  os << "transform category " << m_Transform->GetTransformCategory() << std::endl;
+  os << m_Transform->GetParameters() << std::endl;
 }
 
 //----------------------------------------------------------------------------
