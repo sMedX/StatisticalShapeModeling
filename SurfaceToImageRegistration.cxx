@@ -1,5 +1,5 @@
 ﻿#include <boost/filesystem.hpp>
-#include "PointSetToImageRegistration.h"
+#include "SurfaceToImageRegistrationFilter.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
@@ -14,8 +14,8 @@ int main(int argc, char** argv)
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string labelFile;
-  parser->GetCommandLineArgument("-image", labelFile);
+  std::string potentalFile;
+  parser->GetCommandLineArgument("-potential", potentalFile);
 
   std::string surfaceFile;
   parser->GetCommandLineArgument("-surface", surfaceFile);
@@ -23,19 +23,15 @@ int main(int argc, char** argv)
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
-  std::string transformFile;
-  parser->GetCommandLineArgument("-transform", transformFile);
-
   int numberOfIterations = 100;
   parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
   std::cout << std::endl;
   std::cout << "input parameters" << std::endl;
-  std::cout << " input surface file " << surfaceFile << std::endl;
-  std::cout << "   input image file " << labelFile << std::endl;
-  std::cout << "output surface file " << outputFile << std::endl;
-  std::cout << "     transform file " << transformFile << std::endl;
-  std::cout << "         iterations " << numberOfIterations << std::endl;
+  std::cout << "  input surface file " << surfaceFile << std::endl;
+  std::cout << "input potential file " << potentalFile << std::endl;
+  std::cout << " output surface file " << outputFile << std::endl;
+  std::cout << "          iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -45,62 +41,67 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  std::cout << "   input surface " << outputFile << std::endl;
+  std::cout << "   input surface polydata " << outputFile << std::endl;
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
   // read image
-  BinaryImageType::Pointer label = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(label, labelFile)) {
+  FloatImageType::Pointer potential = FloatImageType::New();
+  if (!readImage<FloatImageType>(potential, potentalFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "input image " << labelFile << std::endl;
-  std::cout << "       size " << label->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "    spacing " << label->GetSpacing() << std::endl;
-  std::cout << "     origin " << label->GetOrigin() << std::endl;
+  std::cout << "input potential image " << potentalFile << std::endl;
+  std::cout << "       size " << potential->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "    spacing " << potential->GetSpacing() << std::endl;
+  std::cout << "     origin " << potential->GetOrigin() << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   //perform GP model to image registration
-  typedef PointSetToImageRegistration<MeshType> ShapeModelToImageRegistrationType;
-  ShapeModelToImageRegistrationType::Pointer shapeModelToImageRegistration = ShapeModelToImageRegistrationType::New();
-  shapeModelToImageRegistration->SetNumberOfIterations(numberOfIterations);
-  shapeModelToImageRegistration->SetInput(surface);
-  shapeModelToImageRegistration->SetLabel(label);
+  typedef SurfaceToImageRegistrationFilter<MeshType> SurfaceToImageRegistrationFilterType;
+  SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
+  surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
+  surfaceToImageRegistration->SetInput(surface);
+  surfaceToImageRegistration->SetPotentialImage(potential);
 
   try {
-    shapeModelToImageRegistration->Update();
+    surfaceToImageRegistration->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
 
-  shapeModelToImageRegistration->PrintReport(std::cout);
+  surfaceToImageRegistration->PrintReport(std::cout);
 
   // write output mesh
-  if (!writeMesh<MeshType>(shapeModelToImageRegistration->GetOutput(), outputFile)) {
+  if (!writeMesh<MeshType>(surfaceToImageRegistration->GetOutput(), outputFile)) {
     return EXIT_FAILURE;
   }
 
   // write transform
-  typedef ShapeModelToImageRegistrationType::TransformType TransformType;
-  if (!writeTransform<TransformType>(shapeModelToImageRegistration->GetTransform(), transformFile)) {
-    return EXIT_FAILURE;
+  if (parser->ArgumentExists("-transform")) {
+    std::string outputFile;
+    parser->GetCommandLineArgument("-transform", outputFile);
+
+    typedef SurfaceToImageRegistrationFilterType::TransformType TransformType;
+    if (!writeTransform<TransformType>(surfaceToImageRegistration->GetTransform(), outputFile)) {
+      return EXIT_FAILURE;
+    }
   }
 
   //define interpolator
-  typedef itk::LinearInterpolateImageFunction<ShapeModelToImageRegistrationType::PotentialImageType, double> InterpolatorType;
+  typedef itk::LinearInterpolateImageFunction<SurfaceToImageRegistrationFilterType::PotentialImageType, double> InterpolatorType;
   InterpolatorType::Pointer interpolator = InterpolatorType::New();
 
-  ShapeModelToImageRegistrationType::PotentialImageType::ConstPointer potentialImage = shapeModelToImageRegistration->GetPotentialImage();
+  SurfaceToImageRegistrationFilterType::PotentialImageType::ConstPointer potentialImage = surfaceToImageRegistration->GetPotentialImage();
   interpolator->SetInputImage(potentialImage);
 
   //define point set
   typedef itk::PointSet<float, Dimension> PointSetType;
-  PointSetType::PointsContainer::Pointer points = shapeModelToImageRegistration->GetOutput()->GetPoints();
+  PointSetType::PointsContainer::Pointer points = surfaceToImageRegistration->GetOutput()->GetPoints();
 
   size_t numberOfPoints = 0;
   double mean = 0;
@@ -131,7 +132,7 @@ int main(int argc, char** argv)
 
   // write report to *.csv file
   if (parser->ArgumentExists("-report")) {
-    float value = shapeModelToImageRegistration->GetOptimizer()->GetValue();
+    float value = surfaceToImageRegistration->GetOptimizer()->GetValue();
 
     std::string report;
     parser->GetCommandLineArgument("-report", report);
@@ -141,9 +142,9 @@ int main(int argc, char** argv)
     std::string dlm = ";";
     std::string header = dlm;
 
-    int idx1 = labelFile.find_last_of("\\/");
-    int idx2 = labelFile.find_last_of(".");
-    std::string scores = labelFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
+    int idx1 = potentalFile.find_last_of("\\/");
+    int idx2 = potentalFile.find_last_of(".");
+    std::string scores = potentalFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
 
     header += "cost function" + dlm;
     scores += std::to_string(value) + dlm;

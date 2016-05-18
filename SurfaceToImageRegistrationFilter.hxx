@@ -1,5 +1,5 @@
-#ifndef __PointSetToImageRegistration_hxx
-#define __PointSetToImageRegistration_hxx
+#ifndef __SurfaceToImageRegistration_hxx
+#define __SurfaceToImageRegistration_hxx
 
 #include <itkEuler3DTransform.h>
 #include <itkScaleTransform.h>
@@ -11,11 +11,13 @@
 #include <itkBoundingBox.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkMeanSquaresPointSetToImageMetric.h>
-#include "PointSetToImageRegistration.h"
+#include <itkBinaryThresholdImageFilter.h>
+
+#include "SurfaceToImageRegistrationFilter.h"
 
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
-PointSetToImageRegistration<TInputMesh, TOutputMesh>::PointSetToImageRegistration()
+SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::SurfaceToImageRegistrationFilter()
 {
   this->SetNumberOfRequiredInputs(1);
   this->SetNumberOfRequiredOutputs(1);
@@ -23,7 +25,7 @@ PointSetToImageRegistration<TInputMesh, TOutputMesh>::PointSetToImageRegistratio
 }
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
-void PointSetToImageRegistration<TInputMesh, TOutputMesh>::GenerateData()
+void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
 {
   m_Surface = const_cast <TInputMesh*> (this->GetInput());
 
@@ -39,7 +41,7 @@ void PointSetToImageRegistration<TInputMesh, TOutputMesh>::GenerateData()
   }
   m_PointSet->SetPointData(pointData);
 
-  this->ComputePotentialImage();
+  this->ComputeLabelImage();
   this->InitializeTransform();
 
   //define interpolator
@@ -83,20 +85,23 @@ void PointSetToImageRegistration<TInputMesh, TOutputMesh>::GenerateData()
 }
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
-void PointSetToImageRegistration<TInputMesh, TOutputMesh>::ComputePotentialImage()
+void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::ComputeLabelImage()
 {
-  typedef itk::SignedMaurerDistanceMapImageFilter<BinaryImageType, PotentialImageType> DistanceFilterType;
-  DistanceFilterType::Pointer distanceMapFilter = DistanceFilterType::New();
-  distanceMapFilter->SetUseImageSpacing(true);
-  distanceMapFilter->SetInput(m_Label);
-  distanceMapFilter->Update();
+  typedef itk::BinaryThresholdImageFilter <PotentialImageType, BinaryImageType> BinaryThresholdImageFilterType;
+  BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
+  threshold->SetInput(m_PotentialImage);
+  threshold->SetLowerThreshold(std::numeric_limits<PotentialImageType::PixelType>::lowest());
+  threshold->SetUpperThreshold(0);
+  threshold->SetInsideValue(1);
+  threshold->SetOutsideValue(0);
+  threshold->Update();
 
-  m_PotentialImage = distanceMapFilter->GetOutput();
+  m_Label = threshold->GetOutput();
 }
 
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
-void PointSetToImageRegistration<TInputMesh, TOutputMesh>::InitializeTransform()
+void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransform()
 {
   // Compute a bounding box around the input mesh
   typedef  itk::BoundingBox<int, TOutputMesh::PointDimension, float, typename TOutputMesh::PointsContainer> BoundingBoxType;
@@ -210,7 +215,7 @@ void PointSetToImageRegistration<TInputMesh, TOutputMesh>::InitializeTransform()
 }
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
-void PointSetToImageRegistration<TInputMesh, TOutputMesh>::GenerateOutputData()
+void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateOutputData()
 {
   //compute moved output
   typedef itk::TransformMeshFilter<TOutputMesh, TOutputMesh, TransformType> TransformFilterType;
@@ -228,10 +233,9 @@ void PointSetToImageRegistration<TInputMesh, TOutputMesh>::GenerateOutputData()
 
   this->GraftNthOutput(0, transform->GetOutput());
 }
-
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
-void PointSetToImageRegistration<TInputMesh, TOutputMesh>::PrintReport(std::ostream& os) const
+void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::PrintReport(std::ostream& os) const
 {
   os << this->GetNameOfClass() << std::endl;
   os << std::endl;
@@ -258,6 +262,5 @@ void PointSetToImageRegistration<TInputMesh, TOutputMesh>::PrintReport(std::ostr
     os << m_Transform->GetNthTransformConstPointer(n)->GetParameters() << std::endl;
   }
 }
-
 //----------------------------------------------------------------------------
 #endif

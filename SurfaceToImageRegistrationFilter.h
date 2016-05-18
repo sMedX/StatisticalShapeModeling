@@ -1,5 +1,5 @@
-#ifndef __PointSetToImageRegistration_h
-#define __PointSetToImageRegistration_h
+#ifndef __SurfaceToImageRegistrationFilter_h
+#define __SurfaceToImageRegistrationFilter_h
 
 #include <itkImage.h>
 #include <itkMeshToMeshFilter.h>
@@ -9,11 +9,11 @@
 #include <itkPointSetToImageRegistrationMethod.h>
 
 template <typename TInputMesh, typename TOutputMesh=TInputMesh>
-class PointSetToImageRegistration : public itk::MeshToMeshFilter<TInputMesh, TOutputMesh>
+class SurfaceToImageRegistrationFilter : public itk::MeshToMeshFilter<TInputMesh, TOutputMesh>
 {
 public:
   // Standard typedefs
-  typedef PointSetToImageRegistration Self;
+  typedef SurfaceToImageRegistrationFilter Self;
   typedef itk::MeshToMeshFilter<TInputMesh, TOutputMesh> Superclass;
   typedef itk::SmartPointer<Self> Pointer;
   typedef itk::SmartPointer<const Self> ConstPointer;
@@ -26,15 +26,16 @@ public:
   typedef itk::PointSetToImageMetric<PointSetType, PotentialImageType> MetricType;
 
   itkNewMacro(Self);
-  itkTypeMacro(PointSetToImageRegistration, itk::MeshToMeshFilter);
+  itkTypeMacro(surfaceToImageRegistration, itk::MeshToMeshFilter);
 
   //Set/Get shape model
-  itkSetConstObjectMacro(Label, BinaryImageType);
   itkGetConstObjectMacro(Label, BinaryImageType);
 
-  //Get PotentialImage
-  itkGetConstObjectMacro(Optimizer, OptimizerType);
+  //Set/Get PotentialImage
   itkGetConstObjectMacro(PotentialImage, PotentialImageType);
+  itkSetConstObjectMacro(PotentialImage, PotentialImageType);
+
+  itkGetConstObjectMacro(Optimizer, OptimizerType);
   itkGetConstObjectMacro(Transform, TransformType);
 
   itkSetMacro(NumberOfIterations, unsigned int);
@@ -49,7 +50,6 @@ public:
   itkSetMacro(DefaultStepLength, double);
   itkGetMacro(DefaultStepLength, double);
 
-  //Set/Get scaling
   itkSetMacro(TranslationScale, double);
   itkGetMacro(TranslationScale, double);
 
@@ -62,12 +62,12 @@ public:
   void PrintReport(std::ostream& os) const;
 
 protected:
-  PointSetToImageRegistration();
-  ~PointSetToImageRegistration() {}
+  SurfaceToImageRegistrationFilter();
+  ~SurfaceToImageRegistrationFilter() {}
 
   virtual void GenerateData() override;
   void InitializeTransform();
-  void ComputePotentialImage();
+  void ComputeLabelImage();
   void GenerateOutputData();
 
   itkStaticConstMacro(PointDimension, unsigned int, TInputMesh::PointDimension);
@@ -94,7 +94,7 @@ protected:
 };
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "PointSetToImageRegistration.hxx"
+#include "SurfaceToImageRegistrationFilter.hxx"
 #endif
 
 #endif
