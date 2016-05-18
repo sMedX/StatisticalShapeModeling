@@ -11,9 +11,8 @@
 #include <vtkSmoothPolyDataFilter.h>
 #include <vtkPolyDataNormals.h>
 #include <itkImageToVTKImageFilter.h>
-#include <itkZeroCrossingImageFilter.h>
 #include <itkSignedMaurerDistanceMapImageFilter.h>
-#include <itkAddImageFilter.h>
+#include <itkBinaryThresholdImageFilter.h>
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
