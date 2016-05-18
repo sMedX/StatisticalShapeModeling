@@ -28,8 +28,8 @@ int main(int argc, char** argv) {
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string labelFile;
-  parser->GetCommandLineArgument("-label", labelFile);
+  std::string maskFile;
+  parser->GetCommandLineArgument("-mask", maskFile);
 
   std::string outputSurfaceFile;
   parser->GetCommandLineArgument("-surface", outputSurfaceFile);
@@ -60,21 +60,21 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------------------------
   // read image
 
-  BinaryImageType::Pointer label = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(label, labelFile)) {
+  BinaryImageType::Pointer mask = BinaryImageType::New();
+  if (!readImage<BinaryImageType>(mask, maskFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "input label info" << std::endl;
-  std::cout << labelFile << std::endl;
-  std::cout << "   size " << label->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "spacing " << label->GetSpacing() << std::endl;
-  std::cout << " origin " << label->GetOrigin() << std::endl;
+  std::cout << "input mask info" << std::endl;
+  std::cout << maskFile << std::endl;
+  std::cout << "   size " << mask->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "spacing " << mask->GetSpacing() << std::endl;
+  std::cout << " origin " << mask->GetOrigin() << std::endl;
   std::cout << std::endl;
 
   typedef itk::RecursiveGaussianImageFilter<BinaryImageType, FloatImageType> RecursiveGaussianImageFilterType;
   RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
-  gaussian->SetInput(label);
+  gaussian->SetInput(mask);
   gaussian->SetSigma(sigma);
   gaussian->Update();
 
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
   BinaryImageType::SizeType outputSize;
 
   for (int i = 0; i < Dimension; ++i) {
-    outputSize[i] = label->GetLargestPossibleRegion().GetSize()[i] * label->GetSpacing()[i] / spacing;
+    outputSize[i] = mask->GetLargestPossibleRegion().GetSize()[i] * mask->GetSpacing()[i] / spacing;
   }
 
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;

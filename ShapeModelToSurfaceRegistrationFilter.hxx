@@ -15,8 +15,6 @@ ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::ShapeModelToSurf
 {
   this->SetNumberOfRequiredInputs(1);
   this->SetNumberOfRequiredOutputs(1);
-
-  this->SetOutput(TOutputMesh::New());
 }
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>

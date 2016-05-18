@@ -96,7 +96,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::ComputeLabelImag
   threshold->SetOutsideValue(0);
   threshold->Update();
 
-  m_Label = threshold->GetOutput();
+  m_Mask = threshold->GetOutput();
 }
 
 //----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
   boundingBox->SetPoints(m_Surface->GetPoints());
   boundingBox->ComputeBoundingBox();
 
-  BinaryImageType::SpacingType spacing = m_Label->GetSpacing();
+  BinaryImageType::SpacingType spacing = m_Mask->GetSpacing();
   BinaryImageType::PointType origin = boundingBox->GetMinimum();
   BinaryImageType::SizeType size;
 
@@ -124,7 +124,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
   shapeToImage->SetSize(size);
   shapeToImage->SetOrigin(origin);
   shapeToImage->SetSpacing(spacing);
-  shapeToImage->SetDirection(m_Label->GetDirection());
+  shapeToImage->SetDirection(m_Mask->GetDirection());
   shapeToImage->SetOutsideValue(0);
   shapeToImage->SetInsideValue(1);
 
@@ -145,7 +145,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
   movingCalculator->Compute();
 
   ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
-  fixedCalculator->SetImage(m_Label);
+  fixedCalculator->SetImage(m_Mask);
   fixedCalculator->Compute();
 
   typename TransformType::InputPointType center;

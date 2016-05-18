@@ -29,7 +29,7 @@ public:
   itkTypeMacro(surfaceToImageRegistration, itk::MeshToMeshFilter);
 
   //Set/Get shape model
-  itkGetConstObjectMacro(Label, BinaryImageType);
+  itkGetConstObjectMacro(Mask, BinaryImageType);
 
   //Set/Get PotentialImage
   itkGetConstObjectMacro(PotentialImage, PotentialImageType);
@@ -76,7 +76,7 @@ protected:
   OptimizerType::Pointer m_Optimizer;
   typename TInputMesh::Pointer m_Surface;
   typename PointSetType::Pointer m_PointSet;
-  typename BinaryImageType::ConstPointer m_Label;
+  typename BinaryImageType::ConstPointer m_Mask;
   typename PotentialImageType::ConstPointer m_PotentialImage;
   typename TransformType::Pointer m_Transform;
   typename MetricType::Pointer m_Metric;
