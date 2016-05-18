@@ -2,6 +2,7 @@
 #include <itkStandardMeshRepresenter.h>
 
 #include "ShapeModelToSurfaceRegistrationFilter.h"
+#include "PointSetToImageMetrics.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
@@ -101,62 +102,27 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  // write moved surface
-  if (parser->ArgumentExists("-moved")) {
-    std::string outputFile;
-    parser->GetCommandLineArgument("-moved", outputFile);
+  //Compute metrics
+  typedef ShapeModelToSurfaceRegistrationFilterType::PotentialImageType PotentialImageType;
+  typedef ShapeModelToSurfaceRegistrationFilterType::PointSetType PointSetType;
+  PointSetType::Pointer pointSet = PointSetType::New();
+  pointSet->SetPoints(shapeModelToSurfaceRegistration->GetOutput()->GetPoints());
 
-    if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
-      return EXIT_FAILURE;
-    }
-  }
-
-  //define interpolator
-  typedef itk::LinearInterpolateImageFunction<ShapeModelToSurfaceRegistrationFilterType::PotentialImageType, double> InterpolatorType;
-  InterpolatorType::Pointer interpolator = InterpolatorType::New();
-
-  ShapeModelToSurfaceRegistrationFilterType::PotentialImageType::ConstPointer potentialImage = shapeModelToSurfaceRegistration->GetPotentialImage();
-  interpolator->SetInputImage(potentialImage);
-
-  //define point set
-  typedef itk::PointSet<float, Dimension> PointSetType;
-  PointSetType::PointsContainer::Pointer points = shapeModelToSurfaceRegistration->GetOutput()->GetPoints();
-
-  size_t numberOfPoints = 0;
-  double mean = 0;
-  double rmse = 0;
-  double maxd = 0;
-
-  for( auto it = points->Begin(); it != points->End(); ++it) {
-    itk::ContinuousIndex<double, Dimension> index;
-    bool isInside = potentialImage->TransformPhysicalPointToContinuousIndex(it.Value(), index);
-
-    if ( isInside ) {
-      double value = std::abs(interpolator->EvaluateAtContinuousIndex(index));
-
-      numberOfPoints++;
-      mean += value;
-      rmse += value*value;
-      maxd = std::max(maxd, value);
-    }
-  }
-
-  mean = mean / numberOfPoints;
-  rmse = std::sqrt(rmse / numberOfPoints);
-
-  std::cout << "distance metrics" << std::endl;
-  std::cout << "   mean " << mean << std::endl;
-  std::cout << "    rms " << rmse << std::endl;
-  std::cout << "maximal " << maxd << std::endl;
+  typedef PointSetToImageMetrics<PointSetType, PotentialImageType> PointSetToImageMetricsType;
+  PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
+  metrics->SetFixedPointSet(pointSet);
+  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetPotentialImage());
+  metrics->Compute();
+  metrics->PrintReport(std::cout);
 
   // write report to *.csv file
   if (parser->ArgumentExists("-report")) {
     float value = shapeModelToSurfaceRegistration->GetOptimizer()->GetValue();
 
-    std::string report;
-    parser->GetCommandLineArgument("-report", report);
+    std::string fileName;
+    parser->GetCommandLineArgument("-report", fileName);
 
-    std::cout << "write report to the file: " << report << std::endl;
+    std::cout << "write report to the file: " << fileName << std::endl;
 
     std::string dlm = ";";
     std::string header = dlm;
@@ -165,24 +131,21 @@ int main(int argc, char** argv)
     int idx2 = surfaceFile.find_last_of(".");
     std::string scores = surfaceFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
 
-    header += "cost function" + dlm;
+    header += "Cost function" + dlm;
     scores += std::to_string(value) + dlm;
 
-    header += "mean" + dlm;
-    scores += std::to_string(mean) + dlm;
+    header += "Mean" + dlm;
+    scores += std::to_string(metrics->GetMeanValue()) + dlm;
 
-    header += "rmse" + dlm;
-    scores += std::to_string(rmse) + dlm;
+    header += "RMSE" + dlm;
+    scores += std::to_string(metrics->GetRMSEValue()) + dlm;
 
-    header += "maxd" + dlm;
-    scores += std::to_string(maxd) + dlm;
+    header += "Maximal" + dlm;
+    scores += std::to_string(metrics->GetMaximalValue()) + dlm;
 
-    header += "regularization" + dlm;
-    scores += std::to_string(shapeModelToSurfaceRegistration->GetRegularizationParameter()) + dlm;
-
-    bool exist = boost::filesystem::exists(report);
+    bool exist = boost::filesystem::exists(fileName);
     std::ofstream ofile;
-    ofile.open(report, std::ofstream::out | std::ofstream::app);
+    ofile.open(fileName, std::ofstream::out | std::ofstream::app);
 
     if (!exist) {
       ofile << header << std::endl;

@@ -1,5 +1,7 @@
 ﻿#include <boost/filesystem.hpp>
+
 #include "SurfaceToImageRegistrationFilter.h"
+#include "PointSetToImageMetrics.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
@@ -14,8 +16,8 @@ int main(int argc, char** argv)
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string potentalFile;
-  parser->GetCommandLineArgument("-potential", potentalFile);
+  std::string potentialFile;
+  parser->GetCommandLineArgument("-potential", potentialFile);
 
   std::string surfaceFile;
   parser->GetCommandLineArgument("-surface", surfaceFile);
@@ -29,7 +31,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
   std::cout << "input parameters" << std::endl;
   std::cout << "  input surface file " << surfaceFile << std::endl;
-  std::cout << "input potential file " << potentalFile << std::endl;
+  std::cout << "input potential file " << potentialFile << std::endl;
   std::cout << " output surface file " << outputFile << std::endl;
   std::cout << "          iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
@@ -48,11 +50,11 @@ int main(int argc, char** argv)
 
   // read image
   FloatImageType::Pointer potential = FloatImageType::New();
-  if (!readImage<FloatImageType>(potential, potentalFile)) {
+  if (!readImage<FloatImageType>(potential, potentialFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "input potential image " << potentalFile << std::endl;
+  std::cout << "input potential image " << potentialFile << std::endl;
   std::cout << "       size " << potential->GetLargestPossibleRegion().GetSize() << std::endl;
   std::cout << "    spacing " << potential->GetSpacing() << std::endl;
   std::cout << "     origin " << potential->GetOrigin() << std::endl;
@@ -83,84 +85,59 @@ int main(int argc, char** argv)
 
   // write transform
   if (parser->ArgumentExists("-transform")) {
-    std::string outputFile;
-    parser->GetCommandLineArgument("-transform", outputFile);
+    std::string fileName;
+    parser->GetCommandLineArgument("-transform", fileName);
 
     typedef SurfaceToImageRegistrationFilterType::TransformType TransformType;
-    if (!writeTransform<TransformType>(surfaceToImageRegistration->GetTransform(), outputFile)) {
+    if (!writeTransform<TransformType>(surfaceToImageRegistration->GetTransform(), fileName)) {
       return EXIT_FAILURE;
     }
   }
 
-  //define interpolator
-  typedef itk::LinearInterpolateImageFunction<SurfaceToImageRegistrationFilterType::PotentialImageType, double> InterpolatorType;
-  InterpolatorType::Pointer interpolator = InterpolatorType::New();
+  //Compute metrics
+  typedef SurfaceToImageRegistrationFilterType::PotentialImageType PotentialImageType;
+  typedef SurfaceToImageRegistrationFilterType::PointSetType PointSetType;
+  PointSetType::Pointer pointSet = PointSetType::New();
+  pointSet->SetPoints(surfaceToImageRegistration->GetOutput()->GetPoints());
 
-  SurfaceToImageRegistrationFilterType::PotentialImageType::ConstPointer potentialImage = surfaceToImageRegistration->GetPotentialImage();
-  interpolator->SetInputImage(potentialImage);
-
-  //define point set
-  typedef itk::PointSet<float, Dimension> PointSetType;
-  PointSetType::PointsContainer::Pointer points = surfaceToImageRegistration->GetOutput()->GetPoints();
-
-  size_t numberOfPoints = 0;
-  double mean = 0;
-  double rmse = 0;
-  double maxd = 0;
-
-  for( auto it = points->Begin(); it != points->End(); ++it) {
-    itk::ContinuousIndex<double, Dimension> index;
-    bool isInside = potentialImage->TransformPhysicalPointToContinuousIndex(it.Value(), index);
-
-    if ( isInside ) {
-      double value = std::abs(interpolator->EvaluateAtContinuousIndex(index));
-
-      numberOfPoints++;
-      mean += value;
-      rmse += value*value;
-      maxd = std::max(maxd, value);
-    }
-  }
-
-  mean = mean / numberOfPoints;
-  rmse = std::sqrt(rmse / numberOfPoints);
-
-  std::cout << "distance metrics" << std::endl;
-  std::cout << "   mean " << mean << std::endl;
-  std::cout << "    rms " << rmse << std::endl;
-  std::cout << "maximal " << maxd << std::endl;
+  typedef PointSetToImageMetrics<PointSetType, PotentialImageType> PointSetToImageMetricsType;
+  PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
+  metrics->SetFixedPointSet(pointSet);
+  metrics->SetMovingImage(surfaceToImageRegistration->GetPotentialImage());
+  metrics->Compute();
+  metrics->PrintReport(std::cout);
 
   // write report to *.csv file
   if (parser->ArgumentExists("-report")) {
     float value = surfaceToImageRegistration->GetOptimizer()->GetValue();
 
-    std::string report;
-    parser->GetCommandLineArgument("-report", report);
+    std::string fileName;
+    parser->GetCommandLineArgument("-report", fileName);
 
-    std::cout << "write report to the file: " << report << std::endl;
+    std::cout << "write report to the file: " << fileName << std::endl;
 
     std::string dlm = ";";
     std::string header = dlm;
 
-    int idx1 = potentalFile.find_last_of("\\/");
-    int idx2 = potentalFile.find_last_of(".");
-    std::string scores = potentalFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
+    int idx1 = surfaceFile.find_last_of("\\/");
+    int idx2 = surfaceFile.find_last_of(".");
+    std::string scores = surfaceFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
 
-    header += "cost function" + dlm;
+    header += "Cost function" + dlm;
     scores += std::to_string(value) + dlm;
 
-    header += "mean" + dlm;
-    scores += std::to_string(mean) + dlm;
+    header += "Mean" + dlm;
+    scores += std::to_string(metrics->GetMeanValue()) + dlm;
 
-    header += "rmse" + dlm;
-    scores += std::to_string(rmse) + dlm;
+    header += "RMSE" + dlm;
+    scores += std::to_string(metrics->GetRMSEValue()) + dlm;
 
-    header += "maxd" + dlm;
-    scores += std::to_string(maxd) + dlm;
+    header += "Maximal" + dlm;
+    scores += std::to_string(metrics->GetMaximalValue()) + dlm;
 
-    bool exist = boost::filesystem::exists(report);
+    bool exist = boost::filesystem::exists(fileName);
     std::ofstream ofile;
-    ofile.open(report, std::ofstream::out | std::ofstream::app);
+    ofile.open(fileName, std::ofstream::out | std::ofstream::app);
 
     if (!exist) {
       ofile << header << std::endl;
