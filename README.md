@@ -2,4 +2,4 @@
 
 Framework for statistical shape modeling with Statismo. 
 
-[Project Wiki](https://github.com/RuslanKosarev/StatisticalShapeModelling/wiki)
+[Project Wiki](https://github.com/RuslanKosarev/StatisticalShapeModeling/wiki)
