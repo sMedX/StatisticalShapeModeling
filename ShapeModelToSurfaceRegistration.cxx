@@ -33,7 +33,7 @@ int main(int argc, char** argv)
   parser->GetCommandLineArgument("-regularization", regularization);
 
   int numberOfIterations = 100;
-  parser->GetCommandLineArgument("-iterations", numberOfIterations);
+  parser->GetCommandLineArgument("-iteration", numberOfIterations);
 
   std::cout << std::endl;
   std::cout << "shape model to image registration" << std::endl;
