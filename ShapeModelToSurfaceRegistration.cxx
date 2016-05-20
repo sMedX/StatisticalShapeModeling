@@ -52,7 +52,7 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  std::cout << "   input surface polydata " << outputFile << std::endl;
+  std::cout << "   input surface polydata " << surfaceFile << std::endl;
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
