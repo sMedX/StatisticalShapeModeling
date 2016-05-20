@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-mask", maskFile);
 
   std::string outputSurfaceFile;
-  parser->GetCommandLineArgument("-surface", outputSurfaceFile);
+  parser->GetCommandLineArgument("-output", outputSurfaceFile);
 
   std::string outputPotentialFile;
   parser->GetCommandLineArgument("-potential", outputPotentialFile);
