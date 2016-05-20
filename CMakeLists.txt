@@ -31,3 +31,6 @@ target_link_libraries(surfaceToImageRegistration ${statismo_LIBRARIES} ${ITK_LIB
 
 add_executable(shapeModelToSurfaceRegistration ShapeModelToSurfaceRegistration.cxx)
 target_link_libraries(shapeModelToSurfaceRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+
+add_executable(crossValidationTest CrossValidationTest.cxx)
+target_link_libraries(crossValidationTest ${statismo_LIBRARIES} ${ITK_LIBRARIES})

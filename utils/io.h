@@ -7,13 +7,14 @@
 #include <itkObject.h>
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
-#include <itkMeshFileWriter.h>
 #include <itkMeshFileReader.h>
+#include <itkMeshFileWriter.h>
+#include <vtkPolyDataReader.h>
+#include <vtkPolyDataWriter.h>
+#include <itkTransformFileReader.h>
+#include <itkTransformFileWriter.h>
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
-#include <vtkPolyDataWriter.h>
-#include <itkTransformFileWriter.h>
-#include <itkTransformFileReader.h>
 
 //! Reads a templated image from a file via ITK ImageFileReader
 template <typename TImage>
@@ -103,6 +104,19 @@ bool writeMesh(const TMesh* mesh, const std::string& fileName)
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
+
+  return true;
+}
+
+bool readVTKPolydata(vtkPolyData* surface, const std::string& filename)
+{
+  typedef vtkSmartPointer<vtkPolyDataReader> Reader;
+
+  Reader reader = Reader::New();
+  reader->SetFileName(filename.c_str());
+  reader->Update();
+
+  surface->ShallowCopy(reader->GetOutput());
 
   return true;
 }
