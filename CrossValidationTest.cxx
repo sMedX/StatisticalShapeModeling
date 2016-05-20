@@ -1,5 +1,3 @@
-#include <iostream>
-#include <ostream>
 #include <boost/scoped_ptr.hpp>
 #include <vtkPolyDataReader.h>
 #include <vtkPolyData.h>
@@ -25,18 +23,11 @@ typedef DataManagerType::DataItemListType DataItemListType;
 
 int main(int argc, char** argv)
 {
-
   itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
   parser->SetCommandLineArguments(argc, argv);
 
-//  std::string datadir;
-  //parser->GetCommandLineArgument("-data", datadir);
-
   std::string listFile;
   parser->GetCommandLineArgument("-list", listFile);
-
-  std::string outdir;
-  parser->GetCommandLineArgument("-output", outdir);
 
   unsigned int folds = 0;
   parser->GetCommandLineArgument("-folds", folds);
@@ -68,8 +59,6 @@ int main(int argc, char** argv)
       dataManager->AddDataset(surface, fileName);
     }
 
-    std::cout << "successfully loaded " << dataManager->GetNumberOfSamples() << " samples " << std::endl;
-
     // create the model builder
     boost::scoped_ptr<ModelBuilderType> pcaModelBuilder(ModelBuilderType::Create());
 
@@ -79,11 +68,14 @@ int main(int argc, char** argv)
 
     CVFoldListType cvFoldList = dataManager->GetCrossValidationFolds(folds, true);
 
-    // the CVFoldListType is a standard STL list over which we can iterate to get all the folds
+    std::cout << "successfully loaded " << dataManager->GetNumberOfSamples() << " samples " << std::endl;
+    std::cout << "    number of folds " << cvFoldList.size() << std::endl;
+
+    // iterate over cvFoldList to get all the folds
     for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
 
       // build the model as usual
-      boost::scoped_ptr<StatisticalModelType> model(pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0.01));
+      boost::scoped_ptr<StatisticalModelType> model(pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0));
       std::cout << "built model with  " << model->GetNumberOfPrincipalComponents() << " principal components" << std::endl;
 
       // Now we can iterate over the test data and do whatever validation we would like to do.
@@ -115,10 +107,11 @@ int main(int argc, char** argv)
         mean = mean / testSample->GetNumberOfPoints();
         rmse = std::sqrt(rmse / testSample->GetNumberOfPoints());
 
-        std::cout << "probability of test sample under the model: " << probability << std::endl;
-        std::cout << "  rms error of test sample under the model: " << rmse << " mm" << std::endl;
-        std::cout << " mean error of test sample under the model: " << mean << " mm" << std::endl;
-        std::cout << " mean error of test sample under the model: " << maximal << " mm" << std::endl;
+        std::cout << "Metric values for the sample " << sampleName << std::endl;
+        std::cout << "Probability " << probability << std::endl;
+        std::cout << "       Mean " << mean << " mm" << std::endl;
+        std::cout << "       RMSE " << rmse << " mm" << std::endl;
+        std::cout << "    Maximal " << maximal << " mm" << std::endl;
 
         if (parser->ArgumentExists("-report")) {
           std::string reportFile;
@@ -127,8 +120,6 @@ int main(int argc, char** argv)
           std::string dlm = ";";
           std::string header = dlm;
           std::string scores = sampleName + dlm;
-
-          //std::sprintf(buffer, "%e", probability);
 
           header += "Probability" + dlm;
           scores += std::to_string(probability) + dlm;
@@ -153,16 +144,6 @@ int main(int argc, char** argv)
           ofile << scores << std::endl;
           ofile.close();
         }
-
-        /*
-        std::string fileName = agtk::getFileNameFromPath((*it)->GetDatasetURI());
-        fileName = outdir + "/" + fileName;
-
-        fileName = agtk::addFileNameSuffix(fileName, "_cv");
-
-        std::cout << "output surface " << fileName << std::endl;
-        agtk::writeSurface(outputSample, fileName);
-        */
       }
     }
   }
