@@ -4,7 +4,7 @@
 #include <DataManager.h>
 #include <PCAModelBuilder.h>
 #include <StatisticalModel.h>
-#include <vtkStandardMeshRepresenter.h>
+#include <itkStandardMeshRepresenter.h>
 #include <utils/statismo-build-models-utils.h>
 
 #include "utils/io.h"
@@ -12,11 +12,12 @@
 
 // All the statismo classes have to be parameterized with the RepresenterType.
 const unsigned int Dimension = 3;
-typedef itk::Point<float, Dimension> PointType;
-typedef statismo::vtkStandardMeshRepresenter RepresenterType;
-typedef statismo::DataManager<vtkPolyData> DataManagerType;
-typedef statismo::StatisticalModel<vtkPolyData> StatisticalModelType;
-typedef statismo::PCAModelBuilder<vtkPolyData> ModelBuilderType;
+typedef itk::Mesh<float, Dimension> MeshType;
+typedef MeshType::PointType PointType;
+typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
+typedef statismo::DataManager<MeshType> DataManagerType;
+typedef statismo::StatisticalModel<MeshType> StatisticalModelType;
+typedef statismo::PCAModelBuilder<MeshType> ModelBuilderType;
 typedef statismo::VectorType VectorType;
 typedef DataManagerType::CrossValidationFoldListType CVFoldListType;
 typedef DataManagerType::DataItemListType DataItemListType;
@@ -35,23 +36,24 @@ int main(int argc, char** argv)
   try {
     StringList fileNames = getFileList(listFile);
 
-    typedef vtkSmartPointer<vtkPolyData> vtkPolyData;
-    vtkPolyData surface = vtkPolyData::New();
     std::string fileName = fileNames.begin()->c_str();
+    MeshType::Pointer surface = MeshType::New();
 
-    if (!readVTKPolydata(surface, fileName)) {
+    if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
 
     // create a data manager and add a number of datasets for model building
-    boost::scoped_ptr<RepresenterType> representer(RepresenterType::Create(surface));
-    boost::scoped_ptr<DataManagerType> dataManager(DataManagerType::Create(representer.get()));
+    RepresenterType::Pointer representer = RepresenterType::New();
+    representer->SetReference(surface);
+
+    boost::scoped_ptr<DataManagerType> dataManager(DataManagerType::Create(representer));
 
     for (StringList::const_iterator it = fileNames.begin(); it != fileNames.end(); ++it) {
-      vtkPolyData surface = vtkPolyData::New();
       std::string fileName = it->c_str();
+      MeshType::Pointer surface = MeshType::New();
 
-      if (!readVTKPolydata(surface, fileName)) {
+      if (!readMesh<MeshType>(surface, fileName)) {
         return EXIT_FAILURE;
       }
 
@@ -84,9 +86,9 @@ int main(int argc, char** argv)
       for (DataItemListType::const_iterator it = testSamplesList.begin(); it != testSamplesList.end(); ++it) {
         std::string sampleName = (*it)->GetDatasetURI();
 
-        vtkPolyData testSample = (*it)->GetSample();
+        MeshType::Pointer testSample = (*it)->GetSample();
         VectorType coefficients = model->ComputeCoefficientsForDataset(testSample);
-        vtkPolyData outputSample = model->DrawSample(coefficients);
+        MeshType::Pointer outputSample = model->DrawSample(coefficients);
 
         double probability = model->ComputeProbabilityOfDataset(testSample);
         double mean = 0;

@@ -15,6 +15,7 @@
 #include <itkTransformFileWriter.h>
 #include <vtkSmartPointer.h>
 #include <vtkPolyData.h>
+#include <itkMesh.h>
 
 //! Reads a templated image from a file via ITK ImageFileReader
 template <typename TImage>
