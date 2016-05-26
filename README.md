@@ -5,6 +5,7 @@ Project for statistical shape modeling with [statismo](https://github.com/statis
 [Project Wiki](https://github.com/RuslanKosarev/StatisticalShapeModeling/wiki)
 
 Corresponding author Ruslan N. Kosarev 
+
 E-mail address: kosarev@smedx.com
 
 
