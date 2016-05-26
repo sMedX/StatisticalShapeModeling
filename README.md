@@ -1,6 +1,12 @@
 ##Statistical Shape Modeling
 
-Framework for statistical shape modeling with [statismo](https://github.com/statismo/statismo).
+Project for statistical shape modeling with [statismo](https://github.com/statismo/statismo).
+
+[Project Wiki](https://github.com/RuslanKosarev/StatisticalShapeModeling/wiki)
+
+Corresponding author Ruslan N. Kosarev 
+E-mail address: kosarev@smedx.com
+
 
 ##License
 
@@ -13,5 +19,3 @@ This code is distributed in the hope that it will be useful, but WITHOUT ANY WAR
 You should have received a copy of the GNU Lesser General Public License along with this library; if not, write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 
 
-
-[Project Wiki](https://github.com/RuslanKosarev/StatisticalShapeModeling/wiki)
