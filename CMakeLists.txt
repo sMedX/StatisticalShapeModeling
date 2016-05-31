@@ -15,6 +15,12 @@ list(APPEND statismo_INCLUDE_DIRS ${statismo_SOURCE_DIR}/modules/ITK/cli)
 
 include_directories(${statismo_INCLUDE_DIRS})
 
+# Boost setup
+if(WIN32)
+  # Disable autolinking in boost
+  add_definitions(-DBOOST_ALL_NO_LIB)
+endif()
+
 # Find ITK
 find_package(ITK REQUIRED)
 include(${ITK_USE_FILE})
