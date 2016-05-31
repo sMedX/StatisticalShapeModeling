@@ -6,6 +6,11 @@ project(StatisticalShapeModeling)
 find_package(statismo REQUIRED)
 
 set(statismo_SOURCE_DIR CACHE PATH "")
+
+if(NOT statismo_SOURCE_DIR)
+  message(FATAL_ERROR "'statismo_SOURCE_DIR' is required but not specified")
+endif()
+
 list(APPEND statismo_INCLUDE_DIRS ${statismo_SOURCE_DIR}/modules/ITK/cli)
 
 include_directories(${statismo_INCLUDE_DIRS})
