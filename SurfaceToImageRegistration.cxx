@@ -61,7 +61,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  //perform GP model to image registration
+  //perform surface to image registration
   typedef SurfaceToImageRegistrationFilter<MeshType> SurfaceToImageRegistrationFilterType;
   SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
   surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);

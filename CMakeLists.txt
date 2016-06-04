@@ -34,6 +34,9 @@ endif()
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
+add_executable(baseShapeConstructor BaseShapeConstructor.cxx)
+target_link_libraries(baseShapeConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
 add_executable(maskToSurfaceConstructor MaskToSurfaceConstructor.cxx)
 target_link_libraries(maskToSurfaceConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
