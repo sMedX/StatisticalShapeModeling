@@ -102,6 +102,7 @@ int main(int argc, char** argv) {
     SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
     surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
     surfaceToImageRegistration->SetInput(surface);
+    surfaceToImageRegistration->SetTransformType(SurfaceToImageRegistrationFilterType::EnumTransformType::Rotation);
     surfaceToImageRegistration->SetPotentialImage(reference);
 
     try {

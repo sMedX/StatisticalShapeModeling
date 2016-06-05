@@ -31,6 +31,12 @@ public:
   //Set/Get shape model
   itkGetConstObjectMacro(Mask, BinaryImageType);
 
+  //Set spatial transform type
+  typedef  enum {Rotation, Scale, Affine} EnumTransformType;
+
+  itkSetMacro(TransformType, EnumTransformType);
+  itkGetConstMacro(TransformType, EnumTransformType);
+
   //Set/Get PotentialImage
   itkGetConstObjectMacro(PotentialImage, PotentialImageType);
   itkSetConstObjectMacro(PotentialImage, PotentialImageType);
@@ -80,6 +86,7 @@ protected:
   typename PotentialImageType::ConstPointer m_PotentialImage;
   typename TransformType::Pointer m_Transform;
   typename MetricType::Pointer m_Metric;
+  EnumTransformType m_TransformType;
 
   unsigned int m_NumberOfIterations = 100;
   double m_GradientConvergenceTolerance = 1e-07;
