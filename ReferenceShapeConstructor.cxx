@@ -121,7 +121,8 @@ int main(int argc, char** argv) {
   threshold->SetUpperThreshold(0);
   threshold->SetInsideValue(1);
   threshold->SetOutsideValue(0);
-  threshold->Update();*/
+  threshold->Update();
+  */
 
   if (writeImage<FloatImageType>(updateReference, outputFile)) {
     return EXIT_FAILURE;
