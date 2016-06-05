@@ -22,20 +22,26 @@ public:
 
   //inputs and output
   itkSetObjectMacro(Input, TInputMesh);
-  itkGetConstObjectMacro(Output, TOutputImage);
+  itkGetObjectMacro(Output, TOutputImage);
 
   // parameters
   itkSetMacro(Margin, double);
   itkGetMacro(Margin, double);
 
-  itkSetMacro(Spacing, double);
-  itkGetMacro(Spacing, double);
+  void SetOrigin(typename TOutputImage::PointType origin);
+  itkGetMacro(Origin, typename TOutputImage::PointType);
+
+  void SetSize(typename TOutputImage::SizeType size);
+  itkGetMacro(Size, typename TOutputImage::SizeType);
+
+  itkSetMacro(Spacing, typename TOutputImage::SpacingType);
+  itkGetMacro(Spacing, typename TOutputImage::SpacingType);
 
 public:
   void Update() { this->UpdateOutputData(); }
 
 protected:
-  SurfaceToLevelSetImageFilter() {};
+  SurfaceToLevelSetImageFilter();
   virtual ~SurfaceToLevelSetImageFilter() {};
 
   // it makes all work
@@ -43,10 +49,19 @@ protected:
 
 protected:
   typename TInputMesh::Pointer m_Input;
-  typename TOutputImage::ConstPointer m_Output;
+  typename TOutputImage::Pointer m_Output;
+  typename TInputMesh::BoundingBoxType::ConstPointer m_BoundingBox;
+
+  typename TOutputImage::PointType m_Origin;
+  bool m_UseOrigin;
+
+  typename TOutputImage::SpacingType m_Spacing;
+  bool m_UseSpacing;
+
+  typename TOutputImage::SizeType m_Size;
+  bool m_UseSize;
 
   double m_Margin = 0.25;
-  double m_Spacing = 1;
 
 private:
   SurfaceToLevelSetImageFilter(const Self&);
