@@ -1,5 +1,9 @@
 #include <itkMesh.h>
 #include <itkImage.h>
+#include <vtkMarchingCubes.h>
+#include <vtkSmoothPolyDataFilter.h>
+#include <vtkPolyDataNormals.h>
+#include <itkImageToVTKImageFilter.h>
 #include <utils/statismo-build-models-utils.h>
 
 #include "utils/io.h"
@@ -21,8 +25,11 @@ int main(int argc, char** argv) {
   std::string listFile;
   parser->GetCommandLineArgument("-list", listFile);
 
-  std::string outputFile;
-  parser->GetCommandLineArgument("-output", outputFile);
+  std::string outputLevelset;
+  parser->GetCommandLineArgument("-levelset", outputLevelset);
+
+  std::string outputSurface;
+  parser->GetCommandLineArgument("-surface", outputSurface);
 
   int numberOfIterations = 100;
   parser->GetCommandLineArgument("-iteration", numberOfIterations);
@@ -30,7 +37,8 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
   std::cout << "reference shape constructor" << std::endl;
   std::cout << "   list of files " << listFile << std::endl;
-  std::cout << "     output file " << outputFile << std::endl;
+  std::cout << " output levelset " << outputLevelset << std::endl;
+  std::cout << "  output surface " << outputSurface << std::endl;
   std::cout << "      iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
@@ -137,18 +145,79 @@ int main(int argc, char** argv) {
     }
   }
 
-  /*
-  typedef itk::BinaryThresholdImageFilter <FloatImageType, BinaryImageType> BinaryThresholdImageFilterType;
-  BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
-  threshold->SetInput(baseImageUpdate);
-  threshold->SetLowerThreshold(std::numeric_limits<FloatImageType::PixelType>::lowest());
-  threshold->SetUpperThreshold(0);
-  threshold->SetInsideValue(1);
-  threshold->SetOutsideValue(0);
-  threshold->Update();
-  */
+  std::cout << "output reference image " << outputLevelset << std::endl;
+  std::cout << "   size " << updateReference->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "spacing " << updateReference->GetSpacing() << std::endl;
+  std::cout << " origin " << updateReference->GetOrigin() << std::endl;
+  std::cout << std::endl;
 
-  if (writeImage<FloatImageType>(updateReference, outputFile)) {
+  if (!writeImage<FloatImageType>(updateReference, outputLevelset)) {
+    return EXIT_FAILURE;
+  }
+
+  //----------------------------------------------------------------------------
+  // compute reference surface
+
+  //convert ITK image to VTK image
+  typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
+  ConvertorType::Pointer convertor = ConvertorType::New();
+  convertor->SetInput(updateReference);
+  convertor->Update();
+
+  double levelValue = 0;
+  typedef vtkSmartPointer<vtkMarchingCubes> MarchingCubes;
+  MarchingCubes mcubes = MarchingCubes::New();
+  mcubes->SetInputData(convertor->GetOutput());
+  mcubes->SetValue(0, levelValue);
+
+  try {
+    mcubes->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+  float relaxation = 0.2;
+  int iterations = 10;
+
+  typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
+  SmoothPolyData smoother = SmoothPolyData::New();
+  smoother->SetInputData(mcubes->GetOutput());
+  smoother->SetNumberOfIterations(iterations);
+  smoother->SetRelaxationFactor(relaxation);
+
+  try {
+    smoother->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  typedef vtkSmartPointer<vtkPolyDataNormals> PolyDataNormals;
+  PolyDataNormals normals = PolyDataNormals::New();
+  normals->SetInputData(smoother->GetOutput());
+  normals->AutoOrientNormalsOn();
+  normals->FlipNormalsOff();
+  normals->ConsistencyOn();
+  normals->ComputeCellNormalsOff();
+  normals->SplittingOff();
+
+  try {
+    normals->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  // write surface to the file
+  std::cout << "output reference surface " << outputSurface << std::endl;
+  std::cout << " number of cells " << normals->GetOutput()->GetNumberOfCells() << std::endl;
+  std::cout << "number of points " << normals->GetOutput()->GetNumberOfPoints() << std::endl;
+  std::cout << std::endl;
+
+  if (!writeVTKPolydata(normals->GetOutput(), outputSurface)) {
     return EXIT_FAILURE;
   }
 
