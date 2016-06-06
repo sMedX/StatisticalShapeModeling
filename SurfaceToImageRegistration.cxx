@@ -33,7 +33,7 @@ int main(int argc, char** argv)
   std::cout << "  input surface file " << surfaceFile << std::endl;
   std::cout << " input levelset file " << levelsetFile << std::endl;
   std::cout << " output surface file " << outputFile << std::endl;
-  std::cout << "          iterations " << numberOfIterations << std::endl;
+  std::cout << "number of iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------

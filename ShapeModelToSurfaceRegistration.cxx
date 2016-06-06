@@ -36,13 +36,13 @@ int main(int argc, char** argv)
   parser->GetCommandLineArgument("-iteration", numberOfIterations);
 
   std::cout << std::endl;
-  std::cout << "shape model to image registration" << std::endl;
-  std::cout << "         model file " << modelFile << std::endl;
-  std::cout << " input surface file " << surfaceFile << std::endl;
-  std::cout << "output surface file " << outputFile << std::endl;
-  std::cout << "        model scale " << mscale << std::endl;
-  std::cout << "     regularization " << regularization << std::endl;
-  std::cout << "         iterations " << numberOfIterations << std::endl;
+  std::cout << " shape model to image registration" << std::endl;
+  std::cout << "          model file " << modelFile << std::endl;
+  std::cout << "  input surface file " << surfaceFile << std::endl;
+  std::cout << " output surface file " << outputFile << std::endl;
+  std::cout << "         model scale " << mscale << std::endl;
+  std::cout << "      regularization " << regularization << std::endl;
+  std::cout << "number of iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
