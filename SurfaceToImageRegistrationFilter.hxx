@@ -162,7 +162,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
   int numberOfTranslationComponents = 3;
   int numberOfScalingComponents = 3;
 
-  if (m_TransformType == EnumTransformType::Rotation) {
+  if (m_TypeOfTransform == EnumTransformType::Rotation) {
     // Euler3DTransform
     typedef itk::Euler3DTransform<double> Euler3DTransformType;
     Euler3DTransformType::Pointer rigid3DTransform = Euler3DTransformType::New();
@@ -185,7 +185,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
       m_Scales[count] = 1.0 / m_TranslationScale;
     }
   }
-  else if (m_TransformType == EnumTransformType::Similarity) {
+  else if (m_TypeOfTransform == EnumTransformType::Similarity) {
     // Similarity3DTransform
     typedef itk::Similarity3DTransform<double> Similarity3DTransformType;
     Similarity3DTransformType::Pointer Similarity3DTransform = Similarity3DTransformType::New();
@@ -305,7 +305,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::PrintReport(std:
   os << m_Transform->GetTransformTypeAsString() << std::endl;
   os << "scales " << m_Scales << std::endl;
 
-  if (m_TransformType != EnumTransformType::Affine) {
+  if (m_TypeOfTransform != EnumTransformType::Affine) {
     os << std::endl;
     os << "1) " << m_Transform->GetTransformTypeAsString() << ", number of parameters ";
     os << m_Transform->GetNumberOfParameters() << std::endl;

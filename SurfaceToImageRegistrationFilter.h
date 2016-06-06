@@ -35,8 +35,8 @@ public:
   //Set spatial transform type
   typedef  enum { Rotation, Similarity, Affine } EnumTransformType;
 
-  itkSetMacro(TransformType, EnumTransformType);
-  itkGetConstMacro(TransformType, EnumTransformType);
+  itkSetMacro(TypeOfTransform, EnumTransformType);
+  itkGetConstMacro(TypeOfTransform, EnumTransformType);
 
   //Set/Get PotentialImage
   itkGetConstObjectMacro(LevelsetImage, LevelsetImageType);
@@ -86,7 +86,7 @@ protected:
   typename BinaryImageType::ConstPointer m_Mask;
   typename LevelsetImageType::ConstPointer m_LevelsetImage;
   typename MetricType::Pointer m_Metric;
-  EnumTransformType m_TransformType;
+  EnumTransformType m_TypeOfTransform;
   typename TransformType::Pointer m_Transform;
   typename CompositeTransformType::Pointer m_CompositeTransform;
 

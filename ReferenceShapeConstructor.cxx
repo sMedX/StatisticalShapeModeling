@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
       typeOfTransform = EnumTransformType::Affine;
       refFileName = outputSurface;
     }
+
     std::cout << "stage " << stage << std::endl;
     std::cout << "type of transform " << typeOfTransform << std::endl;
     std::cout << "reference surface " << refFileName << std::endl;
@@ -112,8 +113,7 @@ int main(int argc, char** argv) {
       SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
       surfaceToImageRegistration->SetInput(surface);
-
-      surfaceToImageRegistration->SetTransformType(typeOfTransform);
+      surfaceToImageRegistration->SetTypeOfTransform(typeOfTransform);
       surfaceToImageRegistration->SetLevelsetImage(reference);
 
       try {

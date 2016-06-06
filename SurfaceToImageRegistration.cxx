@@ -63,7 +63,11 @@ int main(int argc, char** argv)
   //----------------------------------------------------------------------------
   //perform surface to image registration
   typedef SurfaceToImageRegistrationFilter<MeshType> SurfaceToImageRegistrationFilterType;
+  typedef SurfaceToImageRegistrationFilterType::EnumTransformType EnumTransformType;
+  EnumTransformType typeOfTransform = EnumTransformType::Affine;
+
   SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
+  surfaceToImageRegistration->SetTypeOfTransform(typeOfTransform);
   surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
   surfaceToImageRegistration->SetInput(surface);
   surfaceToImageRegistration->SetLevelsetImage(levelset);
