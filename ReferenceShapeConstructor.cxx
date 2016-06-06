@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
     surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
     surfaceToImageRegistration->SetInput(surface);
     surfaceToImageRegistration->SetTransformType(SurfaceToImageRegistrationFilterType::EnumTransformType::Rotation);
-    surfaceToImageRegistration->SetPotentialImage(reference);
+    surfaceToImageRegistration->SetLevelsetImage(reference);
 
     try {
       surfaceToImageRegistration->Update();

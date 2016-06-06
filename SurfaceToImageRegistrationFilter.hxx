@@ -3,6 +3,7 @@
 
 #include <itkEuler3DTransform.h>
 #include <itkScaleTransform.h>
+#include <itkSimilarity3DTransform.h>
 #include <itkTransformMeshFilter.h>
 #include <itkImageMomentsCalculator.h>
 #include <itkLBFGSBOptimizer.h>
@@ -58,7 +59,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
   m_Optimizer->MinimizeOn();
 
   //define metric
-  typedef itk::MeanSquaresPointSetToImageMetric<PointSetType, PotentialImageType> MetricType;
+  typedef itk::MeanSquaresPointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
   m_Metric = MetricType::New();
 
   //run point set to image registration
@@ -70,7 +71,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
   registration->SetOptimizer(m_Optimizer);
   registration->SetTransform(m_Transform);
   registration->SetFixedPointSet(m_PointSet);
-  registration->SetMovingImage(m_PotentialImage);
+  registration->SetMovingImage(m_LevelsetImage);
 
   try {
     registration->Update();
@@ -87,10 +88,10 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
 template <typename TInputMesh, typename TOutputMesh>
 void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::ComputeLabelImage()
 {
-  typedef itk::BinaryThresholdImageFilter <PotentialImageType, BinaryImageType> BinaryThresholdImageFilterType;
+  typedef itk::BinaryThresholdImageFilter <LevelsetImageType, BinaryImageType> BinaryThresholdImageFilterType;
   BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
-  threshold->SetInput(m_PotentialImage);
-  threshold->SetLowerThreshold(std::numeric_limits<PotentialImageType::PixelType>::lowest());
+  threshold->SetInput(m_LevelsetImage);
+  threshold->SetLowerThreshold(std::numeric_limits<LevelsetImageType::PixelType>::lowest());
   threshold->SetUpperThreshold(0);
   threshold->SetInsideValue(1);
   threshold->SetOutsideValue(0);
@@ -160,58 +161,109 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
   int numberOfRotationComponents = 3;
   int numberOfTranslationComponents = 3;
   int numberOfScalingComponents = 3;
-  int numberOfOptimizationParameters = 15;
 
-  //initialize transforms of the model
-  m_Scales.set_size(numberOfOptimizationParameters);
-  size_t count = 0;
+  if (m_TransformType == EnumTransformType::Rotation) {
+    // Euler3DTransform
+    typedef itk::Euler3DTransform<double> Euler3DTransformType;
+    Euler3DTransformType::Pointer rigid3DTransform = Euler3DTransformType::New();
+    rigid3DTransform->SetIdentity();
+    rigid3DTransform->SetCenter(center);
+    rigid3DTransform->SetTranslation(translation);
 
-  //second Euler 3D transform
-  typedef itk::Euler3DTransform<double> Euler3DTransformType;
-  Euler3DTransformType::Pointer rigid3DTransform2 = Euler3DTransformType::New();
-  rigid3DTransform2->SetIdentity();
-  rigid3DTransform2->SetCenter(center);
-  rigid3DTransform2->SetTranslation(translation);
+    m_Transform = rigid3DTransform;
 
-  for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
-    m_Scales[count] = 1.0 / m_RotationScale;
+    //define scales
+    int numberOfOptimizationParameters = rigid3DTransform->GetNumberOfParameters();
+    m_Scales.set_size(numberOfOptimizationParameters);
+    size_t count = 0;
+
+    for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_RotationScale;
+    }
+
+    for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_TranslationScale;
+    }
   }
+  else if (m_TransformType == EnumTransformType::Similarity) {
+    // Similarity3DTransform
+    typedef itk::Similarity3DTransform<double> Similarity3DTransformType;
+    Similarity3DTransformType::Pointer Similarity3DTransform = Similarity3DTransformType::New();
+    Similarity3DTransform->SetIdentity();
+    Similarity3DTransform->SetCenter(center);
+    Similarity3DTransform->SetTranslation(translation);
 
-  for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-    m_Scales[count] = 1.0 / m_TranslationScale;
-  }
+    m_Transform = Similarity3DTransform;
 
-  //scale transform
-  typedef itk::ScaleTransform<double, PointDimension> ScaleTransformType;
-  typename ScaleTransformType::Pointer scaleTransform = ScaleTransformType::New();
-  scaleTransform->SetIdentity();
-  scaleTransform->SetCenter(center);
+    //define scales
+    int numberOfOptimizationParameters = Similarity3DTransform->GetNumberOfParameters();
+    m_Scales.set_size(numberOfOptimizationParameters);
+    size_t count = 0;
 
-  for (int i = 0; i < numberOfScalingComponents; ++i, ++count) {
+    for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_RotationScale;
+    }
+
+    for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_TranslationScale;
+    }
+
     m_Scales[count] = 1.0 / m_ScalingScale;
   }
+  else {
+    //initialize transforms of the model
+    int numberOfOptimizationParameters = 15;
+    m_Scales.set_size(numberOfOptimizationParameters);
+    size_t count = 0;
 
-  //first Euler 3D transform
-  typedef itk::Euler3DTransform<double> VersorTransformType;
-  VersorTransformType::Pointer rigid3DTransform1 = VersorTransformType::New();
-  rigid3DTransform1->SetIdentity();
-  rigid3DTransform1->SetCenter(center);
+    //second Euler 3D transform
+    typedef itk::Euler3DTransform<double> Euler3DTransformType;
+    Euler3DTransformType::Pointer rigid3DTransform2 = Euler3DTransformType::New();
+    rigid3DTransform2->SetIdentity();
+    rigid3DTransform2->SetCenter(center);
+    rigid3DTransform2->SetTranslation(translation);
 
-  for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
-    m_Scales[count] = 1.0 / m_RotationScale;
+    for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_RotationScale;
+    }
+
+    for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_TranslationScale;
+    }
+
+    //scale transform
+    typedef itk::ScaleTransform<double, PointDimension> ScaleTransformType;
+    typename ScaleTransformType::Pointer scaleTransform = ScaleTransformType::New();
+    scaleTransform->SetIdentity();
+    scaleTransform->SetCenter(center);
+
+    for (int i = 0; i < numberOfScalingComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_ScalingScale;
+    }
+
+    //first Euler 3D transform
+    Euler3DTransformType::Pointer rigid3DTransform1 = Euler3DTransformType::New();
+    rigid3DTransform1->SetIdentity();
+    rigid3DTransform1->SetCenter(center);
+
+    for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_RotationScale;
+    }
+
+    for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      m_Scales[count] = 1.0 / m_TranslationScale;
+    }
+
+    // composite transform OutputPoint = rigid3DTransform2( scaleTransform ( rigid3DTransform1(InputPoint)))
+    m_CompositeTransform = CompositeTransformType::New();
+    m_CompositeTransform->AddTransform(rigid3DTransform2);   //transform 0
+    m_CompositeTransform->AddTransform(scaleTransform);      //transform 1
+    m_CompositeTransform->AddTransform(rigid3DTransform1);   //transform 2
+    m_CompositeTransform->SetAllTransformsToOptimizeOn();
+
+    m_Transform = m_CompositeTransform;
   }
 
-  for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-    m_Scales[count] = 1.0 / m_TranslationScale;
-  }
-
-  // composite transform OutputPoint = rigid3DTransform2( scaleTransform ( rigid3DTransform1(InputPoint)))
-  m_Transform = TransformType::New();
-  m_Transform->AddTransform(rigid3DTransform2);   //transform 0
-  m_Transform->AddTransform(scaleTransform);      //transform 1
-  m_Transform->AddTransform(rigid3DTransform1);   //transform 2
-
-  m_Transform->SetAllTransformsToOptimizeOn();
 }
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
@@ -251,15 +303,23 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::PrintReport(std:
   }
 
   os << m_Transform->GetTransformTypeAsString() << std::endl;
-  os << "scales" << std::endl;
-  os << m_Scales << std::endl;
+  os << "scales " << m_Scales << std::endl;
 
-  for (int n = 0; n < m_Transform->GetNumberOfTransforms(); ++n) {
+  if (m_TransformType != EnumTransformType::Affine) {
     os << std::endl;
-    os << n << ") " << m_Transform->GetNthTransformConstPointer(n)->GetTransformTypeAsString() << ", number of parameters ";
-    os << m_Transform->GetNthTransformConstPointer(n)->GetNumberOfParameters() << std::endl;
-    os << "transform category " << m_Transform->GetNthTransformConstPointer(n)->GetTransformCategory() << std::endl;
-    os << m_Transform->GetNthTransformConstPointer(n)->GetParameters() << std::endl;
+    os << "1) " << m_Transform->GetTransformTypeAsString() << ", number of parameters ";
+    os << m_Transform->GetNumberOfParameters() << std::endl;
+    os << "transform category " << m_Transform->GetTransformCategory() << std::endl;
+    os << m_Transform->GetParameters() << std::endl;
+  }
+  else {
+    for (int n = 0; n < m_CompositeTransform->GetNumberOfTransforms(); ++n) {
+      os << std::endl;
+      os << n+1 << ") " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformTypeAsString() << ", number of parameters ";
+      os << m_CompositeTransform->GetNthTransformConstPointer(n)->GetNumberOfParameters() << std::endl;
+      os << "transform category " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformCategory() << std::endl;
+      os << m_CompositeTransform->GetNthTransformConstPointer(n)->GetParameters() << std::endl;
+    }
   }
 }
 //----------------------------------------------------------------------------
