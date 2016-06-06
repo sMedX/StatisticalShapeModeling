@@ -46,7 +46,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
   this->InitializeTransform();
 
   //define interpolator
-  typedef itk::LinearInterpolateImageFunction<FloatImageType, double> InterpolatorType;
+  typedef itk::LinearInterpolateImageFunction<LevelsetImageType, double> InterpolatorType;
   InterpolatorType::Pointer interpolator = InterpolatorType::New();
 
   //define optimizer
@@ -63,7 +63,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
   m_Metric = MetricType::New();
 
   //run point set to image registration
-  typedef itk::PointSetToImageRegistrationMethod<PointSetType, FloatImageType> RegistrationFilterType;
+  typedef itk::PointSetToImageRegistrationMethod<PointSetType, LevelsetImageType> RegistrationFilterType;
   typename RegistrationFilterType::Pointer registration = RegistrationFilterType::New();
   registration->SetInitialTransformParameters(m_Transform->GetParameters());
   registration->SetMetric(m_Metric);

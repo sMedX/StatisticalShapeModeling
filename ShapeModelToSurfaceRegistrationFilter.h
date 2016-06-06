@@ -30,7 +30,7 @@ public:
   typedef itk::PenalizingMeanSquaresPointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
 
   itkNewMacro(Self);
-  itkTypeMacro(ShapeModelToSurfaceRegistrationFilter, itk::ImageToMeshFilter);
+  itkTypeMacro(ShapeModelToSurfaceRegistrationFilter, itk::MeshToMeshFilter);
 
   //Set/Get shape model
   itkSetConstObjectMacro(ShapeModel, ModelType);

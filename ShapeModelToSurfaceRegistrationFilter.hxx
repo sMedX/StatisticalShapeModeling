@@ -61,7 +61,7 @@ void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::GenerateDat
   m_Metric->SetNumberOfModelComponents(m_ShapeModel->GetNumberOfPrincipalComponents());
 
   //define interpolator
-  typedef itk::LinearInterpolateImageFunction<FloatImageType, double> InterpolatorType;
+  typedef itk::LinearInterpolateImageFunction<LevelsetImageType, double> InterpolatorType;
   InterpolatorType::Pointer interpolator = InterpolatorType::New();
 
   //define optimizer
@@ -75,7 +75,7 @@ void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::GenerateDat
 
   //run registration with a shape model
   //point set to image registration method
-  typedef itk::PointSetToImageRegistrationMethod<PointSetType, FloatImageType> RegistrationFilterType;
+  typedef itk::PointSetToImageRegistrationMethod<PointSetType, LevelsetImageType> RegistrationFilterType;
   typename RegistrationFilterType::Pointer m_Registration = RegistrationFilterType::New();
   m_Registration->SetInitialTransformParameters(m_Transform->GetParameters());
   m_Registration->SetMetric(m_Metric);
