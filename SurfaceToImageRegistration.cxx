@@ -16,8 +16,8 @@ int main(int argc, char** argv)
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string potentialFile;
-  parser->GetCommandLineArgument("-potential", potentialFile);
+  std::string levelsetFile;
+  parser->GetCommandLineArgument("-levelset", levelsetFile);
 
   std::string surfaceFile;
   parser->GetCommandLineArgument("-surface", surfaceFile);
@@ -31,7 +31,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
   std::cout << "input parameters" << std::endl;
   std::cout << "  input surface file " << surfaceFile << std::endl;
-  std::cout << "input potential file " << potentialFile << std::endl;
+  std::cout << " input levelset file " << levelsetFile << std::endl;
   std::cout << " output surface file " << outputFile << std::endl;
   std::cout << "          iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
@@ -49,15 +49,15 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   // read image
-  FloatImageType::Pointer potential = FloatImageType::New();
-  if (!readImage<FloatImageType>(potential, potentialFile)) {
+  FloatImageType::Pointer levelset = FloatImageType::New();
+  if (!readImage<FloatImageType>(levelset, levelsetFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "input potential image " << potentialFile << std::endl;
-  std::cout << "       size " << potential->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "    spacing " << potential->GetSpacing() << std::endl;
-  std::cout << "     origin " << potential->GetOrigin() << std::endl;
+  std::cout << "input level set image " << levelsetFile << std::endl;
+  std::cout << "       size " << levelset->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "    spacing " << levelset->GetSpacing() << std::endl;
+  std::cout << "     origin " << levelset->GetOrigin() << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
   SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
   surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
   surfaceToImageRegistration->SetInput(surface);
-  surfaceToImageRegistration->SetPotentialImage(potential);
+  surfaceToImageRegistration->SetLevelsetImage(levelset);
 
   try {
     surfaceToImageRegistration->Update();
@@ -95,15 +95,15 @@ int main(int argc, char** argv)
   }
 
   //Compute metrics
-  typedef SurfaceToImageRegistrationFilterType::PotentialImageType PotentialImageType;
+  typedef SurfaceToImageRegistrationFilterType::LevelsetImageType LevelsetImageType;
   typedef SurfaceToImageRegistrationFilterType::PointSetType PointSetType;
   PointSetType::Pointer pointSet = PointSetType::New();
   pointSet->SetPoints(surfaceToImageRegistration->GetOutput()->GetPoints());
 
-  typedef PointSetToImageMetrics<PointSetType, PotentialImageType> PointSetToImageMetricsType;
+  typedef PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
-  metrics->SetMovingImage(surfaceToImageRegistration->GetPotentialImage());
+  metrics->SetMovingImage(surfaceToImageRegistration->GetLevelsetImage());
   metrics->Compute();
   metrics->PrintReport(std::cout);
 

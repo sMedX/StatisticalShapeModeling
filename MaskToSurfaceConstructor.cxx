@@ -31,11 +31,11 @@ int main(int argc, char** argv) {
   std::string maskFile;
   parser->GetCommandLineArgument("-mask", maskFile);
 
-  std::string outputSurfaceFile;
-  parser->GetCommandLineArgument("-output", outputSurfaceFile);
+  std::string surfaceFile;
+  parser->GetCommandLineArgument("-surface", surfaceFile);
 
-  std::string outputPotentialFile;
-  parser->GetCommandLineArgument("-potential", outputPotentialFile);
+  std::string levelsetFile;
+  parser->GetCommandLineArgument("-levelset", levelsetFile);
 
   float spacing = 1;
   parser->GetCommandLineArgument("-spacing", spacing);
@@ -167,21 +167,22 @@ int main(int argc, char** argv) {
   vtkSmartPointer<vtkPolyData> surface = normals->GetOutput();
 
   // write polydata to the file
-  if (!writeVTKPolydata(surface, outputSurfaceFile)) {
+  if (!writeVTKPolydata(surface, surfaceFile)) {
     return EXIT_FAILURE;
   }
   
   std::cout << "output surface polydata info" << std::endl;
-  std::cout << outputSurfaceFile << std::endl;
+  std::cout << surfaceFile << std::endl;
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   //compute potential map image
-  if (!parser->ArgumentExists("-potential")) {
+  if (!parser->ArgumentExists("-levelset")) {
     return EXIT_SUCCESS;
   }
+
   typedef itk::BinaryThresholdImageFilter <FloatImageType, BinaryImageType> BinaryThresholdImageFilterType;
   BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
   threshold->SetInput(processedImage);
@@ -196,18 +197,18 @@ int main(int argc, char** argv) {
   distancemap->SetInput(threshold->GetOutput());
   distancemap->Update();
 
-  FloatImageType::Pointer potentialImage = distancemap->GetOutput();
+  FloatImageType::Pointer levelsetImage = distancemap->GetOutput();
 
   // write potential image to the file
-  if (!writeImage<FloatImageType>(potentialImage, outputPotentialFile)) {
+  if (!writeImage<FloatImageType>(levelsetImage, levelsetFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "output potential image info" << std::endl;
-  std::cout << outputPotentialFile << std::endl;
-  std::cout << "   size " << potentialImage->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "spacing " << potentialImage->GetSpacing() << std::endl;
-  std::cout << " origin " << potentialImage->GetOrigin() << std::endl;
+  std::cout << "output level set image info" << std::endl;
+  std::cout << levelsetFile << std::endl;
+  std::cout << "   size " << levelsetImage->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "spacing " << levelsetImage->GetSpacing() << std::endl;
+  std::cout << " origin " << levelsetImage->GetOrigin() << std::endl;
 
   return EXIT_SUCCESS;
 }
