@@ -25,9 +25,9 @@ public:
   typedef itk::StatisticalShapeModelTransform<TOutputMesh, double, TInputMesh::PointDimension> ModelTransformType;
   typedef itk::PointSet<float, TInputMesh::PointDimension> PointSetType;
   typedef itk::Image<unsigned char, TInputMesh::PointDimension> BinaryImageType;
-  typedef itk::Image<float, TInputMesh::PointDimension> PotentialImageType;
+  typedef itk::Image<float, TInputMesh::PointDimension> LevelsetImageType;
   typedef itk::StatisticalModel<TOutputMesh> ModelType;
-  typedef itk::PenalizingMeanSquaresPointSetToImageMetric<PointSetType, PotentialImageType> MetricType;
+  typedef itk::PenalizingMeanSquaresPointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
 
   itkNewMacro(Self);
   itkTypeMacro(ShapeModelToSurfaceRegistrationFilter, itk::ImageToMeshFilter);
@@ -38,7 +38,7 @@ public:
 
   //Get PotentialImage
   itkGetConstObjectMacro(Optimizer, OptimizerType);
-  itkGetConstObjectMacro(PotentialImage, PotentialImageType);
+  itkGetConstObjectMacro(LevelsetImage, LevelsetImageType);
 
   itkSetMacro(NumberOfIterations, unsigned int);
   itkGetMacro(NumberOfIterations, unsigned int);
@@ -58,8 +58,8 @@ public:
   itkSetMacro(Margin, double);
   itkGetMacro(Margin, double);
 
-  itkSetMacro(Spacing, double);
-  itkGetMacro(Spacing, double);
+  itkSetMacro(Spacing, typename LevelsetImageType::SpacingType);
+  itkGetMacro(Spacing, typename LevelsetImageType::SpacingType);
 
   //Set/Get scaling
   itkSetMacro(ModelScale, double);
@@ -73,7 +73,6 @@ protected:
 
   virtual void GenerateData() override;
   void InitializeTransform();
-  void ComputePotentialImage();
   void GenerateOutputData();
 
   itkStaticConstMacro(Dimension, unsigned int, TInputMesh::PointDimension);
@@ -81,7 +80,7 @@ protected:
 
   OptimizerType::Pointer m_Optimizer;
   typename ModelType::ConstPointer m_ShapeModel;
-  typename PotentialImageType::ConstPointer m_PotentialImage;
+  typename LevelsetImageType::ConstPointer m_LevelsetImage;
   typename TInputMesh::Pointer m_Surface;
   typename PointSetType::Pointer m_PointSet;
   typename MetricType::Pointer m_Metric;
@@ -96,9 +95,9 @@ protected:
   double m_RegularizationParameter = 0.1;
 
   ScalesType m_Scales;
+  typename LevelsetImageType::SpacingType m_Spacing;
   double m_ModelScale = 3;
   double m_Margin = 0.25;
-  double m_Spacing = 1;
 };
 
 #ifndef ITK_MANUAL_INSTANTIATION

@@ -103,15 +103,15 @@ int main(int argc, char** argv)
   }
 
   //Compute metrics
-  typedef ShapeModelToSurfaceRegistrationFilterType::PotentialImageType PotentialImageType;
+  typedef ShapeModelToSurfaceRegistrationFilterType::LevelsetImageType LevelsetImageType;
   typedef ShapeModelToSurfaceRegistrationFilterType::PointSetType PointSetType;
   PointSetType::Pointer pointSet = PointSetType::New();
   pointSet->SetPoints(shapeModelToSurfaceRegistration->GetOutput()->GetPoints());
 
-  typedef PointSetToImageMetrics<PointSetType, PotentialImageType> PointSetToImageMetricsType;
+  typedef PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
-  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetPotentialImage());
+  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelsetImage());
   metrics->Compute();
   metrics->PrintReport(std::cout);
 
