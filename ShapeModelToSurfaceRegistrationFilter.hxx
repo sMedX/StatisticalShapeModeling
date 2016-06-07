@@ -117,19 +117,19 @@ void ShapeModelToSurfaceRegistrationFilter<TInputMesh, TOutputMesh>::GenerateOut
 {
   //compute output
   typedef itk::TransformMeshFilter<TOutputMesh, TOutputMesh, ModelTransformType> ModelTransformFilterType;
-  typename ModelTransformFilterType::Pointer transformModelSurface = ModelTransformFilterType::New();
-  transformModelSurface->SetInput(m_ShapeModel->GetRepresenter()->GetReference());
-  transformModelSurface->SetTransform(m_Transform);
+  typename ModelTransformFilterType::Pointer transform = ModelTransformFilterType::New();
+  transform->SetInput(m_ShapeModel->GetRepresenter()->GetReference());
+  transform->SetTransform(m_Transform);
 
   try {
-    transformModelSurface->Update();
+    transform->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cout << excep << std::endl;
     itkExceptionMacro(<< excep);
   }
 
-  this->GraftOutput(transformModelSurface->GetOutput());
+  this->GraftOutput(transform->GetOutput());
 }
 //----------------------------------------------------------------------------
 template <typename TInputMesh, typename TOutputMesh>
