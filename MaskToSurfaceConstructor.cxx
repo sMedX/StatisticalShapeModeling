@@ -11,8 +11,6 @@
 #include <vtkSmoothPolyDataFilter.h>
 #include <vtkPolyDataNormals.h>
 #include <itkImageToVTKImageFilter.h>
-#include <itkSignedMaurerDistanceMapImageFilter.h>
-#include <itkBinaryThresholdImageFilter.h>
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
@@ -176,39 +174,6 @@ int main(int argc, char** argv) {
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
-
-  //----------------------------------------------------------------------------
-  //compute potential map image
-  if (!parser->ArgumentExists("-levelset")) {
-    return EXIT_SUCCESS;
-  }
-
-  typedef itk::BinaryThresholdImageFilter <FloatImageType, BinaryImageType> BinaryThresholdImageFilterType;
-  BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
-  threshold->SetInput(processedImage);
-  threshold->SetLowerThreshold(levelValue);
-  threshold->SetUpperThreshold(std::numeric_limits<float>::max());
-  threshold->SetInsideValue(1);
-  threshold->SetOutsideValue(0);
-
-  typedef itk::SignedMaurerDistanceMapImageFilter<BinaryImageType, FloatImageType> SignedMaurerDistanceMapImageFilterType;
-  SignedMaurerDistanceMapImageFilterType::Pointer distancemap = SignedMaurerDistanceMapImageFilterType::New();
-  distancemap->SetUseImageSpacing(true);
-  distancemap->SetInput(threshold->GetOutput());
-  distancemap->Update();
-
-  FloatImageType::Pointer levelsetImage = distancemap->GetOutput();
-
-  // write potential image to the file
-  if (!writeImage<FloatImageType>(levelsetImage, levelsetFile)) {
-    return EXIT_FAILURE;
-  }
-
-  std::cout << "output level set image info" << std::endl;
-  std::cout << levelsetFile << std::endl;
-  std::cout << "   size " << levelsetImage->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "spacing " << levelsetImage->GetSpacing() << std::endl;
-  std::cout << " origin " << levelsetImage->GetOrigin() << std::endl;
 
   return EXIT_SUCCESS;
 }
