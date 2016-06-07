@@ -27,10 +27,7 @@ public:
   typedef itk::PointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
 
   itkNewMacro(Self);
-  itkTypeMacro(surfaceToImageRegistration, itk::MeshToMeshFilter);
-
-  //Set/Get shape model
-  itkGetConstObjectMacro(Mask, BinaryImageType);
+  itkTypeMacro(SurfaceToImageRegistrationFilter, itk::MeshToMeshFilter);
 
   //Set spatial transform type
   typedef  enum { Rotation, Similarity, Affine } EnumTransformType;

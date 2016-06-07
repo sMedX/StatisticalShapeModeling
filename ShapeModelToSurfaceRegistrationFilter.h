@@ -86,8 +86,6 @@ protected:
   typename MetricType::Pointer m_Metric;
   typename ModelTransformType::Pointer m_Transform;
 
-  int m_ModelTransformIndex;
-
   unsigned int m_NumberOfIterations = 100;
   double m_GradientConvergenceTolerance = 1e-07;
   double m_LineSearchAccuracy = 0.1;
