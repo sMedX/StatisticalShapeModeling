@@ -34,11 +34,14 @@ endif()
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
-add_executable(referenceShapeConstructor ReferenceShapeConstructor.cxx)
-target_link_libraries(referenceShapeConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES})
-
 add_executable(maskToSurfaceConstructor MaskToSurfaceConstructor.cxx)
 target_link_libraries(maskToSurfaceConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+add_executable(reduceSurface ReduceSurface.cxx)
+target_link_libraries(reduceSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
+add_executable(referenceShapeConstructor ReferenceShapeConstructor.cxx)
+target_link_libraries(referenceShapeConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
 add_executable(surfaceToImageRegistration SurfaceToImageRegistration.cxx)
 target_link_libraries(surfaceToImageRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
