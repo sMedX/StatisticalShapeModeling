@@ -321,6 +321,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::PrintReport(std:
       os << m_CompositeTransform->GetNthTransformConstPointer(n)->GetParameters() << std::endl;
     }
   }
+  os << std::endl;
 }
 //----------------------------------------------------------------------------
 #endif
