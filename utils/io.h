@@ -200,5 +200,19 @@ std::string getFileNameFromPath(const std::string& fileName)
   return fileName.substr(idx1 + 1, idx2 - idx1);
 }
 
+std::string addFileNameSuffix(const std::string& fileName, const::std::string& suffix)
+{
+  std::string::size_type idx = fileName.find_last_of(".");
+
+  return fileName.substr(0, idx) + suffix + fileName.substr(idx);
+}
+
+std::string getBaseNameFromPath(const std::string& fileName)
+{
+  size_t idx1 = fileName.find_last_of("\\/");
+  size_t idx2 = fileName.find_last_of(".");
+
+  return fileName.substr(idx1 + 1, idx2 - idx1 - 1);
+}
 
 #endif

@@ -23,8 +23,11 @@ int main(int argc, char** argv) {
   std::string listFile;
   parser->GetCommandLineArgument("-list", listFile);
 
-  std::string refFile;
-  parser->GetCommandLineArgument("-reference", refFile);
+  std::string outputSurfaceFile;
+  parser->GetCommandLineArgument("-surface", outputSurfaceFile);
+
+  std::string outputReferenceFile;
+  parser->GetCommandLineArgument("-reference", outputReferenceFile);
 
   int numberOfStages = 3;
   parser->GetCommandLineArgument("-stage", numberOfStages);
@@ -35,7 +38,8 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
   std::cout << "reference shape constructor" << std::endl;
   std::cout << "    list of files " << listFile << std::endl;
-  std::cout << " output reference " << refFile << std::endl;
+  std::cout << "   output surface " << outputSurfaceFile << std::endl;
+  std::cout << " output reference " << outputReferenceFile << std::endl;
   std::cout << " number of stages " << numberOfStages << std::endl;
   std::cout << "       iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
@@ -168,13 +172,13 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  std::cout << "output reference image " << refFile << std::endl;
+  std::cout << "output reference image " << outputReferenceFile << std::endl;
   std::cout << "   size " << reference->GetLargestPossibleRegion().GetSize() << std::endl;
   std::cout << "spacing " << reference->GetSpacing() << std::endl;
   std::cout << " origin " << reference->GetOrigin() << std::endl;
   std::cout << std::endl;
 
-  if (!writeImage<FloatImageType>(reference, refFile)) {
+  if (!writeImage<FloatImageType>(reference, outputReferenceFile)) {
     return EXIT_FAILURE;
   }
 
@@ -199,7 +203,9 @@ int main(int argc, char** argv) {
 
   // write alignment surfaces
   for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
-    std::string fileName = getDirectoryFromPath(refFile) + "/" + getFileNameFromPath(vectorOfFiles[count]);
+    // define full file name for output surface
+    std::string fileName = getDirectoryFromPath(outputSurfaceFile) + "/";
+    fileName = fileName + getBaseNameFromPath(vectorOfFiles[count]) + "-" + getFileNameFromPath(outputSurfaceFile);
 
     std::cout << "output surface polydata info" << std::endl;
     std::cout << fileName << std::endl;
