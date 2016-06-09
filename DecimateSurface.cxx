@@ -54,6 +54,8 @@ int main(int argc, char** argv) {
   vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
   decimate->SetInputData(inputSurface);
   decimate->SetTargetReduction(reduction);
+  decimate->SetPreserveTopology(true);
+  decimate->SetSplitting(false);
   decimate->Update();
 
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;

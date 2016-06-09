@@ -184,4 +184,21 @@ bool readTransform(TransformListType transforms, const std::string& fileName)
   return true;
 }
 
+//----------------------------------------------------------------------------
+std::string getDirectoryFromPath(const std::string& fileName)
+{
+  size_t idx = fileName.find_last_of("\\/");
+
+  return fileName.substr(0, idx);
+}
+
+std::string getFileNameFromPath(const std::string& fileName)
+{
+  size_t idx1 = fileName.find_last_of("\\/");
+  size_t idx2 = fileName.size();
+
+  return fileName.substr(idx1 + 1, idx2 - idx1);
+}
+
+
 #endif
