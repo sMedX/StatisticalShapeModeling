@@ -27,8 +27,8 @@ int main(int argc, char** argv) {
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string maskFile;
-  parser->GetCommandLineArgument("-mask", maskFile);
+  std::string labelFile;
+  parser->GetCommandLineArgument("-label", labelFile);
 
   std::string surfaceFile;
   parser->GetCommandLineArgument("-surface", surfaceFile);
@@ -52,32 +52,32 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-iteration", iterations);
 
   std::cout << std::endl;
-  std::cout << " input parameters " << std::endl;
-  std::cout << " number of points " << numberOfPoints << std::endl;
-  std::cout << "          spacing " << spacing << std::endl;
-  std::cout << "            sigma " << sigma << std::endl;
-  std::cout << "       relaxation " << relaxation << std::endl;
-  std::cout << "       iterations " << iterations << std::endl;
+  std::cout << "parameters " << std::endl;
+  std::cout << "number of points " << numberOfPoints << std::endl;
+  std::cout << "         spacing " << spacing << std::endl;
+  std::cout << "           sigma " << sigma << std::endl;
+  std::cout << "      relaxation " << relaxation << std::endl;
+  std::cout << "      iterations " << iterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   // read image
 
-  BinaryImageType::Pointer mask = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(mask, maskFile)) {
+  BinaryImageType::Pointer label = BinaryImageType::New();
+  if (!readImage<BinaryImageType>(label, labelFile)) {
     return EXIT_FAILURE;
   }
 
-  std::cout << "input mask info" << std::endl;
-  std::cout << maskFile << std::endl;
-  std::cout << "   size " << mask->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "spacing " << mask->GetSpacing() << std::endl;
-  std::cout << " origin " << mask->GetOrigin() << std::endl;
+  std::cout << "input label info" << std::endl;
+  std::cout << labelFile << std::endl;
+  std::cout << "   size " << label->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "spacing " << label->GetSpacing() << std::endl;
+  std::cout << " origin " << label->GetOrigin() << std::endl;
   std::cout << std::endl;
 
   typedef itk::RecursiveGaussianImageFilter<BinaryImageType, FloatImageType> RecursiveGaussianImageFilterType;
   RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
-  gaussian->SetInput(mask);
+  gaussian->SetInput(label);
   gaussian->SetSigma(sigma);
   gaussian->Update();
 
@@ -94,7 +94,7 @@ int main(int argc, char** argv) {
   BinaryImageType::SizeType outputSize;
 
   for (int i = 0; i < Dimension; ++i) {
-    outputSize[i] = mask->GetLargestPossibleRegion().GetSize()[i] * mask->GetSpacing()[i] / spacing;
+    outputSize[i] = label->GetLargestPossibleRegion().GetSize()[i] * label->GetSpacing()[i] / spacing;
   }
 
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
@@ -110,14 +110,14 @@ int main(int argc, char** argv) {
   FloatImageType::Pointer processedImage = resampler->GetOutput();
 
   //----------------------------------------------------------------------------
-  //compute surface
+  // compute surface
   typedef itk::MinimumMaximumImageCalculator <FloatImageType> MinimumMaximumImageCalculatorType;
   MinimumMaximumImageCalculatorType::Pointer calculator = MinimumMaximumImageCalculatorType::New();
   calculator->SetImage(processedImage);
   calculator->Compute();
   float levelValue = 0.5*(calculator->GetMinimum() + calculator->GetMaximum());
 
-  //convert ITK image to VTK image
+  // convert ITK image to VTK image
   typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
   ConvertorType::Pointer convertor = ConvertorType::New();
   convertor->SetInput(processedImage);
@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
 
   // decimate surface
   double reduction = 1 - numberOfPoints / (double) mcubes->GetOutput()->GetNumberOfPoints();
-  std::cout << "target reduction to decimate surface " << reduction << std::endl;
+  std::cout << "reduction to decimate surface " << reduction << std::endl;
 
   vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
   decimate->SetInputData(mcubes->GetOutput());
