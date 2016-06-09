@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
     updateReference->CopyInformation(reference);
 
     for (int count= 0; count < vectorOfSurfaces.size(); ++count) {
-      std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", count " << count + 1 << "/" << vectorOfSurfaces.size() << ", file " << vectorOfFiles[count] << std::endl;
+      std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << count + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[count] << std::endl;
 
       // perform surface to image registration
       SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
