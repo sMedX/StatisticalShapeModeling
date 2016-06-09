@@ -37,11 +37,11 @@ include(${VTK_USE_FILE})
 add_executable(maskToSurfaceConstructor MaskToSurfaceConstructor.cxx)
 target_link_libraries(maskToSurfaceConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
+add_executable(alignmentOfSurfaces AlignmentOfSurfaces.cxx)
+target_link_libraries(alignmentOfSurfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+
 add_executable(decimateSurface DecimateSurface.cxx)
 target_link_libraries(decimateSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
-
-add_executable(referenceShapeConstructor ReferenceShapeConstructor.cxx)
-target_link_libraries(referenceShapeConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
 add_executable(surfaceToImageRegistration SurfaceToImageRegistration.cxx)
 target_link_libraries(surfaceToImageRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
