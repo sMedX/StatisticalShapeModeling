@@ -93,6 +93,8 @@ int main(int argc, char** argv) {
   typedef SurfaceToImageRegistrationFilterType::EnumTransformType EnumTransformType;
   EnumTransformType typeOfTransform = EnumTransformType::Rotation;
 
+  std::cout << "perform registration" << std::endl;
+
   for (int stage = 0; stage < numberOfStages; ++stage) {
     if (stage > 0) {
       typeOfTransform = EnumTransformType::Affine;
