@@ -10,6 +10,7 @@
 #include <vtkMarchingCubes.h>
 #include <vtkSmoothPolyDataFilter.h>
 #include <vtkPolyDataNormals.h>
+#include <vtkDecimatePro.h>
 #include <itkImageToVTKImageFilter.h>
 
 #include "utils/io.h"
@@ -33,7 +34,10 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-surface", surfaceFile);
 
   std::string levelsetFile;
-  parser->GetCommandLineArgument("-levelset", levelsetFile);
+  parser->GetCommandLineArgument("-output", levelsetFile);
+ 
+  size_t numberOfPoints = 1e+05;
+  parser->GetCommandLineArgument("-points", numberOfPoints);
 
   float spacing = 1;
   parser->GetCommandLineArgument("-spacing", spacing);
@@ -48,11 +52,12 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-iteration", iterations);
 
   std::cout << std::endl;
-  std::cout << "input parameters" << std::endl;
-  std::cout << "    spacing " << spacing << std::endl;
-  std::cout << "      sigma " << sigma << std::endl;
-  std::cout << " relaxation " << relaxation << std::endl;
-  std::cout << " iterations " << iterations << std::endl;
+  std::cout << " input parameters " << std::endl;
+  std::cout << " number of points " << numberOfPoints << std::endl;
+  std::cout << "          spacing " << spacing << std::endl;
+  std::cout << "            sigma " << sigma << std::endl;
+  std::cout << "       relaxation " << relaxation << std::endl;
+  std::cout << "       iterations " << iterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -131,9 +136,20 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
+  // decimate surface
+  double reduction = 1 - numberOfPoints / (double) mcubes->GetOutput()->GetNumberOfPoints();
+  std::cout << "target reduction to decimate surface " << reduction << std::endl;
+
+  vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
+  decimate->SetInputData(mcubes->GetOutput());
+  decimate->SetTargetReduction(reduction);
+  decimate->SetPreserveTopology(true);
+  decimate->SetSplitting(false);
+  decimate->Update();
+
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
   SmoothPolyData smoother = SmoothPolyData::New();
-  smoother->SetInputData(mcubes->GetOutput());
+  smoother->SetInputData(decimate->GetOutput());
   smoother->SetNumberOfIterations(iterations);
   smoother->SetRelaxationFactor(relaxation);
 
@@ -169,6 +185,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
   
+
   std::cout << "output surface polydata info" << std::endl;
   std::cout << surfaceFile << std::endl;
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
