@@ -83,5 +83,6 @@ void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::PrintReport(std::ostr
   os << indent << "   Mean = " << m_MeanValue << std::endl;
   os << indent << "   RMSE = " << m_RMSEValue << std::endl;
   os << indent << "Maximal = " << m_MaximalValue << std::endl;
+  os << std::endl;
 }
 #endif

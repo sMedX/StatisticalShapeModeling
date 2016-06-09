@@ -177,32 +177,15 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  // write alignment surfaces
-  for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
-    std::string fileName = getDirectoryFromPath(refFile) + "/" + getFileNameFromPath(vectorOfFiles[count]);
+  std::string reportFileName;
+  std::ofstream rfile;
 
-    std::cout << "output surface polydata info" << std::endl;
-    std::cout << fileName << std::endl;
-    std::cout << " number of cells " << vectorOfSurfaces[count] ->GetNumberOfCells() << std::endl;
-    std::cout << "number of points " << vectorOfSurfaces[count]->GetNumberOfPoints() << std::endl;
-    std::cout << std::endl;
-
-    if (!writeMesh<MeshType>(vectorOfSurfaces[count], fileName)) {
-      EXIT_FAILURE;
-    }
-  }
-
-  //----------------------------------------------------------------------------
-  // write report to *.csv file
   if (parser->ArgumentExists("-report")) {
-    std::string reportFile;
-    parser->GetCommandLineArgument("-report", reportFile);
+    parser->GetCommandLineArgument("-report", reportFileName);
+    std::cout << "write report to the file: " << reportFileName << std::endl;
 
-    std::cout << "write report to the file: " << reportFile << std::endl;
-
-    //open file and write header
-    std::ofstream ofile;
-    ofile.open(reportFile, std::ofstream::out);
+    // open file and write header
+    rfile.open(reportFileName, std::ofstream::out);
 
     std::string dlm = ";";
     std::string header = dlm;
@@ -210,33 +193,48 @@ int main(int argc, char** argv) {
     header += "RMSE" + dlm;
     header += "Maximal" + dlm;
 
-    ofile << header << std::endl;
+    rfile << header << std::endl;
+  }
 
-    for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
+  // write alignment surfaces
+  for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
+    std::string fileName = getDirectoryFromPath(refFile) + "/" + getFileNameFromPath(vectorOfFiles[count]);
 
-      // compute metrics
-      typedef itk::PointSet<float, MeshType::PointDimension> PointSetType;
-      PointSetType::Pointer pointSet = PointSetType::New();
-      pointSet->SetPoints(vectorOfSurfaces[count]->GetPoints());
+    std::cout << "output surface polydata info" << std::endl;
+    std::cout << fileName << std::endl;
+    std::cout << " number of cells " << vectorOfSurfaces[count]->GetNumberOfCells() << std::endl;
+    std::cout << "number of points " << vectorOfSurfaces[count]->GetNumberOfPoints() << std::endl;
+    std::cout << std::endl;
 
-      typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
-      PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
-      metrics->SetFixedPointSet(pointSet);
-      metrics->SetMovingImage(reference);
-      metrics->Compute();
-      metrics->PrintReport(std::cout);
+    if (!writeMesh<MeshType>(vectorOfSurfaces[count], fileName)) {
+      EXIT_FAILURE;
+    }
 
-      // write metrics to the file
+    // compute metrics
+    typedef itk::PointSet<float, MeshType::PointDimension> PointSetType;
+    PointSetType::Pointer pointSet = PointSetType::New();
+    pointSet->SetPoints(vectorOfSurfaces[count]->GetPoints());
+
+    typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
+    PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
+    metrics->SetFixedPointSet(pointSet);
+    metrics->SetMovingImage(reference);
+    metrics->Compute();
+    metrics->PrintReport(std::cout);
+
+    // write metrics to *.csv file
+    if ( rfile.is_open() ) {
+      std::string dlm = ";";
       std::string scores = getFileNameFromPath(vectorOfFiles[count]) + dlm;
       scores += std::to_string(metrics->GetMeanValue()) + dlm;
       scores += std::to_string(metrics->GetRMSEValue()) + dlm;
       scores += std::to_string(metrics->GetMaximalValue()) + dlm;
 
-      ofile << scores << std::endl;
+      rfile << scores << std::endl;
     }
-
-    ofile.close();
   }
+
+  rfile.close();
 
   return EXIT_SUCCESS;
 }
