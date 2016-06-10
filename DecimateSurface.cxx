@@ -24,8 +24,8 @@ int main(int argc, char** argv) {
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
-  double reduction = 0.80;
-  parser->GetCommandLineArgument("-reduction", reduction);
+  size_t numberOfPoints = 1e+05;
+  parser->GetCommandLineArgument("-points", numberOfPoints);
 
   double relaxation = 0.2;
   parser->GetCommandLineArgument("-relaxation", relaxation);
@@ -34,8 +34,8 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-iteration", iterations);
 
   std::cout << std::endl;
-  std::cout << "input parameters" << std::endl;
-  std::cout << "  reduction " << reduction << std::endl;
+  std::cout << "parameters" << std::endl;
+  std::cout << "     points " << numberOfPoints << std::endl;
   std::cout << " relaxation " << relaxation << std::endl;
   std::cout << " iterations " << iterations << std::endl;
   std::cout << std::endl;
@@ -51,6 +51,9 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
 
   // decimate surface
+  double reduction = 1 - numberOfPoints / (double)inputSurface->GetNumberOfPoints();
+  std::cout << "reduction to decimate surface " << reduction << std::endl;
+
   vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
   decimate->SetInputData(inputSurface);
   decimate->SetTargetReduction(reduction);
