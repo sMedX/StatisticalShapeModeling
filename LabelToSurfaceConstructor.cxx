@@ -50,8 +50,8 @@ int main(int argc, char** argv) {
   float relaxation = 0.2;
   parser->GetCommandLineArgument("-relaxation", relaxation);
 
-  int iterations = 10;
-  parser->GetCommandLineArgument("-iteration", iterations);
+  int numberOfIterations = 100;
+  parser->GetCommandLineArgument("-iteration", numberOfIterations);
 
   std::cout << std::endl;
   std::cout << "parameters " << std::endl;
@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
   std::cout << "   spacing " << spacing << std::endl;
   std::cout << "     sigma " << sigma << std::endl;
   std::cout << "relaxation " << relaxation << std::endl;
-  std::cout << "iterations " << iterations << std::endl;
+  std::cout << "iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
   SmoothPolyData smoother = SmoothPolyData::New();
   smoother->SetInputData(decimate->GetOutput());
-  smoother->SetNumberOfIterations(iterations);
+  smoother->SetNumberOfIterations(numberOfIterations);
   smoother->SetRelaxationFactor(relaxation);
 
   try {
