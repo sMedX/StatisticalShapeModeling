@@ -23,11 +23,8 @@ int main(int argc, char** argv) {
   std::string listFile;
   parser->GetCommandLineArgument("-list", listFile);
 
-  std::string outputSurfaceFile;
-  parser->GetCommandLineArgument("-surface", outputSurfaceFile);
-
-  std::string outputReferenceFile;
-  parser->GetCommandLineArgument("-reference", outputReferenceFile);
+  std::string surfaceFile;
+  parser->GetCommandLineArgument("-surface", surfaceFile);
 
   int numberOfStages = 3;
   parser->GetCommandLineArgument("-stage", numberOfStages);
@@ -38,8 +35,7 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
   std::cout << "reference shape constructor" << std::endl;
   std::cout << "    list of files " << listFile << std::endl;
-  std::cout << "   output surface " << outputSurfaceFile << std::endl;
-  std::cout << " output reference " << outputReferenceFile << std::endl;
+  std::cout << "   output surface " << surfaceFile << std::endl;
   std::cout << " number of stages " << numberOfStages << std::endl;
   std::cout << "       iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
@@ -50,16 +46,16 @@ int main(int argc, char** argv) {
   std::vector<std::string> vectorOfFiles;
 
   for (StringList::const_iterator it = listOfFiles.begin(); it != listOfFiles.end(); ++it) {
-    std::string surfaceFile = it->c_str();
+    std::string fileName = it->c_str();
     MeshType::Pointer surface = MeshType::New();
 
-    if (!readMesh<MeshType>(surface, surfaceFile)) {
+    if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
     vectorOfSurfaces.push_back(surface);
-    vectorOfFiles.push_back(surfaceFile);
+    vectorOfFiles.push_back(fileName);
 
-    std::cout << "input surface polydata info " << surfaceFile << std::endl;
+    std::cout << "input surface polydata info " << fileName << std::endl;
     std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
     std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
     std::cout << std::endl;
@@ -172,14 +168,19 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  std::cout << "output reference image " << outputReferenceFile << std::endl;
-  std::cout << "   size " << reference->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "spacing " << reference->GetSpacing() << std::endl;
-  std::cout << " origin " << reference->GetOrigin() << std::endl;
-  std::cout << std::endl;
+  if (parser->ArgumentExists("-levelset")) {
+    std::string referenceFile;
+    parser->GetCommandLineArgument("-levelset", referenceFile);
 
-  if (!writeImage<FloatImageType>(reference, outputReferenceFile)) {
-    return EXIT_FAILURE;
+    std::cout << "output reference image " << referenceFile << std::endl;
+    std::cout << "   size " << reference->GetLargestPossibleRegion().GetSize() << std::endl;
+    std::cout << "spacing " << reference->GetSpacing() << std::endl;
+    std::cout << " origin " << reference->GetOrigin() << std::endl;
+    std::cout << std::endl;
+
+    if (!writeImage<FloatImageType>(reference, referenceFile)) {
+      return EXIT_FAILURE;
+    }
   }
 
   std::string reportFileName;
@@ -204,8 +205,8 @@ int main(int argc, char** argv) {
   // write alignment surfaces
   for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
     // define full file name for output surface
-    std::string fileName = getDirectoryFromPath(outputSurfaceFile) + "/";
-    fileName = fileName + getBaseNameFromPath(vectorOfFiles[count]) + "-" + getFileNameFromPath(outputSurfaceFile);
+    std::string fileName = getDirectoryFromPath(surfaceFile) + "/";
+    fileName = fileName + getBaseNameFromPath(vectorOfFiles[count]) + "-" + getFileNameFromPath(surfaceFile);
 
     std::cout << "output surface polydata info" << std::endl;
     std::cout << fileName << std::endl;
@@ -232,7 +233,7 @@ int main(int argc, char** argv) {
     // write metrics to *.csv file
     if ( rfile.is_open() ) {
       std::string dlm = ";";
-      std::string scores = getFileNameFromPath(vectorOfFiles[count]) + dlm;
+      std::string scores = getFileNameFromPath(fileName) + dlm;
       scores += std::to_string(metrics->GetMeanValue()) + dlm;
       scores += std::to_string(metrics->GetRMSEValue()) + dlm;
       scores += std::to_string(metrics->GetMaximalValue()) + dlm;
