@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-output", outputFile);
 
   size_t numberOfPoints = 1e+05;
-  parser->GetCommandLineArgument("-points", numberOfPoints);
+  parser->GetCommandLineArgument("-point", numberOfPoints);
 
   double relaxation = 0.2;
   parser->GetCommandLineArgument("-relaxation", relaxation);

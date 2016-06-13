@@ -32,13 +32,10 @@ int main(int argc, char** argv) {
   std::string surfaceFile;
   parser->GetCommandLineArgument("-surface", surfaceFile);
 
-  std::string levelsetFile;
-  parser->GetCommandLineArgument("-output", levelsetFile);
- 
   size_t numberOfPoints = 1e+05;
-  parser->GetCommandLineArgument("-points", numberOfPoints);
+  parser->GetCommandLineArgument("-point", numberOfPoints);
 
-  unsigned int radius = 5;
+  int radius = 5;
   parser->GetCommandLineArgument("-radius", radius);
 
   float spacing = 1;
@@ -133,7 +130,7 @@ int main(int argc, char** argv) {
 
   typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
   GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
-  fillholes->SetInput(holefilling->GetOutput());
+  fillholes->SetInput(gaussian2->GetOutput());
   fillholes->SetFullyConnected(true);
 
   try {
