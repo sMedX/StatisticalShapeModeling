@@ -2,7 +2,7 @@
 #include <itkStandardMeshRepresenter.h>
 
 #include "ShapeModelToSurfaceRegistrationFilter.h"
-#include "PointSetToImageMetrics.h"
+#include "utils/PointSetToImageMetrics.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
@@ -127,9 +127,7 @@ int main(int argc, char** argv)
     std::string dlm = ";";
     std::string header = dlm;
 
-    int idx1 = surfaceFile.find_last_of("\\/");
-    int idx2 = surfaceFile.find_last_of(".");
-    std::string scores = surfaceFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
+    std::string scores = getFileNameFromPath(surfaceFile);
 
     header += "Cost function" + dlm;
     scores += std::to_string(value) + dlm;

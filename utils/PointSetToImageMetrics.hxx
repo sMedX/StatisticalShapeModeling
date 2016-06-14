@@ -3,6 +3,9 @@
 
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <itkLinearInterpolateImageFunction.h>
+#include <itkSampleToHistogramFilter.h>
+#include <itkListSample.h>
+#include <itkHistogram.h>
 
 #include "PointSetToImageMetrics.h"
 
@@ -12,20 +15,20 @@
 template <typename TFixedPointSet, typename TMovingImage>
 PointSetToImageMetrics<TFixedPointSet, TMovingImage>::PointSetToImageMetrics()
 {
-  typedef itk::LinearInterpolateImageFunction<TMovingImage, double> InterpolatorType;
   m_Interpolator = InterpolatorType::New();
+  m_LevelOfQuantile = 0.95;
+  m_HistogramSize = 1000;
 }
 
 /**
  * Get the match Measure
  */
-
 template <typename TFixedPointSet, typename TMovingImage>
 void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::Compute()
 {
   FixedPointSetConstPointer fixedPointSet = this->GetFixedPointSet();
 
-  if( !fixedPointSet ) {
+  if (!fixedPointSet) {
     itkExceptionMacro(<< "Fixed point set has not been assigned");
   }
 
@@ -46,14 +49,20 @@ void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::Compute()
   m_RMSEValue = itk::NumericTraits<MeasureType>::Zero;
   m_MaximalValue = itk::NumericTraits<MeasureType>::Zero;
 
+  typedef itk::Vector<double, 1> VectorType;
+  typedef itk::Statistics::ListSample<VectorType> ListSampleType;
+  ListSampleType::Pointer sample = ListSampleType::New();
+
   this->m_NumberOfPixelsCounted = 0;
 
-  while( pointItr != pointEnd ) {
+  while (pointItr != pointEnd) {
     InputPointType point = pointItr.Value();
 
     if (this->m_Interpolator->IsInsideBuffer(point)) {
-      const RealType movingValue = this->m_Interpolator->Evaluate(point);
-      const RealType error = std::abs(movingValue - m_FixedValue);
+      const double movingValue = this->m_Interpolator->Evaluate(point);
+      const double error = std::abs(movingValue - m_FixedValue);
+
+      sample->PushBack(error);
 
       m_MeanValue += error;
       m_RMSEValue += error * error;
@@ -65,12 +74,34 @@ void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::Compute()
     ++pointItr;
   }
 
-  if( !this->m_NumberOfPixelsCounted ) {
+  typedef itk::Statistics::Histogram<float, itk::Statistics::DenseFrequencyContainer2> HistogramType;
+  typedef itk::Statistics::SampleToHistogramFilter<ListSampleType, HistogramType> SampleToHistogramFilterType;
+  SampleToHistogramFilterType::Pointer sampleToHistogram = SampleToHistogramFilterType::New();
+  sampleToHistogram->SetInput(sample);
+  sampleToHistogram->SetAutoMinimumMaximum(true);
+
+  SampleToHistogramFilterType::HistogramSizeType histogramSize(1);
+  histogramSize.Fill(m_HistogramSize);
+
+  sampleToHistogram->SetHistogramSize(histogramSize);
+
+  try {
+    sampleToHistogram->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    itkExceptionMacro(<< excep);
+  }
+
+  const HistogramType* histogram = sampleToHistogram->GetOutput();
+
+  if (!this->m_NumberOfPixelsCounted) {
     itkExceptionMacro(<< "All the points mapped to outside of the moving image");
   }
   else {
     m_MeanValue = m_MeanValue / this->m_NumberOfPixelsCounted;
-    m_RMSEValue = std::sqrt(m_RMSEValue/this->m_NumberOfPixelsCounted);
+    m_RMSEValue = std::sqrt(m_RMSEValue / this->m_NumberOfPixelsCounted);
+    m_QuantileValue = histogram->Quantile(0, m_LevelOfQuantile);
   }
 }
 
@@ -80,9 +111,12 @@ void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::PrintReport(std::ostr
   std::string indent = "    ";
 
   os << "Metric values:" << std::endl;
-  os << indent << "   Mean = " << m_MeanValue << std::endl;
-  os << indent << "   RMSE = " << m_RMSEValue << std::endl;
-  os << indent << "Maximal = " << m_MaximalValue << std::endl;
+  os << indent << "    Mean = " << m_MeanValue << std::endl;
+  os << indent << "    RMSE = " << m_RMSEValue << std::endl;
+  os << indent << "Quantile = " << m_QuantileValue << ", level = " << m_LevelOfQuantile  << std::endl;
+  os << indent << " Maximal = " << m_MaximalValue << std::endl;
   os << std::endl;
 }
+
+
 #endif
