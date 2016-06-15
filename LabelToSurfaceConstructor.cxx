@@ -259,8 +259,6 @@ int main(int argc, char** argv) {
 
   FloatImageType::Pointer distancemap = multiply->GetOutput();
 
-  writeImage<FloatImageType>(distancemap, "dist.nrrd");
-
   typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
