@@ -186,24 +186,16 @@ int main(int argc, char** argv) {
   std::string reportFileName;
   std::ofstream rfile;
 
+  // open file to write report
   if (parser->ArgumentExists("-report")) {
     parser->GetCommandLineArgument("-report", reportFileName);
     std::cout << "write report to the file: " << reportFileName << std::endl;
-
-    // open file and write header
     rfile.open(reportFileName, std::ofstream::out);
-
-    std::string dlm = ";";
-    std::string header = dlm;
-    header += "Mean" + dlm;
-    header += "RMSE" + dlm;
-    header += "Maximal" + dlm;
-
-    rfile << header << std::endl;
   }
 
   // write alignment surfaces
   for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
+
     // define full file name for output surface
     std::string fileName = getDirectoryFromPath(surfaceFile) + "/";
     fileName = fileName + getBaseNameFromPath(vectorOfFiles[count]) + "-" + getFileNameFromPath(surfaceFile);
@@ -230,12 +222,24 @@ int main(int argc, char** argv) {
     metrics->Compute();
     metrics->PrintReport(std::cout);
 
-    // write metrics to *.csv file
+    // write metrics to report file
     if ( rfile.is_open() ) {
       std::string dlm = ";";
+
+      if (count == 0) {
+        std::string header = dlm;
+        header += "Mean" + dlm;
+        header += "RMSE" + dlm;
+        header += "Quantile " + std::to_string(metrics->GetLevelOfQuantile()) + dlm;
+        header += "Maximal" + dlm;
+
+        rfile << header << std::endl;
+      }
+
       std::string scores = getFileNameFromPath(fileName) + dlm;
       scores += std::to_string(metrics->GetMeanValue()) + dlm;
       scores += std::to_string(metrics->GetRMSEValue()) + dlm;
+      scores += std::to_string(metrics->GetQuantileValue()) + dlm;
       scores += std::to_string(metrics->GetMaximalValue()) + dlm;
 
       rfile << scores << std::endl;

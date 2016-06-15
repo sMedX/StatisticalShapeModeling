@@ -138,6 +138,9 @@ int main(int argc, char** argv)
     header += "RMSE" + dlm;
     scores += std::to_string(metrics->GetRMSEValue()) + dlm;
 
+    header += "Quantile " + std::to_string(metrics->GetLevelOfQuantile()) + dlm;
+    scores += std::to_string(metrics->GetQuantileValue()) + dlm;
+
     header += "Maximal" + dlm;
     scores += std::to_string(metrics->GetMaximalValue()) + dlm;
 
