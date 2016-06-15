@@ -1,13 +1,12 @@
 #include <itkMesh.h>
 #include <itkImage.h>
-#include <itkImageToVTKImageFilter.h>
 #include <utils/statismo-build-models-utils.h>
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
+#include "utils/PointSetToImageMetrics.h"
 #include "SurfaceToLevelSetImageFilter.h"
 #include "SurfaceToImageRegistrationFilter.h"
-#include "utils/PointSetToImageMetrics.h"
 
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
@@ -29,14 +28,19 @@ int main(int argc, char** argv) {
   int numberOfStages = 3;
   parser->GetCommandLineArgument("-stage", numberOfStages);
 
+  int transform = 0;
+  parser->GetCommandLineArgument("-transform", transform);
+
   int numberOfIterations = 100;
   parser->GetCommandLineArgument("-iteration", numberOfIterations);
 
+
   std::cout << std::endl;
-  std::cout << "reference shape constructor" << std::endl;
+  std::cout << "parameters" << std::endl;
   std::cout << "    list of files " << listFile << std::endl;
   std::cout << "   output surface " << surfaceFile << std::endl;
   std::cout << " number of stages " << numberOfStages << std::endl;
+  std::cout << "type of transform " << transform << std::endl;
   std::cout << "       iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
@@ -95,11 +99,11 @@ int main(int argc, char** argv) {
 
   for (int stage = 0; stage < numberOfStages; ++stage) {
     if (stage > 0) {
-      typeOfTransform = EnumTransformType::Affine;
+      typeOfTransform = static_cast<EnumTransformType>(transform);
     }
 
     std::cout << "perform registration" << std::endl;
-    std::cout << "stage " << stage << std::endl;
+    std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
     std::cout << "type of transform " << typeOfTransform << std::endl;
     std::cout << std::endl;
 
@@ -168,17 +172,17 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  if (parser->ArgumentExists("-levelset")) {
-    std::string referenceFile;
-    parser->GetCommandLineArgument("-levelset", referenceFile);
+  if (parser->ArgumentExists("-reference")) {
+    std::string fileName;
+    parser->GetCommandLineArgument("-reference", fileName);
 
-    std::cout << "output reference image " << referenceFile << std::endl;
+    std::cout << "output reference image " << fileName << std::endl;
     std::cout << "   size " << reference->GetLargestPossibleRegion().GetSize() << std::endl;
     std::cout << "spacing " << reference->GetSpacing() << std::endl;
     std::cout << " origin " << reference->GetOrigin() << std::endl;
     std::cout << std::endl;
 
-    if (!writeImage<FloatImageType>(reference, referenceFile)) {
+    if (!writeImage<FloatImageType>(reference, fileName)) {
       return EXIT_FAILURE;
     }
   }
@@ -197,8 +201,7 @@ int main(int argc, char** argv) {
   for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
 
     // define full file name for output surface
-    std::string fileName = getDirectoryFromPath(surfaceFile) + "/";
-    fileName = fileName + getBaseNameFromPath(vectorOfFiles[count]) + "-" + getFileNameFromPath(surfaceFile);
+    std::string fileName = getDirectoryFromPath(surfaceFile) + getBaseNameFromPath(vectorOfFiles[count]) + "-" + getFileNameFromPath(surfaceFile);
 
     std::cout << "output surface polydata info" << std::endl;
     std::cout << fileName << std::endl;

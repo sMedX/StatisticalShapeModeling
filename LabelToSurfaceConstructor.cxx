@@ -41,13 +41,13 @@ int main(int argc, char** argv) {
   size_t numberOfPoints = 1e+05;
   parser->GetCommandLineArgument("-point", numberOfPoints);
 
-  int radius = 5;
-  parser->GetCommandLineArgument("-radius", radius);
-
   float spacing = 1;
   parser->GetCommandLineArgument("-spacing", spacing);
 
-  float sigma = 1;
+  int radius = 5;
+  parser->GetCommandLineArgument("-radius", radius);
+
+  float sigma = 5;
   parser->GetCommandLineArgument("-sigma", sigma);
 
   float relaxation = 0.2;
@@ -59,8 +59,8 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
   std::cout << "parameters " << std::endl;
   std::cout << "    points " << numberOfPoints << std::endl;
-  std::cout << "    radius " << radius << std::endl;
   std::cout << "   spacing " << spacing << std::endl;
+  std::cout << "    radius " << radius << std::endl;
   std::cout << "     sigma " << sigma << std::endl;
   std::cout << "relaxation " << relaxation << std::endl;
   std::cout << "iterations " << numberOfIterations << std::endl;
