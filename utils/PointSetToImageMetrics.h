@@ -4,6 +4,7 @@
 #include <itkPointSetToImageMetric.h>
 #include <itkCovariantVector.h>
 #include <itkPoint.h>
+#include <itkLinearInterpolateImageFunction.h>
 
 template< typename TFixedPointSet, typename TMovingImage >
 class PointSetToImageMetrics :
