@@ -189,7 +189,11 @@ std::string getDirectoryFromPath(const std::string& fileName)
 {
   size_t idx = fileName.find_last_of("\\/");
 
-  return fileName.substr(0, idx);
+  if (idx == std::string::npos) {
+    idx = -1;
+  }
+
+  return fileName.substr(0, idx+1);
 }
 
 std::string getFileNameFromPath(const std::string& fileName)
