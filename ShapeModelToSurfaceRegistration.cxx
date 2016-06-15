@@ -125,9 +125,9 @@ int main(int argc, char** argv)
     std::cout << "write report to the file: " << fileName << std::endl;
 
     std::string dlm = ";";
-    std::string header = dlm;
 
-    std::string scores = getFileNameFromPath(surfaceFile);
+    std::string header = dlm;
+    std::string scores = getFileNameFromPath(surfaceFile) + dlm;
 
     header += "Cost function" + dlm;
     scores += std::to_string(value) + dlm;

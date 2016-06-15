@@ -60,6 +60,7 @@ public itk::PointSetToImageMetric < TFixedPointSet, TMovingImage >
   /*Get metrics values. */
   itkGetMacro(MeanValue, MeasureType);
   itkGetMacro(RMSEValue, MeasureType);
+  itkGetMacro(QuantileValue, MeasureType);
   itkGetMacro(MaximalValue, MeasureType);
 
   void PrintReport(std::ostream& os) const;

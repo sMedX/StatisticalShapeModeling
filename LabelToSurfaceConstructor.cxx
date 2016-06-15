@@ -1,3 +1,5 @@
+#include <boost/filesystem.hpp>
+
 #include <itkMesh.h>
 #include <vtkPolyData.h>
 #include <vtkMarchingCubes.h>
@@ -11,9 +13,13 @@
 #include <itkRecursiveGaussianImageFilter.h>
 #include <itkMinimumMaximumImageCalculator.h>
 #include <itkBinaryThresholdImageFilter.h>
+#include <itkSignedMaurerDistanceMapImageFilter.h>
+#include <itkAddImageFilter.h>
+#include <itkMultiplyImageFilter.h>
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
+#include "utils/PointSetToImageMetrics.h"
 
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
@@ -70,10 +76,10 @@ int main(int argc, char** argv) {
 
   // compute the minimum and the maximum intensity values of label
   typedef itk::MinimumMaximumImageCalculator <FloatImageType> MinimumMaximumImageCalculatorType;
-  MinimumMaximumImageCalculatorType::Pointer calculator = MinimumMaximumImageCalculatorType::New();
-  calculator->SetImage(label);
-  calculator->Compute();
-  float levelValue = 0.5*(calculator->GetMinimum() + calculator->GetMaximum());
+  MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
+  labelValues->SetImage(label);
+  labelValues->Compute();
+  float levelValue = 0.5*(labelValues->GetMinimum() + labelValues->GetMaximum());
 
   std::cout << "input label " << labelFile << std::endl;
   std::cout << "       size " << label->GetLargestPossibleRegion().GetSize() << std::endl;
@@ -100,7 +106,7 @@ int main(int argc, char** argv) {
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
   ResampleImageFilterType::Pointer resampler = ResampleImageFilterType::New();
   resampler->SetInput(gaussian1->GetOutput());
-  resampler->SetDefaultPixelValue(calculator->GetMinimum());
+  resampler->SetDefaultPixelValue(labelValues->GetMinimum());
   resampler->SetSize(outSize);
   resampler->SetOutputSpacing(outSpacing);
   resampler->SetOutputOrigin(label->GetOrigin());
@@ -214,6 +220,93 @@ int main(int argc, char** argv) {
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
+
+  // compute metrics
+  typedef itk::PointSet<float, MeshType::PointDimension> PointSetType;
+  PointSetType::Pointer pointSet = PointSetType::New();
+
+  for (size_t n = 0; n < surface->GetPoints()->GetNumberOfPoints(); ++n) {
+    pointSet->SetPoint(n, surface->GetPoints()->GetPoint(n));
+  }
+
+  // compute distance map
+  typedef itk::SignedMaurerDistanceMapImageFilter<FloatImageType, FloatImageType> DistanceFilterType;
+  DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
+  distanceToForeground->SetUseImageSpacing(true);
+  distanceToForeground->SetInput(label);
+  distanceToForeground->SetBackgroundValue(labelValues->GetMinimum());
+  distanceToForeground->SetInsideIsPositive(false);
+  distanceToForeground->Update();
+
+  DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
+  distanceToBackground->SetUseImageSpacing(true);
+  distanceToBackground->SetInput(label);
+  distanceToBackground->SetBackgroundValue(labelValues->GetMaximum());
+  distanceToBackground->SetInsideIsPositive(true);
+  distanceToBackground->Update();
+
+  typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
+  AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
+  addfilter->SetInput1(distanceToForeground->GetOutput());
+  addfilter->SetInput2(distanceToBackground->GetOutput());
+  addfilter->Update();
+
+  typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
+  FilterType::Pointer multiply = FilterType::New();
+  multiply->SetInput(addfilter->GetOutput());
+  multiply->SetConstant(0.5);
+  multiply->Update();
+
+  FloatImageType::Pointer distancemap = multiply->GetOutput();
+
+  writeImage<FloatImageType>(distancemap, "dist.nrrd");
+
+  typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
+  PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
+  metrics->SetFixedPointSet(pointSet);
+  metrics->SetMovingImage(distancemap);
+  metrics->Compute();
+  metrics->PrintReport(std::cout);
+
+  // write report to *.csv file
+  if (parser->ArgumentExists("-report")) {
+    std::string fileName;
+    parser->GetCommandLineArgument("-report", fileName);
+
+    std::cout << "write report to the file: " << fileName << std::endl;
+
+    std::string dlm = ";";
+
+    std::string header = dlm;
+    std::string scores = getFileNameFromPath(surfaceFile) + dlm;
+
+    header += "Mean" + dlm;
+    scores += std::to_string(metrics->GetMeanValue()) + dlm;
+
+    header += "RMSE" + dlm;
+    scores += std::to_string(metrics->GetRMSEValue()) + dlm;
+
+    header += "Quantile " + std::to_string(metrics->GetLevelOfQuantile()) + dlm;
+    scores += std::to_string(metrics->GetQuantileValue()) + dlm;
+
+    header += "Maximal" + dlm;
+    scores += std::to_string(metrics->GetMaximalValue()) + dlm;
+
+    bool exist = boost::filesystem::exists(fileName);
+    std::ofstream ofile;
+    ofile.open(fileName, std::ofstream::out | std::ofstream::app);
+
+    if (!exist) {
+      ofile << header << std::endl;
+    }
+
+    ofile << scores << std::endl;
+    ofile.close();
+  }
+
+  return EXIT_SUCCESS;
+
+
 
   return EXIT_SUCCESS;
 }
