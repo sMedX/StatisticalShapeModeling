@@ -30,7 +30,7 @@ public:
   itkTypeMacro(SurfaceToImageRegistrationFilter, itk::MeshToMeshFilter);
 
   //Set spatial transform type
-  typedef  enum { Rotation, Similarity, Affine } EnumTransformType;
+  typedef  enum { Translation, Rotation, Similarity, Affine } EnumTransformType;
 
   itkSetMacro(TypeOfTransform, EnumTransformType);
   itkGetConstMacro(TypeOfTransform, EnumTransformType);

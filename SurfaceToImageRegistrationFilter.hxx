@@ -1,6 +1,7 @@
 #ifndef __SurfaceToImageRegistration_hxx
 #define __SurfaceToImageRegistration_hxx
 
+#include <itkTranslationTransform.h>
 #include <itkEuler3DTransform.h>
 #include <itkScaleTransform.h>
 #include <itkSimilarity3DTransform.h>
@@ -104,11 +105,8 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::ComputeLabelImag
 template <typename TInputMesh, typename TOutputMesh>
 void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransform()
 {
-  // Compute a bounding box around the input mesh
-  typedef  itk::BoundingBox<int, TOutputMesh::PointDimension, float, typename TOutputMesh::PointsContainer> BoundingBoxType;
-  typename BoundingBoxType::Pointer boundingBox = BoundingBoxType::New();
-  boundingBox->SetPoints(m_Surface->GetPoints());
-  boundingBox->ComputeBoundingBox();
+  // Compute a bounding box of the input mesh
+  typename TOutputMesh::BoundingBoxType::ConstPointer boundingBox = m_Surface->GetBoundingBox();
 
   BinaryImageType::SpacingType spacing = m_Mask->GetSpacing();
   BinaryImageType::PointType origin = boundingBox->GetMinimum();
@@ -157,12 +155,27 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
     translation[i] = fixedCalculator->GetCenterOfGravity()[i] - movingCalculator->GetCenterOfGravity()[i];
   }
 
-  //number of optimization parameters
-  int numberOfRotationComponents = 3;
+  // number of optimization parameters
   int numberOfTranslationComponents = 3;
+  int numberOfRotationComponents = 3;
   int numberOfScalingComponents = 3;
 
-  if (m_TypeOfTransform == EnumTransformType::Rotation) {
+  if (m_TypeOfTransform == EnumTransformType::Translation) {
+    // Translation transform
+    typedef itk::TranslationTransform<double, TOutputMesh::PointDimension> TranslationTransformType;
+    TranslationTransformType::Pointer translationTransform = TranslationTransformType::New();
+    translationTransform->Translate(translation);
+
+    m_Transform = translationTransform;
+
+    //define scales
+    m_Scales.set_size(m_Transform->GetNumberOfParameters());
+
+    for (int i = 0; i < numberOfTranslationComponents; ++i) {
+      m_Scales[i] = 1.0 / m_TranslationScale;
+    }
+  }
+  else if (m_TypeOfTransform == EnumTransformType::Rotation) {
     // Euler3DTransform
     typedef itk::Euler3DTransform<double> Euler3DTransformType;
     Euler3DTransformType::Pointer rigid3DTransform = Euler3DTransformType::New();
@@ -173,8 +186,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
     m_Transform = rigid3DTransform;
 
     //define scales
-    int numberOfOptimizationParameters = rigid3DTransform->GetNumberOfParameters();
-    m_Scales.set_size(numberOfOptimizationParameters);
+    m_Scales.set_size(m_Transform->GetNumberOfParameters());
     size_t count = 0;
 
     for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
@@ -196,8 +208,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
     m_Transform = Similarity3DTransform;
 
     //define scales
-    int numberOfOptimizationParameters = Similarity3DTransform->GetNumberOfParameters();
-    m_Scales.set_size(numberOfOptimizationParameters);
+    m_Scales.set_size(m_Transform->GetNumberOfParameters());
     size_t count = 0;
 
     for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
