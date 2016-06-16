@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   int numberOfStages = 3;
   parser->GetCommandLineArgument("-stage", numberOfStages);
 
-  int transform = 0;
+  int transform = 1;
   parser->GetCommandLineArgument("-transform", transform);
 
   int numberOfIterations = 100;
