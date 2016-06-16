@@ -1,5 +1,7 @@
 #include <itkMesh.h>
 #include <itkImage.h>
+#include <itkMultiplyImageFilter.h>
+#include <itkAddImageFilter.h>
 #include <utils/statismo-build-models-utils.h>
 
 #include "utils/io.h"
@@ -95,12 +97,19 @@ int main(int argc, char** argv) {
   // define types
   typedef SurfaceToImageRegistrationFilter<MeshType> SurfaceToImageRegistrationFilterType;
   typedef SurfaceToImageRegistrationFilterType::EnumTransformType EnumTransformType;
-  EnumTransformType typeOfTransform = EnumTransformType::Rotation;
+  EnumTransformType typeOfTransform;
 
   for (int stage = 0; stage < numberOfStages; ++stage) {
-    if (stage > 0) {
-      typeOfTransform = static_cast<EnumTransformType>(transform);
-    }
+    switch ( stage ) {
+      case 0:
+        typeOfTransform = EnumTransformType::Translation;
+        break;
+      case 1:
+        typeOfTransform = EnumTransformType::Rotation;
+        break;
+      default:
+        typeOfTransform = static_cast<EnumTransformType>(transform);
+  }
 
     std::cout << "perform registration" << std::endl;
     std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
@@ -114,13 +123,13 @@ int main(int argc, char** argv) {
     updateReference->FillBuffer(0);
     updateReference->CopyInformation(reference);
 
-    for (int count= 0; count < vectorOfSurfaces.size(); ++count) {
-      std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << count + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[count] << std::endl;
+    for (int n = 0; n < vectorOfSurfaces.size(); ++n) {
+      std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << n + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[n] << std::endl;
 
       // perform surface to image registration
       SurfaceToImageRegistrationFilterType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationFilterType::New();
+      surfaceToImageRegistration->SetInput(vectorOfSurfaces[n]);
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
-      surfaceToImageRegistration->SetInput(vectorOfSurfaces[count]);
       surfaceToImageRegistration->SetTypeOfTransform(typeOfTransform);
       surfaceToImageRegistration->SetLevelsetImage(reference);
 
@@ -135,14 +144,14 @@ int main(int argc, char** argv) {
       surfaceToImageRegistration->PrintReport(std::cout);
 
       // update surface in the vector
-      vectorOfSurfaces[count] = surfaceToImageRegistration->GetOutput();
+      vectorOfSurfaces[n] = surfaceToImageRegistration->GetOutput();
 
       // compute level set image
       SurfaceToLevelSetImageFilterType::Pointer levelset = SurfaceToLevelSetImageFilterType::New();
       levelset->SetOrigin(reference->GetOrigin());
       levelset->SetSpacing(reference->GetSpacing());
       levelset->SetSize(reference->GetLargestPossibleRegion().GetSize());
-      levelset->SetInput(vectorOfSurfaces[count]);
+      levelset->SetInput(vectorOfSurfaces[n]);
 
       try {
         levelset->Update();
@@ -153,17 +162,19 @@ int main(int argc, char** argv) {
       }
 
       // add current levelset to update reference image
-      double const1 = 1. - 1. / (count + 1);
-      double const2 = 1. / (count + 1);
+      typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
+      FilterType::Pointer multiply = FilterType::New();
+      multiply->SetInput(levelset->GetOutput());
+      multiply->SetConstant(1 / (double) vectorOfSurfaces.size());
+      multiply->Update();
 
-      typedef itk::ImageRegionIterator<FloatImageType> IteratorType;
-      IteratorType it1(updateReference, updateReference->GetLargestPossibleRegion());
-      IteratorType it2(levelset->GetOutput(), levelset->GetOutput()->GetLargestPossibleRegion());
+      typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
+      AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
+      addfilter->SetInput1(updateReference);
+      addfilter->SetInput2(multiply->GetOutput());
+      addfilter->Update();
 
-      for (it1.GoToBegin(), it2.GoToBegin(); !it1.IsAtEnd(); ++it1, ++it2) {
-        double pixelValue = const1 * it1.Get() + const2*it2.Get();
-        it1.Set(pixelValue);
-      }
+      updateReference = addfilter->GetOutput();
     }
 
     //update reference image
