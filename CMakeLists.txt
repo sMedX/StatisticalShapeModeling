@@ -40,9 +40,6 @@ target_link_libraries(labelToSurfaceConstructor ${statismo_LIBRARIES} ${ITK_LIBR
 add_executable(alignmentOfSurfaces AlignmentOfSurfaces.cxx)
 target_link_libraries(alignmentOfSurfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(decimateSurface DecimateSurface.cxx)
-target_link_libraries(decimateSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
-
 add_executable(shapeModelToSurfaceRegistration ShapeModelToSurfaceRegistration.cxx)
 target_link_libraries(shapeModelToSurfaceRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
