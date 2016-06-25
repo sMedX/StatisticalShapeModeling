@@ -6,6 +6,9 @@
 #include <StatisticalModel.h>
 #include <itkStandardMeshRepresenter.h>
 #include <utils/statismo-build-models-utils.h>
+#include <itkSampleToHistogramFilter.h>
+#include <itkListSample.h>
+#include <itkHistogram.h>
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
@@ -96,11 +99,16 @@ int main(int argc, char** argv)
         double maximal = 0;
         PointType p1, p2;
 
+        typedef itk::Vector<double, 1> VectorType;
+        typedef itk::Statistics::ListSample<VectorType> ListSampleType;
+        ListSampleType::Pointer sample = ListSampleType::New();
+
         for (size_t n = 0; n < testSample->GetNumberOfPoints(); ++n) {
           p1.CastFrom<float>(testSample->GetPoint(n));
           p2.CastFrom<float>(outputSample->GetPoint(n));
           double dist = p1.EuclideanDistanceTo(p2);
 
+          sample->PushBack(dist);
           mean += dist;
           rmse += dist * dist;
           maximal = std::max(maximal, dist);
@@ -109,11 +117,25 @@ int main(int argc, char** argv)
         mean = mean / testSample->GetNumberOfPoints();
         rmse = std::sqrt(rmse / testSample->GetNumberOfPoints());
 
+        typedef itk::Statistics::Histogram<float, itk::Statistics::DenseFrequencyContainer2> HistogramType;
+        typedef itk::Statistics::SampleToHistogramFilter<ListSampleType, HistogramType> SampleToHistogramFilterType;
+        SampleToHistogramFilterType::Pointer sampleToHistogram = SampleToHistogramFilterType::New();
+        sampleToHistogram->SetInput(sample);
+        sampleToHistogram->SetAutoMinimumMaximum(true);
+        SampleToHistogramFilterType::HistogramSizeType histogramSize(1);
+        histogramSize.Fill(1000);
+        sampleToHistogram->SetHistogramSize(histogramSize);
+        sampleToHistogram->Update();
+
+        const HistogramType* histogram = sampleToHistogram->GetOutput();
+        double quantileValue = histogram->Quantile(0, 0.95);
+
         std::cout << "Metric values for the sample " << sampleName << std::endl;
-        std::cout << "Probability " << probability << std::endl;
-        std::cout << "       Mean " << mean << " mm" << std::endl;
-        std::cout << "       RMSE " << rmse << " mm" << std::endl;
-        std::cout << "    Maximal " << maximal << " mm" << std::endl;
+        std::cout << "Probability = " << probability << std::endl;
+        std::cout << "       Mean = " << mean << " mm" << std::endl;
+        std::cout << "       RMSE = " << rmse << " mm" << std::endl;
+        std::cout << "   Quantile = " << quantileValue << ", level = " << 0.95 << std::endl;
+        std::cout << "    Maximal = " << maximal << " mm" << std::endl;
 
         if (parser->ArgumentExists("-report")) {
           std::string reportFile;
@@ -131,6 +153,9 @@ int main(int argc, char** argv)
 
           header += "RMSE, mm" + dlm;
           scores += std::to_string(rmse) + dlm;
+
+          header += "Quantile " + std::to_string(0.95) + dlm;
+          scores += std::to_string(quantileValue) + dlm;
 
           header += "Maximal, mm" + dlm;
           scores += std::to_string(maximal) + dlm;

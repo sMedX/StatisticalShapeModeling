@@ -19,21 +19,25 @@ public:
   typedef itk::SmartPointer<const Self> ConstPointer;
   typedef itk::LBFGSOptimizer OptimizerType;
   typedef typename itk::Optimizer::ScalesType ScalesType;
-  typedef itk::CompositeTransform<double, TInputMesh::PointDimension> TransformType;
+  typedef itk::Transform<double, TInputMesh::PointDimension> TransformType;
+  typedef itk::CompositeTransform<double, TInputMesh::PointDimension> CompositeTransformType;
   typedef itk::PointSet<float, TInputMesh::PointDimension> PointSetType;
   typedef itk::Image<unsigned char, TInputMesh::PointDimension> BinaryImageType;
-  typedef itk::Image<float, TInputMesh::PointDimension> PotentialImageType;
-  typedef itk::PointSetToImageMetric<PointSetType, PotentialImageType> MetricType;
+  typedef itk::Image<float, TInputMesh::PointDimension> LevelsetImageType;
+  typedef itk::PointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
 
   itkNewMacro(Self);
-  itkTypeMacro(surfaceToImageRegistration, itk::MeshToMeshFilter);
+  itkTypeMacro(SurfaceToImageRegistrationFilter, itk::MeshToMeshFilter);
 
-  //Set/Get shape model
-  itkGetConstObjectMacro(Mask, BinaryImageType);
+  //Set spatial transform type
+  typedef  enum { Translation, Rotation, Similarity, Affine } EnumTransformType;
+
+  itkSetMacro(TypeOfTransform, EnumTransformType);
+  itkGetConstMacro(TypeOfTransform, EnumTransformType);
 
   //Set/Get PotentialImage
-  itkGetConstObjectMacro(PotentialImage, PotentialImageType);
-  itkSetConstObjectMacro(PotentialImage, PotentialImageType);
+  itkGetConstObjectMacro(LevelsetImage, LevelsetImageType);
+  itkSetConstObjectMacro(LevelsetImage, LevelsetImageType);
 
   itkGetConstObjectMacro(Optimizer, OptimizerType);
   itkGetConstObjectMacro(Transform, TransformType);
@@ -77,9 +81,11 @@ protected:
   typename TInputMesh::Pointer m_Surface;
   typename PointSetType::Pointer m_PointSet;
   typename BinaryImageType::ConstPointer m_Mask;
-  typename PotentialImageType::ConstPointer m_PotentialImage;
-  typename TransformType::Pointer m_Transform;
+  typename LevelsetImageType::ConstPointer m_LevelsetImage;
   typename MetricType::Pointer m_Metric;
+  EnumTransformType m_TypeOfTransform;
+  typename TransformType::Pointer m_Transform;
+  typename CompositeTransformType::Pointer m_CompositeTransform;
 
   unsigned int m_NumberOfIterations = 100;
   double m_GradientConvergenceTolerance = 1e-07;

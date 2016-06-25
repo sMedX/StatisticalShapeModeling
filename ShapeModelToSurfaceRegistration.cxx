@@ -2,7 +2,7 @@
 #include <itkStandardMeshRepresenter.h>
 
 #include "ShapeModelToSurfaceRegistrationFilter.h"
-#include "PointSetToImageMetrics.h"
+#include "utils/PointSetToImageMetrics.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
@@ -36,13 +36,13 @@ int main(int argc, char** argv)
   parser->GetCommandLineArgument("-iteration", numberOfIterations);
 
   std::cout << std::endl;
-  std::cout << "shape model to image registration" << std::endl;
-  std::cout << "         model file " << modelFile << std::endl;
-  std::cout << " input surface file " << surfaceFile << std::endl;
-  std::cout << "output surface file " << outputFile << std::endl;
-  std::cout << "        model scale " << mscale << std::endl;
-  std::cout << "     regularization " << regularization << std::endl;
-  std::cout << "         iterations " << numberOfIterations << std::endl;
+  std::cout << " shape model to image registration" << std::endl;
+  std::cout << "          model file " << modelFile << std::endl;
+  std::cout << "  input surface file " << surfaceFile << std::endl;
+  std::cout << " output surface file " << outputFile << std::endl;
+  std::cout << "         model scale " << mscale << std::endl;
+  std::cout << "      regularization " << regularization << std::endl;
+  std::cout << "number of iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -103,15 +103,15 @@ int main(int argc, char** argv)
   }
 
   //Compute metrics
-  typedef ShapeModelToSurfaceRegistrationFilterType::PotentialImageType PotentialImageType;
+  typedef ShapeModelToSurfaceRegistrationFilterType::LevelsetImageType LevelsetImageType;
   typedef ShapeModelToSurfaceRegistrationFilterType::PointSetType PointSetType;
   PointSetType::Pointer pointSet = PointSetType::New();
   pointSet->SetPoints(shapeModelToSurfaceRegistration->GetOutput()->GetPoints());
 
-  typedef PointSetToImageMetrics<PointSetType, PotentialImageType> PointSetToImageMetricsType;
+  typedef PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
-  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetPotentialImage());
+  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelsetImage());
   metrics->Compute();
   metrics->PrintReport(std::cout);
 
@@ -125,11 +125,9 @@ int main(int argc, char** argv)
     std::cout << "write report to the file: " << fileName << std::endl;
 
     std::string dlm = ";";
-    std::string header = dlm;
 
-    int idx1 = surfaceFile.find_last_of("\\/");
-    int idx2 = surfaceFile.find_last_of(".");
-    std::string scores = surfaceFile.substr(idx1 + 1, idx2 - idx1 - 1) + dlm;
+    std::string header = dlm;
+    std::string scores = getFileNameFromPath(surfaceFile) + dlm;
 
     header += "Cost function" + dlm;
     scores += std::to_string(value) + dlm;
@@ -139,6 +137,9 @@ int main(int argc, char** argv)
 
     header += "RMSE" + dlm;
     scores += std::to_string(metrics->GetRMSEValue()) + dlm;
+
+    header += "Quantile " + std::to_string(metrics->GetLevelOfQuantile()) + dlm;
+    scores += std::to_string(metrics->GetQuantileValue()) + dlm;
 
     header += "Maximal" + dlm;
     scores += std::to_string(metrics->GetMaximalValue()) + dlm;

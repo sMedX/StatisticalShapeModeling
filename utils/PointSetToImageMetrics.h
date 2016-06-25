@@ -4,12 +4,13 @@
 #include <itkPointSetToImageMetric.h>
 #include <itkCovariantVector.h>
 #include <itkPoint.h>
+#include <itkLinearInterpolateImageFunction.h>
 
 template< typename TFixedPointSet, typename TMovingImage >
-class PointSetToImageMetrics:
-  public itk::PointSetToImageMetric< TFixedPointSet, TMovingImage >
+class PointSetToImageMetrics :
+public itk::PointSetToImageMetric < TFixedPointSet, TMovingImage >
 {
-public:
+  public:
 
   /** Standard class typedefs. */
   typedef PointSetToImageMetrics                      Self;
@@ -42,13 +43,25 @@ public:
 
   typedef typename Superclass::PointIterator     PointIterator;
   typedef typename Superclass::PointDataIterator PointDataIterator;
+  typedef itk::LinearInterpolateImageFunction<TMovingImage, double> InterpolatorType;
+
+  /**  Type of the parameters. */
+  typedef typename Superclass::ParametersType ParametersType;
 
   /**  Compute values. */
   void Compute();
 
+  /*Get/Set values to compute quantile. */
+  itkSetMacro(LevelOfQuantile, double);
+  itkGetMacro(LevelOfQuantile, double);
+
+  itkSetMacro(HistogramSize, unsigned int);
+  itkGetMacro(HistogramSize, unsigned int);
+
   /*Get metrics values. */
   itkGetMacro(MeanValue, MeasureType);
   itkGetMacro(RMSEValue, MeasureType);
+  itkGetMacro(QuantileValue, MeasureType);
   itkGetMacro(MaximalValue, MeasureType);
 
   void PrintReport(std::ostream& os) const;
@@ -76,9 +89,14 @@ private:
   PointSetToImageMetrics(const Self &); //purposely not implemented
   void operator=(const Self &);                   //purposely not implemented
 
+  typename InterpolatorType::Pointer m_Interpolator;
+
+  double m_LevelOfQuantile;
+  unsigned int m_HistogramSize;
   RealType m_FixedValue;
   MeasureType m_MeanValue = itk::NumericTraits<MeasureType>::Zero;
   MeasureType m_RMSEValue = itk::NumericTraits<MeasureType>::Zero;
+  MeasureType m_QuantileValue = itk::NumericTraits<MeasureType>::Zero;
   MeasureType m_MaximalValue = itk::NumericTraits<MeasureType>::Zero;
 
 };
