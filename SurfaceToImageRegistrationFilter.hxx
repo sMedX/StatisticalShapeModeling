@@ -175,7 +175,7 @@ void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransf
       m_Scales[i] = 1.0 / m_TranslationScale;
     }
   }
-  else if (m_TypeOfTransform == EnumTransformType::Rotation) {
+  else if (m_TypeOfTransform == EnumTransformType::Euler3D) {
     // Euler3DTransform
     typedef itk::Euler3DTransform<double> Euler3DTransformType;
     Euler3DTransformType::Pointer rigid3DTransform = Euler3DTransformType::New();
