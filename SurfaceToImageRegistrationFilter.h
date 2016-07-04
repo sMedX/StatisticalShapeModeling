@@ -30,7 +30,7 @@ public:
   itkTypeMacro(SurfaceToImageRegistrationFilter, itk::MeshToMeshFilter);
 
   //Set spatial transform type
-  typedef  enum { Translation, Rotation, Similarity, Affine } EnumTransformType;
+  typedef  enum { Translation, Euler3D, Similarity, Affine } EnumTransformType;
 
   itkSetMacro(TypeOfTransform, EnumTransformType);
   itkGetConstMacro(TypeOfTransform, EnumTransformType);
@@ -83,10 +83,10 @@ protected:
   typename BinaryImageType::ConstPointer m_Mask;
   typename LevelsetImageType::ConstPointer m_LevelsetImage;
   typename MetricType::Pointer m_Metric;
-  EnumTransformType m_TypeOfTransform;
   typename TransformType::Pointer m_Transform;
   typename CompositeTransformType::Pointer m_CompositeTransform;
 
+  EnumTransformType m_TypeOfTransform = EnumTransformType::Euler3D;
   unsigned int m_NumberOfIterations = 100;
   double m_GradientConvergenceTolerance = 1e-07;
   double m_LineSearchAccuracy = 0.1;

@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
         typeOfTransform = EnumTransformType::Translation;
         break;
       case 1:
-        typeOfTransform = EnumTransformType::Rotation;
+        typeOfTransform = EnumTransformType::Euler3D;
         break;
       default:
         typeOfTransform = static_cast<EnumTransformType>(transform);

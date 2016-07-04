@@ -34,8 +34,8 @@ endif()
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
-add_executable(labelToSurfaceConstructor LabelToSurfaceConstructor.cxx)
-target_link_libraries(labelToSurfaceConstructor ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+add_executable(labelToSurface LabelToSurface.cxx)
+target_link_libraries(labelToSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
 add_executable(alignmentOfSurfaces AlignmentOfSurfaces.cxx)
 target_link_libraries(alignmentOfSurfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
