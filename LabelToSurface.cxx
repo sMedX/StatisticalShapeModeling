@@ -38,9 +38,6 @@ int main(int argc, char** argv) {
   std::string surfaceFile;
   parser->GetCommandLineArgument("-surface", surfaceFile);
 
-  size_t numberOfPoints = 1e+05;
-  parser->GetCommandLineArgument("-point", numberOfPoints);
-
   float spacing = 1;
   parser->GetCommandLineArgument("-spacing", spacing);
 
@@ -58,7 +55,6 @@ int main(int argc, char** argv) {
 
   std::cout << std::endl;
   std::cout << "parameters " << std::endl;
-  std::cout << "    points " << numberOfPoints << std::endl;
   std::cout << "   spacing " << spacing << std::endl;
   std::cout << "    radius " << radius << std::endl;
   std::cout << "     sigma " << sigma << std::endl;
@@ -167,20 +163,9 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  // decimate surface
-  double reduction = 1 - numberOfPoints / (double) mcubes->GetOutput()->GetNumberOfPoints();
-  std::cout << "reduction to decimate surface " << reduction << std::endl;
-
-  vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
-  decimate->SetInputData(mcubes->GetOutput());
-  decimate->SetTargetReduction(reduction);
-  decimate->SetPreserveTopology(true);
-  decimate->SetSplitting(false);
-  decimate->Update();
-
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
   SmoothPolyData smoother = SmoothPolyData::New();
-  smoother->SetInputData(decimate->GetOutput());
+  smoother->SetInputData(mcubes->GetOutput());
   smoother->SetNumberOfIterations(numberOfIterations);
   smoother->SetRelaxationFactor(relaxation);
 
