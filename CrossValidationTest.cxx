@@ -36,6 +36,9 @@ int main(int argc, char** argv)
   unsigned int folds = 0;
   parser->GetCommandLineArgument("-folds", folds);
 
+  bool write = false;
+  parser->GetCommandLineArgument("-write", write);
+
   try {
     StringList fileNames = getFileList(listFile);
 
@@ -81,7 +84,7 @@ int main(int argc, char** argv)
 
       // build the model as usual
       boost::scoped_ptr<StatisticalModelType> model(pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0));
-      std::cout << "built model with  " << model->GetNumberOfPrincipalComponents() << " principal components" << std::endl;
+      std::cout << "built model from " << it->GetTrainingData().size() << " samples" << std::endl;
 
       // Now we can iterate over the test data and do whatever validation we would like to do.
       const DataItemListType testSamplesList = it->GetTestingData();
@@ -90,8 +93,14 @@ int main(int argc, char** argv)
         std::string sampleName = (*it)->GetDatasetURI();
 
         MeshType::Pointer testSample = (*it)->GetSample();
-        VectorType coefficients = model->ComputeCoefficientsForDataset(testSample);
-        MeshType::Pointer outputSample = model->DrawSample(coefficients);
+        MeshType::Pointer outputSample = model->DrawSample(model->ComputeCoefficientsForDataset(testSample));
+
+        if (write) {
+          std::string fileName = addFileNameSuffix(sampleName, "_cv");
+          if (!writeMesh<MeshType>(outputSample, fileName)) {
+            return EXIT_FAILURE;
+          }
+        }
 
         double probability = model->ComputeProbabilityOfDataset(testSample);
         double mean = 0;
