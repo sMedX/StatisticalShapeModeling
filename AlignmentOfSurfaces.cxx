@@ -183,9 +183,9 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  if (parser->ArgumentExists("-reference")) {
+  if (parser->ArgumentExists("-potential")) {
     std::string fileName;
-    parser->GetCommandLineArgument("-reference", fileName);
+    parser->GetCommandLineArgument("-potential", fileName);
 
     std::cout << "output reference image " << fileName << std::endl;
     std::cout << "   size " << reference->GetLargestPossibleRegion().GetSize() << std::endl;
