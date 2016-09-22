@@ -115,6 +115,15 @@ int main(int argc, char** argv)
   metrics->Compute();
   metrics->PrintReport(std::cout);
 
+  // write levelset image
+  if (parser->ArgumentExists("-levelset")) {
+    std::string fileName;
+    parser->GetCommandLineArgument("-levelset", fileName);
+    if (!writeImage(shapeModelToSurfaceRegistration->GetLevelsetImage(), fileName)) {
+      return EXIT_FAILURE;
+    }
+  }
+
   // write report to *.csv file
   if (parser->ArgumentExists("-report")) {
     float value = shapeModelToSurfaceRegistration->GetOptimizer()->GetValue();
