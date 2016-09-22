@@ -1,11 +1,10 @@
 #include <boost/scoped_ptr.hpp>
-#include <vtkPolyDataReader.h>
-#include <vtkPolyData.h>
-#include <DataManager.h>
-#include <PCAModelBuilder.h>
-#include <StatisticalModel.h>
-#include <itkStandardMeshRepresenter.h>
 #include <utils/statismo-build-models-utils.h>
+#include <DataManager.h>
+#include <itkPCAModelBuilder.h>
+#include <itkStandardMeshRepresenter.h>
+#include <itkReducedVarianceModelBuilder.h>
+#include <itkStatisticalModel.h>
 #include <itkSampleToHistogramFilter.h>
 #include <itkListSample.h>
 #include <itkHistogram.h>
@@ -17,10 +16,12 @@
 const unsigned int Dimension = 3;
 typedef itk::Mesh<float, Dimension> MeshType;
 typedef MeshType::PointType PointType;
-typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
 typedef statismo::DataManager<MeshType> DataManagerType;
-typedef statismo::StatisticalModel<MeshType> StatisticalModelType;
-typedef statismo::PCAModelBuilder<MeshType> ModelBuilderType;
+typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
+typedef itk::StatisticalModel<MeshType> StatisticalModelType;
+
+typedef itk::PCAModelBuilder<MeshType> ModelBuilderType;
+typedef itk::ReducedVarianceModelBuilder<MeshType> ReducedVarianceModelBuilderType;
 typedef statismo::VectorType VectorType;
 typedef DataManagerType::CrossValidationFoldListType CVFoldListType;
 typedef DataManagerType::DataItemListType DataItemListType;
@@ -32,6 +33,9 @@ int main(int argc, char** argv)
 
   std::string listFile;
   parser->GetCommandLineArgument("-list", listFile);
+
+  int numberOfComponents = -1;
+  parser->GetCommandLineArgument("-components", numberOfComponents);
 
   unsigned int folds = 0;
   parser->GetCommandLineArgument("-folds", folds);
@@ -67,9 +71,6 @@ int main(int argc, char** argv)
       dataManager->AddDataset(surface, fileName);
     }
 
-    // create the model builder
-    boost::scoped_ptr<ModelBuilderType> pcaModelBuilder(ModelBuilderType::Create());
-
     if (folds == 0) {
       folds = dataManager->GetNumberOfSamples();
     }
@@ -82,9 +83,18 @@ int main(int argc, char** argv)
     // iterate over cvFoldList to get all the folds
     for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
 
-      // build the model as usual
-      boost::scoped_ptr<StatisticalModelType> model(pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0));
+      // create the model
+      ModelBuilderType::Pointer pcaModelBuilder = ModelBuilderType::New();
+      StatisticalModelType::Pointer model = pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0);
+
+      //reduce the number of components
+      if (numberOfComponents >= 0) {
+        ReducedVarianceModelBuilderType::Pointer reducedVarModelBuilder = ReducedVarianceModelBuilderType::New();
+        model = reducedVarModelBuilder->BuildNewModelWithLeadingComponents(model, numberOfComponents);
+      }
+
       std::cout << "built model from " << it->GetTrainingData().size() << " samples" << std::endl;
+      std::cout << "number of principal components " << model->GetNumberOfPrincipalComponents() << std::endl;
 
       // Now we can iterate over the test data and do whatever validation we would like to do.
       const DataItemListType testSamplesList = it->GetTestingData();
@@ -188,4 +198,3 @@ int main(int argc, char** argv)
     std::cout << e.what() << std::endl;
   }
 }
-
