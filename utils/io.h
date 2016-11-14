@@ -188,33 +188,38 @@ bool readTransform(TransformListType transforms, const std::string& fileName)
 //----------------------------------------------------------------------------
 std::string getDirectoryFromPath(const std::string& fileName)
 {
-  size_t idx = fileName.find_last_of("\\/");
-
-  if (idx == std::string::npos) {
-    idx = -1;
-  }
-
-  return fileName.substr(0, idx+1);
+  //size_t idx = fileName.find_last_of("\\/");
+  //if (idx == std::string::npos) {
+  //  idx = -1;
+  //}
+  //return fileName.substr(0, idx + 1);
+  boost::filesystem::path path(fileName);
+  return path.parent_path().string();
 }
 
 std::string getFileNameFromPath(const std::string& fileName)
 {
-  size_t idx1 = fileName.find_last_of("\\/");
-  size_t idx2 = fileName.size();
+  //size_t idx1 = fileName.find_last_of("\\/");
+  //size_t idx2 = fileName.size();
+  //return fileName.substr(idx1 + 1, idx2 - idx1);
 
-  return fileName.substr(idx1 + 1, idx2 - idx1);
+  boost::filesystem::path path(fileName);
+  return path.filename().string();
 }
 
 std::string addFileNameSuffix(const std::string& fileName, const::std::string& suffix)
 {
-  std::string::size_type idx = fileName.find_last_of(".");
-
-  return fileName.substr(0, idx) + suffix + fileName.substr(idx);
+//  std::string::size_type idx = fileName.find_last_of(".");
+//  return fileName.substr(0, idx) + suffix + fileName.substr(idx);
+  boost::filesystem::path path(fileName);
+  path = path.parent_path() / boost::filesystem::path(path.stem().string() + suffix + path.extension().string());
+  return path.string();
 }
 
 std::string getBaseNameFromPath(const std::string& fileName)
 {
-  return boost::filesystem::basename(fileName);
+  boost::filesystem::path path(fileName);
+  return path.stem().string();
 }
 
 #endif
