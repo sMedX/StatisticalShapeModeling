@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
         rfile << header << std::endl;
       }
 
-      std::string scores = getFileNameFromPath(fileName) + dlm;
+      std::string scores = getBaseNameFromPath(fileName) + dlm;
       scores += std::to_string(metrics->GetMeanValue()) + dlm;
       scores += std::to_string(metrics->GetRMSEValue()) + dlm;
       scores += std::to_string(metrics->GetQuantileValue()) + dlm;

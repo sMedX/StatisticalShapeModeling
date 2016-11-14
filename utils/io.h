@@ -3,6 +3,7 @@
 
 #include <string>
 #include <iostream>
+#include <boost/filesystem.hpp>
 
 #include <itkObject.h>
 #include <itkImageFileReader.h>
@@ -213,10 +214,7 @@ std::string addFileNameSuffix(const std::string& fileName, const::std::string& s
 
 std::string getBaseNameFromPath(const std::string& fileName)
 {
-  size_t idx1 = fileName.find_last_of("\\/");
-  size_t idx2 = fileName.find_last_of(".");
-
-  return fileName.substr(idx1 + 1, idx2 - idx1 - 1);
+  return boost::filesystem::basename(fileName);
 }
 
 #endif
