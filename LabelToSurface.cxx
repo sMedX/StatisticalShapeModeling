@@ -275,6 +275,9 @@ int main(int argc, char** argv) {
     header += "Maximal" + dlm;
     scores += std::to_string(metrics->GetMaximalValue()) + dlm;
 
+    header += "Number of points" + dlm;
+    scores += std::to_string(surface->GetNumberOfPoints()) + dlm;
+
     bool exist = boost::filesystem::exists(fileName);
     std::ofstream ofile;
     ofile.open(fileName, std::ofstream::out | std::ofstream::app);
