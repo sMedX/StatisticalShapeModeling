@@ -261,7 +261,7 @@ int main(int argc, char** argv) {
     std::string dlm = ";";
 
     std::string header = dlm;
-    std::string scores = getFileNameFromPath(surfaceFile) + dlm;
+    std::string scores = getBaseNameFromPath(surfaceFile) + dlm;
 
     header += "Mean" + dlm;
     scores += std::to_string(metrics->GetMeanValue()) + dlm;
@@ -274,6 +274,15 @@ int main(int argc, char** argv) {
 
     header += "Maximal" + dlm;
     scores += std::to_string(metrics->GetMaximalValue()) + dlm;
+
+    header += dlm;
+    scores += dlm;
+
+    header += "Number of points" + dlm;
+    scores += std::to_string(surface->GetNumberOfPoints()) + dlm;
+
+    header += "Number of cells" + dlm;
+    scores += std::to_string(surface->GetNumberOfCells()) + dlm;
 
     bool exist = boost::filesystem::exists(fileName);
     std::ofstream ofile;

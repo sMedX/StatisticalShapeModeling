@@ -14,6 +14,7 @@ const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
 typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
+using fp = boost::filesystem::path;
 
 int main(int argc, char** argv) {
 
@@ -28,7 +29,7 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-surface", surfaceFile);
 
   int numberOfStages = 3;
-  parser->GetCommandLineArgument("-stage", numberOfStages);
+  parser->GetCommandLineArgument("-stages", numberOfStages);
 
   int transform = 1;
   parser->GetCommandLineArgument("-transform", transform);
@@ -100,16 +101,16 @@ int main(int argc, char** argv) {
   EnumTransformType typeOfTransform;
 
   for (int stage = 0; stage < numberOfStages; ++stage) {
-    switch ( stage ) {
-      case 0:
-        typeOfTransform = EnumTransformType::Translation;
-        break;
-      case 1:
-        typeOfTransform = EnumTransformType::Euler3D;
-        break;
-      default:
-        typeOfTransform = static_cast<EnumTransformType>(transform);
-  }
+    switch (stage) {
+    case 0:
+      typeOfTransform = EnumTransformType::Translation;
+      break;
+    case 1:
+      typeOfTransform = EnumTransformType::Euler3D;
+      break;
+    default:
+      typeOfTransform = static_cast<EnumTransformType>(transform);
+    }
 
     std::cout << "perform registration" << std::endl;
     std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
@@ -152,7 +153,6 @@ int main(int argc, char** argv) {
       levelset->SetSpacing(reference->GetSpacing());
       levelset->SetSize(reference->GetLargestPossibleRegion().GetSize());
       levelset->SetInput(vectorOfSurfaces[n]);
-
       try {
         levelset->Update();
       }
@@ -212,9 +212,10 @@ int main(int argc, char** argv) {
   for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
 
     // define full file name for output surface
-    std::string fileName = getDirectoryFromPath(surfaceFile) + getBaseNameFromPath(vectorOfFiles[count]) + "-" + getFileNameFromPath(surfaceFile);
+    fp path = fp(surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(surfaceFile).filename().string());
+    std::string fileName = path.string();
 
-    std::cout << "output surface polydata info" << std::endl;
+    std::cout << "output surface info" << std::endl;
     std::cout << fileName << std::endl;
     std::cout << " number of cells " << vectorOfSurfaces[count]->GetNumberOfCells() << std::endl;
     std::cout << "number of points " << vectorOfSurfaces[count]->GetNumberOfPoints() << std::endl;
@@ -250,7 +251,7 @@ int main(int argc, char** argv) {
         rfile << header << std::endl;
       }
 
-      std::string scores = getFileNameFromPath(fileName) + dlm;
+      std::string scores = getBaseNameFromPath(fileName) + dlm;
       scores += std::to_string(metrics->GetMeanValue()) + dlm;
       scores += std::to_string(metrics->GetRMSEValue()) + dlm;
       scores += std::to_string(metrics->GetQuantileValue()) + dlm;

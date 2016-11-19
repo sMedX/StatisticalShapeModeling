@@ -79,6 +79,7 @@ int main(int argc, char** argv)
 
     std::cout << "successfully loaded " << dataManager->GetNumberOfSamples() << " samples " << std::endl;
     std::cout << "    number of folds " << cvFoldList.size() << std::endl;
+    std::cout << std::endl;
 
     // iterate over cvFoldList to get all the folds
     for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
@@ -95,6 +96,7 @@ int main(int argc, char** argv)
 
       std::cout << "built model from " << it->GetTrainingData().size() << " samples" << std::endl;
       std::cout << "number of principal components " << model->GetNumberOfPrincipalComponents() << std::endl;
+      std::cout << std::endl;
 
       // Now we can iterate over the test data and do whatever validation we would like to do.
       const DataItemListType testSamplesList = it->GetTestingData();
@@ -149,12 +151,13 @@ int main(int argc, char** argv)
         const HistogramType* histogram = sampleToHistogram->GetOutput();
         double quantileValue = histogram->Quantile(0, 0.95);
 
-        std::cout << "Metric values for the sample " << sampleName << std::endl;
+        std::cout << sampleName << std::endl;
         std::cout << "Probability = " << probability << std::endl;
         std::cout << "       Mean = " << mean << " mm" << std::endl;
         std::cout << "       RMSE = " << rmse << " mm" << std::endl;
         std::cout << "   Quantile = " << quantileValue << ", level = " << 0.95 << std::endl;
         std::cout << "    Maximal = " << maximal << " mm" << std::endl;
+        std::cout << std::endl;
 
         if (parser->ArgumentExists("-report")) {
           std::string reportFile;

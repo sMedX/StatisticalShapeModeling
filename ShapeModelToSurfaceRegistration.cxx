@@ -136,7 +136,7 @@ int main(int argc, char** argv)
     std::string dlm = ";";
 
     std::string header = dlm;
-    std::string scores = getFileNameFromPath(surfaceFile) + dlm;
+    std::string scores = getBaseNameFromPath(surfaceFile) + dlm;
 
     header += "Cost function" + dlm;
     scores += std::to_string(value) + dlm;
