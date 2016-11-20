@@ -102,13 +102,13 @@ int main(int argc, char** argv)
       const DataItemListType testSamplesList = it->GetTestingData();
 
       for (DataItemListType::const_iterator it = testSamplesList.begin(); it != testSamplesList.end(); ++it) {
-        std::string sampleName = (*it)->GetDatasetURI();
+        std::string surfaceName = (*it)->GetDatasetURI();
 
         MeshType::Pointer testSample = (*it)->GetSample();
         MeshType::Pointer outputSample = model->DrawSample(model->ComputeCoefficientsForDataset(testSample));
 
         if (write) {
-          std::string fileName = addFileNameSuffix(sampleName, "_cv");
+          std::string fileName = addFileNameSuffix(surfaceName, "_cv");
           if (!writeMesh<MeshType>(outputSample, fileName)) {
             return EXIT_FAILURE;
           }
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
         const HistogramType* histogram = sampleToHistogram->GetOutput();
         double quantileValue = histogram->Quantile(0, 0.95);
 
-        std::cout << sampleName << std::endl;
+        std::cout << surfaceName << std::endl;
         std::cout << "Probability = " << probability << std::endl;
         std::cout << "       Mean = " << mean << " mm" << std::endl;
         std::cout << "       RMSE = " << rmse << " mm" << std::endl;
@@ -165,7 +165,7 @@ int main(int argc, char** argv)
 
           std::string dlm = ";";
           std::string header = dlm;
-          std::string scores = sampleName + dlm;
+          std::string scores = getBaseNameFromPath(surfaceName) + dlm;
 
           header += "Probability" + dlm;
           scores += std::to_string(probability) + dlm;
