@@ -114,7 +114,7 @@ int main(int argc, char** argv)
       std::cerr << excep << std::endl;
       return EXIT_FAILURE;
     }
-    shapeModelToSurfaceRegistration->PrintReport();
+    shapeModelToSurfaceRegistration->PrintReport(std::cout);
 
     referenceSurface = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
   }
@@ -137,6 +137,15 @@ int main(int argc, char** argv)
   metrics->Compute();
   metrics->PrintReport(std::cout);
 
+  // write report to *.csv file
+  if (parser->ArgumentExists("-report")) {
+    std::string fileName;
+    parser->GetCommandLineArgument("-report", fileName);
+    std::cout << "write report to the file: " << fileName << std::endl;
+
+    metrics->PrintReportToFile(fileName, getBaseNameFromPath(surfaceFile));
+  }
+
   // write levelset image
   if (parser->ArgumentExists("-levelset")) {
     std::string fileName;
@@ -144,47 +153,6 @@ int main(int argc, char** argv)
     if (!writeImage(shapeModelToSurfaceRegistration->GetLevelSetImage(), fileName)) {
       return EXIT_FAILURE;
     }
-  }
-
-  // write report to *.csv file
-  if (parser->ArgumentExists("-report")) {
-    float value = shapeModelToSurfaceRegistration->GetOptimizer()->GetValue();
-
-    std::string fileName;
-    parser->GetCommandLineArgument("-report", fileName);
-
-    std::cout << "write report to the file: " << fileName << std::endl;
-
-    std::string dlm = ";";
-
-    std::string header = dlm;
-    std::string scores = getBaseNameFromPath(surfaceFile) + dlm;
-
-    header += "Cost function" + dlm;
-    scores += std::to_string(value) + dlm;
-
-    header += "Mean" + dlm;
-    scores += std::to_string(metrics->GetMeanValue()) + dlm;
-
-    header += "RMSE" + dlm;
-    scores += std::to_string(metrics->GetRMSEValue()) + dlm;
-
-    header += "Quantile " + std::to_string(metrics->GetLevelOfQuantile()) + dlm;
-    scores += std::to_string(metrics->GetQuantileValue()) + dlm;
-
-    header += "Maximal" + dlm;
-    scores += std::to_string(metrics->GetMaximalValue()) + dlm;
-
-    bool exist = boost::filesystem::exists(fileName);
-    std::ofstream ofile;
-    ofile.open(fileName, std::ofstream::out | std::ofstream::app);
-
-    if (!exist) {
-      ofile << header << std::endl;
-    }
-
-    ofile << scores << std::endl;
-    ofile.close();
   }
 
   return EXIT_SUCCESS;

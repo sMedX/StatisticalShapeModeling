@@ -85,7 +85,7 @@ namespace itk
     itkSetMacro(ModelScale, double);
     itkGetMacro(ModelScale, double);
 
-    void PrintReport();
+    void PrintReport(std::ostream& os);
 
   protected:
     ShapeModelRegistrationMethod();

@@ -87,6 +87,10 @@ namespace itk
   template <typename TShapeModel, typename TOutputMesh>
   void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::InitializeOptimizer()
   {
+    if (m_NumberOfIterations < 1) {
+      itkExceptionMacro(<< "number of iterations is zero");
+    }
+
     m_Optimizer = itk::LBFGSOptimizer::New();
     m_Optimizer->SetCostFunction(m_Metric);
     m_Optimizer->SetScales(m_Scales);
@@ -140,28 +144,26 @@ namespace itk
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::PrintReport()
+  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::PrintReport(std::ostream& os)
   {
-    std::cout << "shape model info" << std::endl;
-    std::cout << "number of components       " << m_ShapeModel->GetNumberOfPrincipalComponents() << std::endl;
-    std::cout << "number of points           " << m_ShapeModel->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
-    std::cout << "number of cells            " << m_ShapeModel->GetRepresenter()->GetReference()->GetNumberOfCells() << std::endl;
-    std::cout << std::endl;
+    os << "shape model info" << std::endl;
+    os << "number of components       " << m_ShapeModel->GetNumberOfPrincipalComponents() << std::endl;
+    os << "number of points           " << m_ShapeModel->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
+    os << "number of cells            " << m_ShapeModel->GetRepresenter()->GetReference()->GetNumberOfCells() << std::endl;
+    os << std::endl;
 
-    std::cout << "metric info" << std::endl;
-    std::cout << "name of class              " << m_Metric->GetNameOfClass() << std::endl;
-    std::cout << "regularization parameter   " << m_RegularizationParameter << std::endl;
-    std::cout << std::endl;
+    os << "metric info" << std::endl;
+    os << "name of class              " << m_Metric->GetNameOfClass() << std::endl;
+    os << "regularization parameter   " << m_RegularizationParameter << std::endl;
+    os << std::endl;
 
-    if (m_NumberOfIterations > 0) {
-      std::cout << "optimizer info" << std::endl;
-      std::cout << "stop condition description " << m_Optimizer->GetStopConditionDescription() << std::endl;
-      std::cout << "cost function value        " << m_Optimizer->GetValue() << std::endl;
-      std::cout << std::endl;
-    }
+    os << "optimizer info" << std::endl;
+    os << "stop condition description " << m_Optimizer->GetStopConditionDescription() << std::endl;
+    os << "cost function value        " << m_Optimizer->GetValue() << std::endl;
+    os << std::endl;
 
-    std::cout << m_ShapeTransform->GetTransformTypeAsString() << ", " << m_ShapeTransform->GetTransformCategory() << std::endl;
-    std::cout << "number of parameters " << m_ShapeTransform->GetNumberOfParameters() << std::endl;
-    std::cout << std::endl;
+    os << m_ShapeTransform->GetTransformTypeAsString() << ", " << m_ShapeTransform->GetTransformCategory() << std::endl;
+    os << "number of parameters " << m_ShapeTransform->GetNumberOfParameters() << std::endl;
+    os << std::endl;
   }
 }
