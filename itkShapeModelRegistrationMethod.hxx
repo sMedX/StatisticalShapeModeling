@@ -156,6 +156,7 @@ namespace itk
     if (m_NumberOfIterations > 0) {
       std::cout << "optimizer info" << std::endl;
       std::cout << "stop condition description " << m_Optimizer->GetStopConditionDescription() << std::endl;
+      std::cout << "cost function value        " << m_Optimizer->GetValue() << std::endl;
       std::cout << std::endl;
     }
 
