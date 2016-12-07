@@ -94,7 +94,6 @@ int main(int argc, char** argv)
   parameters.push_back(20);
   parameters.push_back(10);
   parameters.push_back(5);
-  parameters.push_back(1);
 
   double scale = 100;
   int numberOfBasisFunctions = 200;
