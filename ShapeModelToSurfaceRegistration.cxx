@@ -17,7 +17,7 @@ typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-StatisticalModelType::Pointer BuildGPShapeModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
+StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
 
 int main(int argc, char** argv)
 {
@@ -60,8 +60,8 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  std::cout << "   input surface polydata " << surfaceFile << std::endl;
-  std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "input surface polydata " << surfaceFile << std::endl;
+  std::cout << "number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
@@ -70,7 +70,6 @@ int main(int argc, char** argv)
   if (!readMesh<MeshType>(referenceSurface, referenceSurfaceFile)) {
     return EXIT_FAILURE;
   };
-
 
   //----------------------------------------------------------------------------
   //shape model to image registration
@@ -95,11 +94,13 @@ int main(int argc, char** argv)
   parameters.push_back(20);
   parameters.push_back(10);
   parameters.push_back(5);
+  parameters.push_back(1);
+
   double scale = 100;
   int numberOfBasisFunctions = 200;
 
   for (int n = 0; n < parameters.size(); ++n) {
-    StatisticalModelType::Pointer model = BuildGPShapeModel(referenceSurface, parameters[n], scale, numberOfBasisFunctions);
+    StatisticalModelType::Pointer model = BuildGPModel(referenceSurface, parameters[n], scale, numberOfBasisFunctions);
 
     shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
@@ -158,7 +159,7 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-StatisticalModelType::Pointer BuildGPShapeModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions)
+StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions)
 {
   // create kernel
   typedef DataTypeShape::PointType PointType;
