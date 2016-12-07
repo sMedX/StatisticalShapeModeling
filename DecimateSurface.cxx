@@ -1,4 +1,3 @@
-#include <itkMesh.h>
 #include <vtkPolyData.h>
 #include <vtkSmoothPolyDataFilter.h>
 #include <vtkPolyDataNormals.h>
