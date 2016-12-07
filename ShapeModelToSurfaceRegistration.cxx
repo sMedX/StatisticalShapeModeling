@@ -4,11 +4,12 @@
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
 
-#include "itkShapeModelRegistrationMethod.h"
-#include "ShapeModelToSurfaceRegistrationFilter.h"
-#include "utils/PointSetToImageMetrics.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
+
+#include "utils/PointSetToImageMetrics.h"
+#include "itkShapeModelRegistrationMethod.h"
+#include "SurfaceToLevelSetImageFilter.h"
 
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
@@ -24,14 +25,11 @@ int main(int argc, char** argv)
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string surfaceFile;
-  parser->GetCommandLineArgument("-surface", surfaceFile);
-
-  std::string modelFile;
-  parser->GetCommandLineArgument("-model", modelFile);
-
   std::string referenceSurfaceFile;
   parser->GetCommandLineArgument("-reference", referenceSurfaceFile);
+
+  std::string surfaceFile;
+  parser->GetCommandLineArgument("-surface", surfaceFile);
 
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
@@ -47,12 +45,12 @@ int main(int argc, char** argv)
 
   std::cout << std::endl;
   std::cout << " shape model to image registration" << std::endl;
-  std::cout << "          model file " << modelFile << std::endl;
-  std::cout << "  input surface file " << surfaceFile << std::endl;
-  std::cout << " output surface file " << outputFile << std::endl;
-  std::cout << "         model scale " << mscale << std::endl;
-  std::cout << "      regularization " << regularization << std::endl;
-  std::cout << "number of iterations " << numberOfIterations << std::endl;
+  std::cout << "reference surface file " << referenceSurfaceFile << std::endl;
+  std::cout << "    input surface file " << surfaceFile << std::endl;
+  std::cout << "   output surface file " << outputFile << std::endl;
+  std::cout << "           model scale " << mscale << std::endl;
+  std::cout << "        regularization " << regularization << std::endl;
+  std::cout << "  number of iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -202,10 +200,10 @@ StatisticalModelType::Pointer BuildGPShapeModel(MeshType::Pointer surface, doubl
   MatrixPointerType kernel(gaussianKernel);
 
   typedef std::shared_ptr<statismo::MatrixValuedKernel<PointType>> KernelPointerType;
-  KernelPointerType unscaledKernel(new statismo::UncorrelatedMatrixValuedKernel<PointType>(kernel.get(), 3));
+  KernelPointerType unscaledKernel(new statismo::UncorrelatedMatrixValuedKernel<PointType>(kernel.get(), Dimension));
   KernelPointerType modelBuildingKernel(new statismo::ScaledKernel<PointType>(unscaledKernel.get(), scale));
 
-  typedef itk::StandardMeshRepresenter<float, 3> RepresenterType;
+  typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
   typedef RepresenterType::DatasetPointerType DatasetPointerType;
   RepresenterType::Pointer representer = RepresenterType::New();
   representer->SetReference(surface);
