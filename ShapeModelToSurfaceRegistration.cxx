@@ -1,6 +1,10 @@
 ﻿#include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
+#include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
+#include <statismo-build-gp-model-kernels.h>
 
+#include "itkShapeModelRegistrationMethod.h"
 #include "ShapeModelToSurfaceRegistrationFilter.h"
 #include "utils/PointSetToImageMetrics.h"
 #include "utils/io.h"
@@ -10,6 +14,9 @@ const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
 typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
+
+typedef itk::StatisticalModel<MeshType> StatisticalModelType;
+StatisticalModelType::Pointer BuildGPShapeModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
 
 int main(int argc, char** argv)
 {
@@ -22,6 +29,9 @@ int main(int argc, char** argv)
 
   std::string modelFile;
   parser->GetCommandLineArgument("-model", modelFile);
+
+  std::string referenceSurfaceFile;
+  parser->GetCommandLineArgument("-reference", referenceSurfaceFile);
 
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
@@ -57,61 +67,75 @@ int main(int argc, char** argv)
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
-  // read statistical shape model
-  typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
-  RepresenterType::Pointer representer = RepresenterType::New();
-
-  typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-  StatisticalModelType::Pointer model = StatisticalModelType::New();
-
-  try {
-    model->Load(representer, modelFile.c_str());
-  }
-  catch (itk::ExceptionObject & excp) {
-    std::cerr << excp << std::endl;
+  // read reference surface
+  MeshType::Pointer referenceSurface = MeshType::New();
+  if (!readMesh<MeshType>(referenceSurface, referenceSurfaceFile)) {
     return EXIT_FAILURE;
-  }
+  };
 
-  std::cout << "input model " << modelFile << std::endl;
-  std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
-  std::cout << "    number of points " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
-  std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   //shape model to image registration
-  typedef ShapeModelToSurfaceRegistrationFilter<MeshType> ShapeModelToSurfaceRegistrationFilterType;
-  ShapeModelToSurfaceRegistrationFilterType::Pointer shapeModelToSurfaceRegistration = ShapeModelToSurfaceRegistrationFilterType::New();
-  shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
-  shapeModelToSurfaceRegistration->SetModelScale(mscale);
-  shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization);
-  shapeModelToSurfaceRegistration->SetShapeModel(model);
-  shapeModelToSurfaceRegistration->SetInput(surface);
-
+  typedef SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
+  SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
+  levelset->SetMargin(0.3);
+  levelset->SetSpacing(1);
+  levelset->SetInput(surface);
   try {
-    shapeModelToSurfaceRegistration->Update();
+    levelset->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
 
-  shapeModelToSurfaceRegistration->PrintReport(std::cout);
+  typedef itk::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
+  ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
+  
+  std::vector<double> parameters;
+  parameters.push_back(30);
+  parameters.push_back(20);
+  parameters.push_back(10);
+  parameters.push_back(5);
+  double scale = 100;
+  int numberOfBasisFunctions = 200;
+
+  for (int n = 0; n < parameters.size(); ++n) {
+    StatisticalModelType::Pointer model = BuildGPShapeModel(referenceSurface, parameters[n], scale, numberOfBasisFunctions);
+
+    shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
+    shapeModelToSurfaceRegistration->SetShapeModel(model);
+    shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
+    shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
+    shapeModelToSurfaceRegistration->SetModelScale(mscale);
+    shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization);
+    try {
+      shapeModelToSurfaceRegistration->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      return EXIT_FAILURE;
+    }
+    shapeModelToSurfaceRegistration->PrintReport();
+
+    referenceSurface = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
+  }
 
   // write surface
   if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
     return EXIT_FAILURE;
   }
 
-  //Compute metrics
-  typedef ShapeModelToSurfaceRegistrationFilterType::LevelsetImageType LevelsetImageType;
-  typedef ShapeModelToSurfaceRegistrationFilterType::PointSetType PointSetType;
+  // compute metrics
+  typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
+  typedef ShapeModelRegistrationMethod::PointSetType PointSetType;
   PointSetType::Pointer pointSet = PointSetType::New();
-  pointSet->SetPoints(shapeModelToSurfaceRegistration->GetOutput()->GetPoints());
+  pointSet->SetPoints(const_cast<PointSetType::PointsContainer*> (shapeModelToSurfaceRegistration->GetOutput()->GetPoints()));
 
   typedef PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
-  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelsetImage());
+  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
   metrics->Compute();
   metrics->PrintReport(std::cout);
 
@@ -119,7 +143,7 @@ int main(int argc, char** argv)
   if (parser->ArgumentExists("-levelset")) {
     std::string fileName;
     parser->GetCommandLineArgument("-levelset", fileName);
-    if (!writeImage(shapeModelToSurfaceRegistration->GetLevelsetImage(), fileName)) {
+    if (!writeImage(shapeModelToSurfaceRegistration->GetLevelSetImage(), fileName)) {
       return EXIT_FAILURE;
     }
   }
@@ -166,6 +190,43 @@ int main(int argc, char** argv)
   }
 
   return EXIT_SUCCESS;
+}
+
+StatisticalModelType::Pointer BuildGPShapeModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions)
+{
+  // create kernel
+  typedef DataTypeShape::PointType PointType;
+  auto gaussianKernel = new GaussianKernel<PointType>(parameters);
+
+  typedef std::shared_ptr<const statismo::ScalarValuedKernel<PointType>> MatrixPointerType;
+  MatrixPointerType kernel(gaussianKernel);
+
+  typedef std::shared_ptr<statismo::MatrixValuedKernel<PointType>> KernelPointerType;
+  KernelPointerType unscaledKernel(new statismo::UncorrelatedMatrixValuedKernel<PointType>(kernel.get(), 3));
+  KernelPointerType modelBuildingKernel(new statismo::ScaledKernel<PointType>(unscaledKernel.get(), scale));
+
+  typedef itk::StandardMeshRepresenter<float, 3> RepresenterType;
+  typedef RepresenterType::DatasetPointerType DatasetPointerType;
+  RepresenterType::Pointer representer = RepresenterType::New();
+  representer->SetReference(surface);
+
+  // build model
+  typedef itk::LowRankGPModelBuilder<MeshType> ModelBuilderType;
+  ModelBuilderType::Pointer modelBuilder = ModelBuilderType::New();
+  modelBuilder->SetRepresenter(representer);
+
+  // build and save model to file
+  typedef itk::StatisticalModel<MeshType> StatisticalModelType;
+  StatisticalModelType::Pointer model;
+  try {
+    model = modelBuilder->BuildNewModel(representer->IdentitySample(), *modelBuildingKernel.get(), numberOfBasisFunctions);
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    throw;
+  }
+
+  return model;
 }
 
 
