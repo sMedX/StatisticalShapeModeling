@@ -3,7 +3,6 @@
 #include <itkImage.h>
 #include <itkStatisticalModel.h>
 #include <itkTransform.h>
-#include <itkCompositeTransform.h>
 #include <itkStatisticalShapeModelTransform.h>
 #include <itkLBFGSOptimizer.h>
 
