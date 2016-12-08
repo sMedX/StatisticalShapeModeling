@@ -125,7 +125,7 @@ int main(int argc, char** argv)
   unsigned int numberOfStages = regularization.size();
 
   for (int n = 0; n < numberOfStages; ++n) {
-    std::cout << "========== stage (" << n + 1 << " / " << numberOfStages << ") ==========" << std::endl;
+    std::cout << "---------- stage (" << n + 1 << " / " << numberOfStages << ") ----------" << std::endl;
 
     // run registration
     shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
