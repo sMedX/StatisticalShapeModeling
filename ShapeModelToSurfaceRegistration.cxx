@@ -25,8 +25,8 @@ int main(int argc, char** argv)
 
   parser->SetCommandLineArguments(argc, argv);
 
-  std::string referenceSurfaceFile;
-  parser->GetCommandLineArgument("-reference", referenceSurfaceFile);
+  std::string modelFile;
+  parser->GetCommandLineArgument("-model", modelFile);
 
   std::string surfaceFile;
   parser->GetCommandLineArgument("-surface", surfaceFile);
@@ -34,23 +34,40 @@ int main(int argc, char** argv)
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
+  unsigned int numberOfIterations = 100;
+  parser->GetCommandLineArgument("-iteration", numberOfIterations);
+
   double mscale = 1;
   parser->GetCommandLineArgument("-mscale", mscale);
 
-  double regularization = 0.1;
+  std::vector<double> regularization(0.1);
   parser->GetCommandLineArgument("-regularization", regularization);
 
-  int numberOfIterations = 100;
-  parser->GetCommandLineArgument("-iteration", numberOfIterations);
+  std::vector<double> sigma;
+  parser->GetCommandLineArgument("-sigma", sigma);
+
+  double scale = 100;
+  parser->GetCommandLineArgument("-scale", scale);
 
   std::cout << std::endl;
   std::cout << " shape model to image registration" << std::endl;
-  std::cout << "reference surface file " << referenceSurfaceFile << std::endl;
+  std::cout << "            model file " << modelFile << std::endl;
   std::cout << "    input surface file " << surfaceFile << std::endl;
   std::cout << "   output surface file " << outputFile << std::endl;
   std::cout << "           model scale " << mscale << std::endl;
-  std::cout << "        regularization " << regularization << std::endl;
   std::cout << "  number of iterations " << numberOfIterations << std::endl;
+  
+  std::cout << "        regularization ";
+  for (int n = 0; n < regularization.size(); ++n) {
+    std::cout << regularization[n] << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "                 sigma ";
+  for (int n = 0; n < sigma.size(); ++n) {
+    std::cout << sigma[n] << " ";
+  }
+  std::cout << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -65,14 +82,28 @@ int main(int argc, char** argv)
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
-  // read reference surface
-  MeshType::Pointer referenceSurface = MeshType::New();
-  if (!readMesh<MeshType>(referenceSurface, referenceSurfaceFile)) {
+  //----------------------------------------------------------------------------
+  // read statistical shape model
+  typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
+  RepresenterType::Pointer representer = RepresenterType::New();
+
+  typedef itk::StatisticalModel<MeshType> StatisticalModelType;
+  StatisticalModelType::Pointer model = StatisticalModelType::New();
+  try {
+    model->Load(representer, modelFile.c_str());
+  }
+  catch (itk::ExceptionObject & excp) {
+    std::cerr << excp << std::endl;
     return EXIT_FAILURE;
-  };
+  }
+
+  std::cout << "input model " << modelFile << std::endl;
+  std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
+  std::cout << "    number of points " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
+  std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  //shape model to image registration
+  // compute level set image
   typedef SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
   levelset->SetMargin(0.3);
@@ -86,27 +117,23 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
+  //----------------------------------------------------------------------------
+  // shape model to image registration
   typedef itk::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
   ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
-  
-  std::vector<double> parameters;
-  parameters.push_back(30);
-  parameters.push_back(20);
-  parameters.push_back(10);
-  parameters.push_back(5);
 
-  double scale = 100;
-  int numberOfBasisFunctions = 200;
+  unsigned int numberOfStages = regularization.size();
 
-  for (int n = 0; n < parameters.size(); ++n) {
-    StatisticalModelType::Pointer model = BuildGPModel(referenceSurface, parameters[n], scale, numberOfBasisFunctions);
+  for (int n = 0; n < numberOfStages; ++n) {
+    std::cout << "========== stage (" << n + 1 << " / " << numberOfStages << ") ==========" << std::endl;
 
+    // run registration
     shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
     shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
     shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
     shapeModelToSurfaceRegistration->SetModelScale(mscale);
-    shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization);
+    shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[n]);
     try {
       shapeModelToSurfaceRegistration->Update();
     }
@@ -116,14 +143,14 @@ int main(int argc, char** argv)
     }
     shapeModelToSurfaceRegistration->PrintReport(std::cout);
 
-    referenceSurface = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
+    // build new model
+    if (n + 1 < numberOfStages) {
+      MeshType::Pointer reference = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
+      model = BuildGPModel(reference, sigma[n], scale, model->GetNumberOfPrincipalComponents());
+    }
   }
 
-  // write surface
-  if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
-    return EXIT_FAILURE;
-  }
-
+  //----------------------------------------------------------------------------
   // compute metrics
   typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
   typedef ShapeModelRegistrationMethod::PointSetType PointSetType;
@@ -142,8 +169,12 @@ int main(int argc, char** argv)
     std::string fileName;
     parser->GetCommandLineArgument("-report", fileName);
     std::cout << "write report to the file: " << fileName << std::endl;
-
     metrics->PrintReportToFile(fileName, getBaseNameFromPath(surfaceFile));
+  }
+
+  // write surface
+  if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
+    return EXIT_FAILURE;
   }
 
   // write levelset image
