@@ -118,5 +118,38 @@ void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::PrintReport(std::ostr
   os << std::endl;
 }
 
+template <typename TFixedPointSet, typename TMovingImage>
+void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::PrintReportToFile(const std::string & fileName, const std::string & datasetURI) const
+{
+  std::string dlm = ";";
+
+  std::string header = dlm;
+  std::string scores = datasetURI + dlm;
+
+  header += "Mean" + dlm;
+  scores += std::to_string(m_MeanValue) + dlm;
+
+  header += "RMSE" + dlm;
+  scores += std::to_string(m_RMSEValue) + dlm;
+
+  header += "Quantile " + std::to_string(m_LevelOfQuantile) + dlm;
+  scores += std::to_string(m_QuantileValue) + dlm;
+
+  header += "Maximal" + dlm;
+  scores += std::to_string(m_MaximalValue) + dlm;
+
+  bool exist = boost::filesystem::exists(fileName);
+  std::ofstream ofile;
+
+  ofile.open(fileName, std::ofstream::out | std::ofstream::app);
+
+  if (!exist) {
+    ofile << header << std::endl;
+  }
+
+  ofile << scores << std::endl;
+  ofile.close();
+}
+
 
 #endif

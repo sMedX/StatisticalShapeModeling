@@ -65,6 +65,7 @@ public itk::PointSetToImageMetric < TFixedPointSet, TMovingImage >
   itkGetMacro(MaximalValue, MeasureType);
 
   void PrintReport(std::ostream& os) const;
+  void PrintReportToFile(const std::string & fileName, const std::string & datasetURI) const;
 
   virtual MeasureType GetValue(const ParametersType& p) const
   {
