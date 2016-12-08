@@ -109,7 +109,7 @@ ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParameters
     if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
       // compute image value
       const RealType imageValue = m_Interpolator->Evaluate(transformedPoint);
-      value += imageValue * imageValue;
+      value += std::pow(imageValue, m_Degree);
     
       m_NumberOfPixelsCounted++;
     }
@@ -178,13 +178,13 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 
       // compute image value
       const RealType imageValue = m_Interpolator->Evaluate(transformedPoint);
-      value += imageValue * imageValue;
+      value += std::pow(imageValue, m_Degree);
 
       for (unsigned int par = 0; par < m_NumberOfParameters; par++) {
         RealType sum = itk::NumericTraits<RealType>::ZeroValue();
 
         for (unsigned int dim = 0; dim < Self::PointDimension; dim++) {
-          sum += 2.0 *imageValue *jacobian(dim, par) * gradient[dim];
+          sum += m_Degree * std::pow(imageValue, m_Degree - 1) * jacobian(dim, par) * gradient[dim];
         }
 
         derivative[par] += sum;

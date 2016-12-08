@@ -75,6 +75,7 @@ namespace itk
     m_Metric->SetImage(m_LevelSetImage);
     m_Metric->SetTransform(m_ShapeTransform);
     m_Metric->SetRegularizationParameter(m_RegularizationParameter);
+    m_Metric->SetDegree(m_Degree);
     try {
       m_Metric->Initialize();
     }
@@ -155,6 +156,7 @@ namespace itk
     os << "metric info" << std::endl;
     os << "name of class              " << m_Metric->GetNameOfClass() << std::endl;
     os << "regularization parameter   " << m_RegularizationParameter << std::endl;
+    os << "degree                     " << m_Degree << std::endl;
     os << std::endl;
 
     os << "optimizer info" << std::endl;

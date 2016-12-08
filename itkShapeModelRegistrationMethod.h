@@ -84,6 +84,9 @@ namespace itk
     itkSetMacro(ModelScale, double);
     itkGetMacro(ModelScale, double);
 
+    itkSetMacro(Degree, unsigned int);
+    itkGetMacro(Degree, unsigned int);
+
     void PrintReport(std::ostream& os);
 
   protected:
@@ -111,6 +114,7 @@ namespace itk
     double m_DefaultStepLength = 0.1;
     double m_GradientConvergenceTolerance = 1e-07;
     double m_RegularizationParameter = 0.1;
+    unsigned int m_Degree = 2;
   };
 }
 #ifndef ITK_MANUAL_INSTANTIATION

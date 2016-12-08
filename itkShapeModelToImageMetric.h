@@ -102,8 +102,11 @@ public:
   /** Set the parameters defining the Transform. */
   void SetTransformParameters(const ParametersType & parameters) const;
 
-  itkSetMacro(RegularizationParameter, MeasureType)
-  itkGetMacro(RegularizationParameter, MeasureType)
+  itkSetMacro(RegularizationParameter, MeasureType);
+  itkGetMacro(RegularizationParameter, MeasureType);
+
+  itkSetMacro(Degree, unsigned int);
+  itkGetMacro(Degree, unsigned int);
 
   /** Set/Get the flag for computing the image gradient.
    *  When ON the metric derivative is computed using the Jacobian of the
@@ -150,6 +153,7 @@ protected:
   MeasureType m_RegularizationParameter = 0.1;
   unsigned int m_NumberOfParameters;
   unsigned int m_NumberOfComponents;
+  unsigned int m_Degree = 2;
 
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;

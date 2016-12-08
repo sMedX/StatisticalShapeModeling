@@ -49,6 +49,9 @@ int main(int argc, char** argv)
   double scale = 100;
   parser->GetCommandLineArgument("-scale", scale);
 
+  unsigned int degree = 2;
+  parser->GetCommandLineArgument("-degree", degree);
+
   std::cout << std::endl;
   std::cout << " shape model to image registration" << std::endl;
   std::cout << "            model file " << modelFile << std::endl;
@@ -56,7 +59,8 @@ int main(int argc, char** argv)
   std::cout << "   output surface file " << outputFile << std::endl;
   std::cout << "           model scale " << mscale << std::endl;
   std::cout << "  number of iterations " << numberOfIterations << std::endl;
-  
+  std::cout << "                degree " << degree << std::endl;
+
   std::cout << "        regularization ";
   for (int n = 0; n < regularization.size(); ++n) {
     std::cout << regularization[n] << " ";
@@ -134,6 +138,7 @@ int main(int argc, char** argv)
     shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
     shapeModelToSurfaceRegistration->SetModelScale(mscale);
     shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[n]);
+    shapeModelToSurfaceRegistration->SetDegree(degree);
     try {
       shapeModelToSurfaceRegistration->Update();
     }
