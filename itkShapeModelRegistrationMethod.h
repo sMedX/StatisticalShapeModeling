@@ -16,7 +16,7 @@ namespace itk
   {
   public:
     /** Standard class typedefs. */
-    typedef ShapeModelRegistrationMethod    Self;
+    typedef ShapeModelRegistrationMethod              Self;
     typedef itk::ProcessObject                        Superclass;
     typedef itk::SmartPointer< Self >                 Pointer;
     typedef itk::SmartPointer< const Self >           ConstPointer;
