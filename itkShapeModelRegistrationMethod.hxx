@@ -107,6 +107,8 @@ namespace itk
   template <typename TShapeModel, typename TOutputMesh>
   void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::GenerateData()
   {
+    m_Clock.Start();
+
     // initialize transform, metric, optimizer and multi-stage data
     this->InitializeTransform();
     this->InitializeMetric();
@@ -123,6 +125,8 @@ namespace itk
 
     // generate output data
     this->GenerateOutputData();
+
+    m_Clock.Stop();
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
@@ -162,6 +166,7 @@ namespace itk
     os << "optimizer info" << std::endl;
     os << "stop condition description " << m_Optimizer->GetStopConditionDescription() << std::endl;
     os << "cost function value        " << m_Optimizer->GetValue() << std::endl;
+    os << "elapsed time, sec          " << m_Clock.GetTotal() << std::endl;
     os << std::endl;
 
     os << m_ShapeTransform->GetTransformTypeAsString() << ", " << m_ShapeTransform->GetTransformCategory() << std::endl;

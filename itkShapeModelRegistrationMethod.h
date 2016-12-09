@@ -1,5 +1,6 @@
 #pragma once
 
+#include <itkTimeProbe.h>
 #include <itkImage.h>
 #include <itkStatisticalModel.h>
 #include <itkTransform.h>
@@ -115,6 +116,7 @@ namespace itk
     double m_GradientConvergenceTolerance = 1e-07;
     double m_RegularizationParameter = 0.1;
     unsigned int m_Degree = 2;
+    itk::TimeProbe m_Clock;
   };
 }
 #ifndef ITK_MANUAL_INSTANTIATION
