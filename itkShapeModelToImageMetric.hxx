@@ -94,36 +94,10 @@ template <typename TShapeModel, typename TImage>
 typename ShapeModelToImageMetric<TShapeModel, TImage>::MeasureType 
 ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParametersType & parameters ) const
 {
-  m_Transform->SetParameters(parameters);
-
-  m_NumberOfPixelsCounted = 0;
-  PointIteratorType pointIter = m_PointsContainer->Begin();
-
   MeasureType value = itk::NumericTraits<MeasureType>::ZeroValue();
-
-  for (; pointIter != m_PointsContainer->End(); ++pointIter) {
-    InputPointType inputPoint;
-    inputPoint.CastFrom(pointIter.Value());
-    OutputPointType transformedPoint = m_Transform->TransformPoint(inputPoint);
-
-    if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
-      // compute image value
-      const RealType imageValue = m_Interpolator->Evaluate(transformedPoint);
-      value += std::pow(imageValue, m_Degree);
-    
-      m_NumberOfPixelsCounted++;
-    }
-  }
-
-  if (!m_NumberOfPixelsCounted) {
-    itkExceptionMacro(<< "All the points mapped to outside of the image");
-  }
-  else {
-    value /= m_NumberOfPixelsCounted;
-  }
-
-  this->CalculateValuePenalty(parameters, value);
-
+  DerivativeType derivative = DerivativeType(m_NumberOfParameters);
+  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
+  this->GetValueAndDerivative(parameters, value, derivative);
   return value;
 }
 
