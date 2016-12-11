@@ -8,7 +8,7 @@
 #include "utils/itkCommandLineArgumentParser.h"
 #include "utils/PointSetToImageMetrics.h"
 #include "SurfaceToLevelSetImageFilter.h"
-#include "SurfaceToImageRegistrationFilter.h"
+#include "itkSurfaceToImageRegistrationFilter.h"
 
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
 
   // read surface in to vector
   StringList listOfFiles = getFileList(listFile);
+
   std::vector<MeshType::Pointer> vectorOfSurfaces;
   std::vector<std::string> vectorOfFiles;
 
@@ -96,7 +97,7 @@ int main(int argc, char** argv) {
   // compute reference image 
 
   // define types
-  typedef SurfaceToImageRegistrationFilter<MeshType> SurfaceToImageRegistrationFilterType;
+  typedef itk::SurfaceToImageRegistrationFilter<MeshType> SurfaceToImageRegistrationFilterType;
   typedef SurfaceToImageRegistrationFilterType::EnumTransformType EnumTransformType;
   EnumTransformType typeOfTransform;
 
@@ -183,9 +184,9 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  if (parser->ArgumentExists("-potential")) {
+  if (parser->ArgumentExists("-reference")) {
     std::string fileName;
-    parser->GetCommandLineArgument("-potential", fileName);
+    parser->GetCommandLineArgument("-reference", fileName);
 
     std::cout << "output reference image " << fileName << std::endl;
     std::cout << "   size " << reference->GetLargestPossibleRegion().GetSize() << std::endl;
@@ -193,19 +194,14 @@ int main(int argc, char** argv) {
     std::cout << " origin " << reference->GetOrigin() << std::endl;
     std::cout << std::endl;
 
-    if (!writeImage<FloatImageType>(reference, fileName)) {
+    typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
+    FilterType::Pointer multiply = FilterType::New();
+    multiply->SetInput(reference);
+    multiply->SetConstant(-1);
+
+    if (!writeImage<FloatImageType>(multiply->GetOutput(), fileName)) {
       return EXIT_FAILURE;
     }
-  }
-
-  std::string reportFileName;
-  std::ofstream rfile;
-
-  // open file to write report
-  if (parser->ArgumentExists("-report")) {
-    parser->GetCommandLineArgument("-report", reportFileName);
-    std::cout << "write report to the file: " << reportFileName << std::endl;
-    rfile.open(reportFileName, std::ofstream::out);
   }
 
   // write alignment surfaces
@@ -237,31 +233,14 @@ int main(int argc, char** argv) {
     metrics->Compute();
     metrics->PrintReport(std::cout);
 
-    // write metrics to report file
-    if ( rfile.is_open() ) {
-      std::string dlm = ";";
-
-      if (count == 0) {
-        std::string header = dlm;
-        header += "Mean" + dlm;
-        header += "RMSE" + dlm;
-        header += "Quantile " + std::to_string(metrics->GetLevelOfQuantile()) + dlm;
-        header += "Maximal" + dlm;
-
-        rfile << header << std::endl;
-      }
-
-      std::string scores = getBaseNameFromPath(fileName) + dlm;
-      scores += std::to_string(metrics->GetMeanValue()) + dlm;
-      scores += std::to_string(metrics->GetRMSEValue()) + dlm;
-      scores += std::to_string(metrics->GetQuantileValue()) + dlm;
-      scores += std::to_string(metrics->GetMaximalValue()) + dlm;
-
-      rfile << scores << std::endl;
+    // print report to *.csv file
+    if (parser->ArgumentExists("-report")) {
+      std::string fileName;
+      parser->GetCommandLineArgument("-report", fileName);
+      std::cout << "print report to the file: " << fileName << std::endl;
+      metrics->PrintReportToFile(fileName, getBaseNameFromPath(surfaceFile));
     }
   }
-
-  rfile.close();
 
   return EXIT_SUCCESS;
 }
