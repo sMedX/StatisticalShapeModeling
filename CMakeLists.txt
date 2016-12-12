@@ -40,6 +40,9 @@ target_link_libraries(labelToSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VT
 add_executable(alignmentOfSurfaces AlignmentOfSurfaces.cxx)
 target_link_libraries(alignmentOfSurfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
+add_executable(BuildMeanSurface BuildMeanSurface.cxx)
+target_link_libraries(BuildMeanSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+
 add_executable(shapeModelToSurfaceRegistration ShapeModelToSurfaceRegistration.cxx)
 target_link_libraries(shapeModelToSurfaceRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
