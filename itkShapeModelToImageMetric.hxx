@@ -1,5 +1,6 @@
 #pragma once
 
+#include <itkNearestNeighborInterpolateImageFunction.h>
 #include "itkShapeModelToImageMetric.h"
 
 namespace itk
@@ -53,7 +54,7 @@ throw ( itk::ExceptionObject )
   }
 
   if (!m_Interpolator) {
-    typedef itk::LinearInterpolateImageFunction<ImageType, CoordinateRepresentationType> InterpolatorType;
+    typedef itk::NearestNeighborInterpolateImageFunction<ImageType, CoordinateRepresentationType> InterpolatorType;
     m_Interpolator = InterpolatorType::New();
   }
   m_Interpolator->SetInputImage(m_Image);
