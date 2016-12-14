@@ -120,7 +120,7 @@ namespace itk
       m_Optimizer->StartOptimization();
     }
     catch (itk::ExceptionObject& excep) {
-      itkExceptionMacro(<< excep);
+      std::cout << excep << std::endl;
     }
 
     // generate output data
@@ -166,6 +166,8 @@ namespace itk
     os << "optimizer info" << std::endl;
     os << "stop condition description " << m_Optimizer->GetStopConditionDescription() << std::endl;
     os << "cost function value        " << m_Optimizer->GetValue() << std::endl;
+    os << "number of evaluations      " << m_Optimizer->GetMaximumNumberOfFunctionEvaluations() << std::endl;
+    os << "gradient tolerance         " << m_Optimizer->GetGradientConvergenceTolerance() << std::endl;
     os << "elapsed time, sec          " << m_Clock.GetTotal() << std::endl;
     os << std::endl;
 

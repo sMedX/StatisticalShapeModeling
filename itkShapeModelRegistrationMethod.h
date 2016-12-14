@@ -113,7 +113,7 @@ namespace itk
     unsigned int m_NumberOfIterations = 500;
     double m_LineSearchAccuracy = 0.1;
     double m_DefaultStepLength = 0.1;
-    double m_GradientConvergenceTolerance = 1e-07;
+    double m_GradientConvergenceTolerance = 1e-05;
     double m_RegularizationParameter = 0.1;
     unsigned int m_Degree = 2;
     itk::TimeProbe m_Clock;
