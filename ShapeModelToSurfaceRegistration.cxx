@@ -115,8 +115,8 @@ int main(int argc, char** argv)
   // compute level set image
   typedef SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(0.3);
-  levelset->SetSpacing(1);
+  levelset->SetMargin(0.10);
+  levelset->SetSpacing(0.5);
   levelset->SetInput(surface);
   try {
     levelset->Update();
