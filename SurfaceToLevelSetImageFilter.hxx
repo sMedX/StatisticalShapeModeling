@@ -1,5 +1,4 @@
-#ifndef __SurfaceToLevelSetImageFilter_hxx
-#define __SurfaceToLevelSetImageFilter_hxx
+#pragma once
 
 #include  <itkTriangleMeshToBinaryImageFilter.h>
 #include  <itkSignedMaurerDistanceMapImageFilter.h>
@@ -79,5 +78,3 @@ void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::GenerateData()
 
   m_Output = distanceMapFilter->GetOutput();
 }
-
-#endif
