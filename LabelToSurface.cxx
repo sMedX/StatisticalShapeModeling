@@ -16,6 +16,8 @@
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkMultiplyImageFilter.h>
+#include "vtkMath.h"
+#include "vtkCell.h"
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
@@ -25,6 +27,78 @@ const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
 typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
+
+
+
+double EdgeAverageLength(vtkPolyData*poly)
+{
+
+
+
+  double length = 0;
+  const int N = poly->GetNumberOfCells();
+
+    for (int c = 0; c < N; c++)
+    {
+
+      double pc[3][3];
+
+      vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
+
+      vtkSmartPointer<vtkPoints> p = cell->GetPoints();
+      p->GetPoint(0, pc[0]);
+      p->GetPoint(1, pc[1]);
+      p->GetPoint(2, pc[2]);
+      length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[1]));
+      length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[2]));
+      length += sqrt(vtkMath::Distance2BetweenPoints(pc[1], pc[2]));
+
+
+
+
+  }
+  return length / (N * 3);
+
+}
+
+
+double SquareAverage(vtkPolyData*poly)
+{
+
+
+  int edgesN = 0;
+  double length = 0;
+  const int N = poly->GetNumberOfCells();
+
+
+  for (int c = 0; c < N; c++)
+  {
+
+    double pc[3][3];
+    double a[3], b[3], cv[3];
+
+    vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
+
+    vtkSmartPointer<vtkPoints> p = cell->GetPoints();
+    p->GetPoint(0, pc[0]);
+    p->GetPoint(1, pc[1]);
+    p->GetPoint(2, pc[2]);
+
+
+      vtkMath::Subtract(pc[0], pc[1], a);
+      vtkMath::Subtract(pc[0], pc[2], b);
+      vtkMath::Cross(a, b, cv);
+
+
+      length += sqrt(cv[0] * cv[0] + cv[1] * cv[1] + cv[2] * cv[2])/2;
+
+
+  }
+  return length / N;
+
+}
+
+
 
 FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground);
 
@@ -243,6 +317,8 @@ int main(int argc, char** argv) {
   std::cout << "output surface polydata " << surfaceFile << std::endl;
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
+  cout << "edge average length " << EdgeAverageLength(surface) << endl;
+  cout << "square average  " << SquareAverage(surface) << endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
