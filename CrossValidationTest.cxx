@@ -43,9 +43,17 @@ int main(int argc, char** argv)
   bool write = false;
   parser->GetCommandLineArgument("-write", write);
 
+  StringList fileNames;
   try {
-    StringList fileNames = getFileList(listFile);
+    fileNames = getFileList(listFile);
+  }
+  catch (ifstream::failure & e) {
+    cerr << "Could not read the data-list:" << endl;
+    cerr << e.what() << endl;
+    return EXIT_FAILURE;
+  }
 
+  try {
     std::string fileName = fileNames.begin()->c_str();
     MeshType::Pointer surface = MeshType::New();
 

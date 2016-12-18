@@ -1,5 +1,4 @@
-#ifndef __SurfaceToLevelSetImageFilter_h
-#define __SurfaceToLevelSetImageFilter_h
+#pragma once
 
 #include <itkMesh.h>
 #include <itkImage.h>
@@ -70,6 +69,4 @@ private:
 
 #ifndef ITK_MANUAL_INSTANTIATION
 #include "SurfaceToLevelSetImageFilter.hxx"
-#endif
-
 #endif

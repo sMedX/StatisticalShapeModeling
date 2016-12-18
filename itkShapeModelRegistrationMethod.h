@@ -1,5 +1,6 @@
 #pragma once
 
+#include <itkTimeProbe.h>
 #include <itkImage.h>
 #include <itkStatisticalModel.h>
 #include <itkTransform.h>
@@ -15,7 +16,7 @@ namespace itk
   {
   public:
     /** Standard class typedefs. */
-    typedef ShapeModelRegistrationMethod    Self;
+    typedef ShapeModelRegistrationMethod              Self;
     typedef itk::ProcessObject                        Superclass;
     typedef itk::SmartPointer< Self >                 Pointer;
     typedef itk::SmartPointer< const Self >           ConstPointer;
@@ -84,6 +85,9 @@ namespace itk
     itkSetMacro(ModelScale, double);
     itkGetMacro(ModelScale, double);
 
+    itkSetMacro(Degree, unsigned int);
+    itkGetMacro(Degree, unsigned int);
+
     void PrintReport(std::ostream& os);
 
   protected:
@@ -109,8 +113,10 @@ namespace itk
     unsigned int m_NumberOfIterations = 500;
     double m_LineSearchAccuracy = 0.1;
     double m_DefaultStepLength = 0.1;
-    double m_GradientConvergenceTolerance = 1e-07;
+    double m_GradientConvergenceTolerance = 1e-05;
     double m_RegularizationParameter = 0.1;
+    unsigned int m_Degree = 2;
+    itk::TimeProbe m_Clock;
   };
 }
 #ifndef ITK_MANUAL_INSTANTIATION

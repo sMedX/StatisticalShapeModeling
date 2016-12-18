@@ -75,6 +75,7 @@ namespace itk
     m_Metric->SetImage(m_LevelSetImage);
     m_Metric->SetTransform(m_ShapeTransform);
     m_Metric->SetRegularizationParameter(m_RegularizationParameter);
+    m_Metric->SetDegree(m_Degree);
     try {
       m_Metric->Initialize();
     }
@@ -106,6 +107,8 @@ namespace itk
   template <typename TShapeModel, typename TOutputMesh>
   void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::GenerateData()
   {
+    m_Clock.Start();
+
     // initialize transform, metric, optimizer and multi-stage data
     this->InitializeTransform();
     this->InitializeMetric();
@@ -117,11 +120,13 @@ namespace itk
       m_Optimizer->StartOptimization();
     }
     catch (itk::ExceptionObject& excep) {
-      itkExceptionMacro(<< excep);
+      std::cout << excep << std::endl;
     }
 
     // generate output data
     this->GenerateOutputData();
+
+    m_Clock.Stop();
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
@@ -155,11 +160,15 @@ namespace itk
     os << "metric info" << std::endl;
     os << "name of class              " << m_Metric->GetNameOfClass() << std::endl;
     os << "regularization parameter   " << m_RegularizationParameter << std::endl;
+    os << "degree                     " << m_Degree << std::endl;
     os << std::endl;
 
     os << "optimizer info" << std::endl;
     os << "stop condition description " << m_Optimizer->GetStopConditionDescription() << std::endl;
     os << "cost function value        " << m_Optimizer->GetValue() << std::endl;
+    os << "number of evaluations      " << m_Optimizer->GetMaximumNumberOfFunctionEvaluations() << std::endl;
+    os << "gradient tolerance         " << m_Optimizer->GetGradientConvergenceTolerance() << std::endl;
+    os << "elapsed time, sec          " << m_Clock.GetTotal() << std::endl;
     os << std::endl;
 
     os << m_ShapeTransform->GetTransformTypeAsString() << ", " << m_ShapeTransform->GetTransformCategory() << std::endl;

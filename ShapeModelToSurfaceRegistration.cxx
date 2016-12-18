@@ -43,11 +43,14 @@ int main(int argc, char** argv)
   std::vector<double> regularization(0.1);
   parser->GetCommandLineArgument("-regularization", regularization);
 
-  std::vector<double> sigma;
-  parser->GetCommandLineArgument("-sigma", sigma);
+  std::vector<double> parameters;
+  parser->GetCommandLineArgument("-parameters", parameters);
 
   double scale = 100;
   parser->GetCommandLineArgument("-scale", scale);
+
+  unsigned int degree = 2;
+  parser->GetCommandLineArgument("-degree", degree);
 
   std::cout << std::endl;
   std::cout << " shape model to image registration" << std::endl;
@@ -56,16 +59,22 @@ int main(int argc, char** argv)
   std::cout << "   output surface file " << outputFile << std::endl;
   std::cout << "           model scale " << mscale << std::endl;
   std::cout << "  number of iterations " << numberOfIterations << std::endl;
-  
+  std::cout << "                degree " << degree << std::endl;
+
+  unsigned int numberOfStages = parameters.size() + 1;
+  for (int n = regularization.size(); n < numberOfStages; ++n) {
+    regularization.push_back(*regularization.end());
+  }
+
   std::cout << "        regularization ";
   for (int n = 0; n < regularization.size(); ++n) {
     std::cout << regularization[n] << " ";
   }
   std::cout << std::endl;
 
-  std::cout << "                 sigma ";
-  for (int n = 0; n < sigma.size(); ++n) {
-    std::cout << sigma[n] << " ";
+  std::cout << "            parameters ";
+  for (int n = 0; n < parameters.size(); ++n) {
+    std::cout << parameters[n] << " ";
   }
   std::cout << std::endl;
   std::cout << std::endl;
@@ -106,8 +115,8 @@ int main(int argc, char** argv)
   // compute level set image
   typedef SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(0.3);
-  levelset->SetSpacing(1);
+  levelset->SetMargin(0.10);
+  levelset->SetSpacing(0.5);
   levelset->SetInput(surface);
   try {
     levelset->Update();
@@ -122,8 +131,6 @@ int main(int argc, char** argv)
   typedef itk::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
   ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
 
-  unsigned int numberOfStages = regularization.size();
-
   for (int n = 0; n < numberOfStages; ++n) {
     std::cout << "---------- stage (" << n + 1 << " / " << numberOfStages << ") ----------" << std::endl;
 
@@ -134,6 +141,7 @@ int main(int argc, char** argv)
     shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
     shapeModelToSurfaceRegistration->SetModelScale(mscale);
     shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[n]);
+    shapeModelToSurfaceRegistration->SetDegree(degree);
     try {
       shapeModelToSurfaceRegistration->Update();
     }
@@ -146,7 +154,7 @@ int main(int argc, char** argv)
     // build new model
     if (n + 1 < numberOfStages) {
       MeshType::Pointer reference = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
-      model = BuildGPModel(reference, sigma[n], scale, model->GetNumberOfPrincipalComponents());
+      model = BuildGPModel(reference, parameters[n], scale, model->GetNumberOfPrincipalComponents());
     }
   }
 
@@ -168,7 +176,7 @@ int main(int argc, char** argv)
   if (parser->ArgumentExists("-report")) {
     std::string fileName;
     parser->GetCommandLineArgument("-report", fileName);
-    std::cout << "write report to the file: " << fileName << std::endl;
+    std::cout << "print report to the file: " << fileName << std::endl;
     metrics->PrintReportToFile(fileName, getBaseNameFromPath(surfaceFile));
   }
 

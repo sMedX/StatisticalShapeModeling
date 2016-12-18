@@ -1,5 +1,8 @@
 #pragma once
 
+#include <itkNearestNeighborInterpolateImageFunction.h>
+#include <itkLinearInterpolateImageFunction.h>
+
 #include "itkShapeModelToImageMetric.h"
 
 namespace itk
@@ -94,36 +97,10 @@ template <typename TShapeModel, typename TImage>
 typename ShapeModelToImageMetric<TShapeModel, TImage>::MeasureType 
 ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParametersType & parameters ) const
 {
-  m_Transform->SetParameters(parameters);
-
-  m_NumberOfPixelsCounted = 0;
-  PointIteratorType pointIter = m_PointsContainer->Begin();
-
   MeasureType value = itk::NumericTraits<MeasureType>::ZeroValue();
-
-  for (; pointIter != m_PointsContainer->End(); ++pointIter) {
-    InputPointType inputPoint;
-    inputPoint.CastFrom(pointIter.Value());
-    OutputPointType transformedPoint = m_Transform->TransformPoint(inputPoint);
-
-    if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
-      // compute image value
-      const RealType imageValue = m_Interpolator->Evaluate(transformedPoint);
-      value += imageValue * imageValue;
-    
-      m_NumberOfPixelsCounted++;
-    }
-  }
-
-  if (!m_NumberOfPixelsCounted) {
-    itkExceptionMacro(<< "All the points mapped to outside of the image");
-  }
-  else {
-    value /= m_NumberOfPixelsCounted;
-  }
-
-  this->CalculateValuePenalty(parameters, value);
-
+  DerivativeType derivative = DerivativeType(m_NumberOfParameters);
+  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
+  this->GetValueAndDerivative(parameters, value, derivative);
   return value;
 }
 
@@ -178,13 +155,13 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 
       // compute image value
       const RealType imageValue = m_Interpolator->Evaluate(transformedPoint);
-      value += imageValue * imageValue;
+      value += std::pow(imageValue, m_Degree);
 
       for (unsigned int par = 0; par < m_NumberOfParameters; par++) {
         RealType sum = itk::NumericTraits<RealType>::ZeroValue();
 
         for (unsigned int dim = 0; dim < Self::PointDimension; dim++) {
-          sum += 2.0 *imageValue *jacobian(dim, par) * gradient[dim];
+          sum += m_Degree * std::pow(imageValue, m_Degree - 1) * jacobian(dim, par) * gradient[dim];
         }
 
         derivative[par] += sum;
