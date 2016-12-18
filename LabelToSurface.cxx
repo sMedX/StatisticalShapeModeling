@@ -16,15 +16,50 @@
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkMultiplyImageFilter.h>
+#include "vtkMath.h"
+#include "vtkCell.h"
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 #include "utils/PointSetToImageMetrics.h"
 
+
+
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
 typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
+
+
+double EdgeAvarageLength(vtkPolyData*poly)
+{
+
+  double length = 0;
+  const int N = poly->GetNumberOfCells();
+
+
+    for (int c = 0; c < N; c++)
+    {
+
+      double pc[3][3];
+
+      vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
+
+      vtkSmartPointer<vtkPoints> p = cell->GetPoints();
+      p->GetPoint(0, pc[0]);
+      p->GetPoint(1, pc[1]);
+      p->GetPoint(2, pc[2]);
+      length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[1]));
+      length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[2]));
+      length += sqrt(vtkMath::Distance2BetweenPoints(pc[1], pc[2]));
+
+
+
+  }
+  return length / (N * 3);
+
+}
+
 
 int main(int argc, char** argv) {
 
@@ -204,6 +239,7 @@ int main(int argc, char** argv) {
   std::cout << "output surface polydata " << surfaceFile << std::endl;
   std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
+  cout << "edge avarage length " << EdgeAvarageLength(surface) << endl;
   std::cout << std::endl;
 
   // compute metrics
