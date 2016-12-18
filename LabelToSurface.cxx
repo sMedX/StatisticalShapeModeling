@@ -16,8 +16,11 @@
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkMultiplyImageFilter.h>
-#include "vtkMath.h"
-#include "vtkCell.h"
+#include <itkBinaryMorphologicalClosingImageFilter.h>
+#include <itkBinaryBallStructuringElement.h>
+#include <itkNearestNeighborInterpolateImageFunction.h>
+#include <vtkMath.h>
+#include <vtkCell.h>
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
@@ -29,77 +32,8 @@ typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
 
 
-
-double EdgeAverageLength(vtkPolyData*poly)
-{
-
-
-
-  double length = 0;
-  const int N = poly->GetNumberOfCells();
-
-    for (int c = 0; c < N; c++)
-    {
-
-      double pc[3][3];
-
-      vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
-
-      vtkSmartPointer<vtkPoints> p = cell->GetPoints();
-      p->GetPoint(0, pc[0]);
-      p->GetPoint(1, pc[1]);
-      p->GetPoint(2, pc[2]);
-      length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[1]));
-      length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[2]));
-      length += sqrt(vtkMath::Distance2BetweenPoints(pc[1], pc[2]));
-
-
-
-
-  }
-  return length / (N * 3);
-
-}
-
-
-double SquareAverage(vtkPolyData*poly)
-{
-
-
-  int edgesN = 0;
-  double length = 0;
-  const int N = poly->GetNumberOfCells();
-
-
-  for (int c = 0; c < N; c++)
-  {
-
-    double pc[3][3];
-    double a[3], b[3], cv[3];
-
-    vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
-
-    vtkSmartPointer<vtkPoints> p = cell->GetPoints();
-    p->GetPoint(0, pc[0]);
-    p->GetPoint(1, pc[1]);
-    p->GetPoint(2, pc[2]);
-
-
-      vtkMath::Subtract(pc[0], pc[1], a);
-      vtkMath::Subtract(pc[0], pc[2], b);
-      vtkMath::Cross(a, b, cv);
-
-
-      length += sqrt(cv[0] * cv[0] + cv[1] * cv[1] + cv[2] * cv[2])/2;
-
-
-  }
-  return length / N;
-
-}
-
-
-
+double EdgeAverageLength(vtkPolyData*poly);
+double SquareAverage(vtkPolyData*poly);
 FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground);
 
 int main(int argc, char** argv) {
@@ -120,6 +54,9 @@ int main(int argc, char** argv) {
   int radius = 0;
   parser->GetCommandLineArgument("-radius", radius);
 
+  int repair = 0;
+  parser->GetCommandLineArgument("-repair", repair);
+
   float sigma = 0;
   parser->GetCommandLineArgument("-sigma", sigma);
 
@@ -136,6 +73,7 @@ int main(int argc, char** argv) {
   std::cout << "      parameters " << std::endl;
   std::cout << "         spacing " << spacing << std::endl;
   std::cout << "          radius " << radius << std::endl;
+  std::cout << "          repair " << repair << std::endl;
   std::cout << "           sigma " << sigma << std::endl;
   std::cout << "      relaxation " << relaxation << std::endl;
   std::cout << "      iterations " << numberOfIterations << std::endl;
@@ -171,6 +109,22 @@ int main(int argc, char** argv) {
   std::cout << "level value " << levelValue << std::endl;
   std::cout << std::endl;
 
+  //--------------------------------------------------------
+  //Padding to remove possible holes
+
+  FloatImageType::SizeType paddingSize;
+  paddingSize.Fill(7.0);
+
+
+  typedef itk::ConstantPadImageFilter<FloatImageType, FloatImageType> PadImageFilter;
+  PadImageFilter::Pointer padding = PadImageFilter::New();
+  padding->SetInput(image);
+  padding->SetPadBound(paddingSize);
+  padding->SetConstant(labelValues->GetMinimum());
+  padding->Update();
+
+  image = padding->GetOutput();
+
   //----------------------------------------------------------------------------
   // resampling of input image
   if (sigma > 0) {
@@ -178,6 +132,7 @@ int main(int argc, char** argv) {
     RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
     gaussian->SetInput(image);
     gaussian->SetSigma(sigma);
+    gaussian->Update();
     image = gaussian->GetOutput();
   }
 
@@ -189,6 +144,9 @@ int main(int argc, char** argv) {
     outSize[i] = image->GetLargestPossibleRegion().GetSize()[i] * image->GetSpacing()[i] / outSpacing[i];
   }
 
+
+  typedef itk::NearestNeighborInterpolateImageFunction< FloatImageType, double >  InterpolatorType;
+
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
   ResampleImageFilterType::Pointer resampler = ResampleImageFilterType::New();
   resampler->SetInput(image);
@@ -197,6 +155,9 @@ int main(int argc, char** argv) {
   resampler->SetOutputSpacing(outSpacing);
   resampler->SetOutputOrigin(image->GetOrigin());
   resampler->SetOutputDirection(image->GetDirection());
+  InterpolatorType::Pointer interpolator = InterpolatorType::New();
+  resampler->SetInterpolator(interpolator);
+  resampler->Update();
 
   //----------------------------------------------------------------------------
   // image processing
@@ -208,16 +169,41 @@ int main(int argc, char** argv) {
   threshold->SetInsideValue(1);
   threshold->SetOutsideValue(0);
 
+  threshold->Update();
+
+  image = threshold->GetOutput();
+  if (repair > 0) {
+
+    typedef itk::BinaryBallStructuringElement < FloatImageType::PixelType, FloatImageType::ImageDimension >
+      StructuringElementType;
+    StructuringElementType structuringElement;
+    structuringElement.SetRadius(repair);
+    structuringElement.CreateStructuringElement();
+
+    typedef itk::BinaryMorphologicalClosingImageFilter < FloatImageType, FloatImageType, StructuringElementType >
+      BinaryMorphologicalClosingImageFilterType;
+
+    BinaryMorphologicalClosingImageFilterType::Pointer closingFilter = BinaryMorphologicalClosingImageFilterType::New();
+    closingFilter->SetInput(threshold->GetOutput());
+    closingFilter->SetKernel(structuringElement);
+    closingFilter->SetForegroundValue(1.0);
+
+    closingFilter->Update();
+    image = closingFilter->GetOutput();
+  }
+
   BinaryImageType::SizeType nhoodRadius;
   nhoodRadius.Fill(radius);
 
   typedef itk::VotingBinaryHoleFillingImageFilter<FloatImageType, FloatImageType> VotingBinaryIterativeHoleFillingImageFilterType;
   VotingBinaryIterativeHoleFillingImageFilterType::Pointer holefilling = VotingBinaryIterativeHoleFillingImageFilterType::New();
-  holefilling->SetInput(threshold->GetOutput());
+  holefilling->SetInput(image);
   holefilling->SetBackgroundValue(0);
   holefilling->SetForegroundValue(1);
   holefilling->SetRadius(nhoodRadius);
+  holefilling->Update();
   image = holefilling->GetOutput();
+  //image->Update();
 
   if (sigma > 0) {
     typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
@@ -261,7 +247,7 @@ int main(int argc, char** argv) {
 
   // decimate surface
   if (numberOfPoints > 0) {
-    double reduction = 1 - numberOfPoints / (double) surface->GetNumberOfPoints();
+    double reduction = 1 - numberOfPoints / (double)surface->GetNumberOfPoints();
     std::cout << "reduction to decimate surface " << reduction << std::endl;
     vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
     decimate->SetInputData(surface);
@@ -297,7 +283,7 @@ int main(int argc, char** argv) {
   normals->AutoOrientNormalsOn();
   normals->FlipNormalsOff();
   normals->ConsistencyOn();
-  normals->ComputeCellNormalsOff();
+  normals->ComputeCellNormalsOn();
   normals->SplittingOff();
   try {
     normals->Update();
@@ -337,38 +323,9 @@ int main(int argc, char** argv) {
   bool isBinary = true;
   parser->GetCommandLineArgument("-binary", isBinary);
 
-  if ( isBinary ) {
+  if (isBinary) {
     distancemap = ComputeDistanceMapImage(image, labelValues->GetMinimum(), labelValues->GetMaximum());
-    /*
-    typedef itk::SignedMaurerDistanceMapImageFilter<FloatImageType, FloatImageType> DistanceFilterType;
-    DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
-    distanceToForeground->SetUseImageSpacing(true);
-    distanceToForeground->SetInput(image);
-    distanceToForeground->SetBackgroundValue(labelValues->GetMinimum());
-    distanceToForeground->SetInsideIsPositive(false);
-    distanceToForeground->Update();
 
-    DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
-    distanceToBackground->SetUseImageSpacing(true);
-    distanceToBackground->SetInput(image);
-    distanceToBackground->SetBackgroundValue(labelValues->GetMaximum());
-    distanceToBackground->SetInsideIsPositive(true);
-    distanceToBackground->Update();
-
-    typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
-    AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
-    addfilter->SetInput1(distanceToForeground->GetOutput());
-    addfilter->SetInput2(distanceToBackground->GetOutput());
-    addfilter->Update();
-
-    typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
-    FilterType::Pointer multiply = FilterType::New();
-    multiply->SetInput(addfilter->GetOutput());
-    multiply->SetConstant(0.5);
-    multiply->Update();
-
-    distancemap = multiply->GetOutput();
-    */
   }
 
   // compute metrics
@@ -390,6 +347,72 @@ int main(int argc, char** argv) {
   return EXIT_SUCCESS;
 }
 
+
+double EdgeAverageLength(vtkPolyData*poly)
+{
+
+
+
+  double length = 0;
+  const int N = poly->GetNumberOfCells();
+
+  for (int c = 0; c < N; c++)
+  {
+
+    double pc[3][3];
+
+    vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
+
+    vtkSmartPointer<vtkPoints> p = cell->GetPoints();
+    p->GetPoint(0, pc[0]);
+    p->GetPoint(1, pc[1]);
+    p->GetPoint(2, pc[2]);
+    length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[1]));
+    length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[2]));
+    length += sqrt(vtkMath::Distance2BetweenPoints(pc[1], pc[2]));
+
+
+
+
+  }
+  return length / (N * 3);
+
+}
+double SquareAverage(vtkPolyData*poly)
+{
+
+
+  int edgesN = 0;
+  double length = 0;
+  const int N = poly->GetNumberOfCells();
+
+
+  for (int c = 0; c < N; c++)
+  {
+
+    double pc[3][3];
+    double a[3], b[3], cv[3];
+
+    vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
+
+    vtkSmartPointer<vtkPoints> p = cell->GetPoints();
+    p->GetPoint(0, pc[0]);
+    p->GetPoint(1, pc[1]);
+    p->GetPoint(2, pc[2]);
+
+
+    vtkMath::Subtract(pc[0], pc[1], a);
+    vtkMath::Subtract(pc[0], pc[2], b);
+    vtkMath::Cross(a, b, cv);
+
+
+    length += sqrt(cv[0] * cv[0] + cv[1] * cv[1] + cv[2] * cv[2]) / 2;
+
+
+  }
+  return length / N;
+
+}
 FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground)
 {
   typedef itk::SignedMaurerDistanceMapImageFilter<FloatImageType, FloatImageType> DistanceFilterType;
