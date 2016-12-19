@@ -16,8 +16,6 @@
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkMultiplyImageFilter.h>
-#include <itkBinaryMorphologicalClosingImageFilter.h>
-#include <itkBinaryBallStructuringElement.h>
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
@@ -105,22 +103,6 @@ int main(int argc, char** argv) {
   std::cout << "level value " << levelValue << std::endl;
   std::cout << std::endl;
 
-  //--------------------------------------------------------
-  //Padding to remove possible holes
-
-  FloatImageType::SizeType paddingSize;
-  paddingSize.Fill(7.0);
-
-
-  typedef itk::ConstantPadImageFilter<FloatImageType, FloatImageType> PadImageFilter;
-  PadImageFilter::Pointer padding = PadImageFilter::New();
-  padding->SetInput(image);
-  padding->SetPadBound(paddingSize);
-  padding->SetConstant(labelValues->GetMinimum());
-  padding->Update();
-
-  image = padding->GetOutput();
-
   //----------------------------------------------------------------------------
   // resampling of input image
   if (sigma > 0) {
@@ -139,7 +121,6 @@ int main(int argc, char** argv) {
   for (int i = 0; i < Dimension; ++i) {
     outSize[i] = image->GetLargestPossibleRegion().GetSize()[i] * image->GetSpacing()[i] / outSpacing[i];
   }
-  std::cout << "ResampleImageFilter" << std::endl;
 
   typedef itk::NearestNeighborInterpolateImageFunction< FloatImageType, double >  InterpolatorType;
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
@@ -169,8 +150,6 @@ int main(int argc, char** argv) {
   BinaryImageType::SizeType nhoodRadius;
   nhoodRadius.Fill(radius);
 
-  std::cout << "VotingBinaryHoleFillingImageFilter" << std::endl;
-
   typedef itk::VotingBinaryHoleFillingImageFilter<FloatImageType, FloatImageType> VotingBinaryIterativeHoleFillingImageFilterType;
   VotingBinaryIterativeHoleFillingImageFilterType::Pointer holefilling = VotingBinaryIterativeHoleFillingImageFilterType::New();
   holefilling->SetInput(image);
@@ -189,8 +168,6 @@ int main(int argc, char** argv) {
     image = gaussian->GetOutput();
   }
 
-  std::cout << "GrayscaleFillholeImageFilter" << std::endl;
-
   typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
   GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
   fillholes->SetInput(image);
@@ -205,7 +182,6 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // convert ITK image to VTK image
-  std::cout << "convert" << std::endl;
   typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
   ConvertorType::Pointer convertor = ConvertorType::New();
   convertor->SetInput(fillholes->GetOutput());
