@@ -172,6 +172,7 @@ int main(int argc, char** argv) {
   threshold->Update();
 
   image = threshold->GetOutput();
+
   if (repair > 0) {
 
     typedef itk::BinaryBallStructuringElement < FloatImageType::PixelType, FloatImageType::ImageDimension >
@@ -283,7 +284,7 @@ int main(int argc, char** argv) {
   normals->AutoOrientNormalsOn();
   normals->FlipNormalsOff();
   normals->ConsistencyOn();
-  normals->ComputeCellNormalsOn();
+  normals->ComputeCellNormalsOff();
   normals->SplittingOff();
   try {
     normals->Update();
@@ -350,9 +351,6 @@ int main(int argc, char** argv) {
 
 double EdgeAverageLength(vtkPolyData*poly)
 {
-
-
-
   double length = 0;
   const int N = poly->GetNumberOfCells();
 
@@ -370,26 +368,21 @@ double EdgeAverageLength(vtkPolyData*poly)
     length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[1]));
     length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[2]));
     length += sqrt(vtkMath::Distance2BetweenPoints(pc[1], pc[2]));
-
-
-
-
+    
   }
   return length / (N * 3);
-
 }
+
+
 double SquareAverage(vtkPolyData*poly)
 {
-
-
+  
   int edgesN = 0;
   double length = 0;
   const int N = poly->GetNumberOfCells();
-
-
+  
   for (int c = 0; c < N; c++)
   {
-
     double pc[3][3];
     double a[3], b[3], cv[3];
 
@@ -399,20 +392,19 @@ double SquareAverage(vtkPolyData*poly)
     p->GetPoint(0, pc[0]);
     p->GetPoint(1, pc[1]);
     p->GetPoint(2, pc[2]);
-
-
+    
     vtkMath::Subtract(pc[0], pc[1], a);
     vtkMath::Subtract(pc[0], pc[2], b);
     vtkMath::Cross(a, b, cv);
-
-
+    
     length += sqrt(cv[0] * cv[0] + cv[1] * cv[1] + cv[2] * cv[2]) / 2;
-
-
+    
   }
   return length / N;
 
 }
+
+
 FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground)
 {
   typedef itk::SignedMaurerDistanceMapImageFilter<FloatImageType, FloatImageType> DistanceFilterType;
