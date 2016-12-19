@@ -122,7 +122,9 @@ int main(int argc, char** argv) {
     outSize[i] = image->GetLargestPossibleRegion().GetSize()[i] * image->GetSpacing()[i] / outSpacing[i];
   }
 
-  typedef itk::NearestNeighborInterpolateImageFunction< FloatImageType, double >  InterpolatorType;
+  typedef itk::NearestNeighborInterpolateImageFunction<FloatImageType, double>  InterpolatorType;
+  InterpolatorType::Pointer interpolator = InterpolatorType::New();
+
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
   ResampleImageFilterType::Pointer resampler = ResampleImageFilterType::New();
   resampler->SetInput(image);
@@ -131,7 +133,6 @@ int main(int argc, char** argv) {
   resampler->SetOutputSpacing(outSpacing);
   resampler->SetOutputOrigin(image->GetOrigin());
   resampler->SetOutputDirection(image->GetDirection());
-  InterpolatorType::Pointer interpolator = InterpolatorType::New();
   resampler->SetInterpolator(interpolator);
   resampler->Update();
 
@@ -144,15 +145,13 @@ int main(int argc, char** argv) {
   threshold->SetUpperThreshold(std::numeric_limits<FloatImageType::PixelType>::max());
   threshold->SetInsideValue(1);
   threshold->SetOutsideValue(0);
-  threshold->Update();
-  image = threshold->GetOutput();
 
   BinaryImageType::SizeType nhoodRadius;
   nhoodRadius.Fill(radius);
 
   typedef itk::VotingBinaryHoleFillingImageFilter<FloatImageType, FloatImageType> VotingBinaryIterativeHoleFillingImageFilterType;
   VotingBinaryIterativeHoleFillingImageFilterType::Pointer holefilling = VotingBinaryIterativeHoleFillingImageFilterType::New();
-  holefilling->SetInput(image);
+  holefilling->SetInput(threshold->GetOutput());
   holefilling->SetBackgroundValue(0);
   holefilling->SetForegroundValue(1);
   holefilling->SetRadius(nhoodRadius);
