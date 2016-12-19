@@ -16,6 +16,9 @@
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkMultiplyImageFilter.h>
+#include <itkNearestNeighborInterpolateImageFunction.h>
+#include <vtkMath.h>
+#include <vtkCell.h>
 
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
@@ -26,6 +29,9 @@ typedef itk::Image<unsigned char, Dimension> BinaryImageType;
 typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
 
+
+double AverageLengthOfEdges(vtkPolyData*poly);
+double AverageAreaOfCells(vtkPolyData*poly);
 FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground);
 
 int main(int argc, char** argv) {
@@ -104,6 +110,7 @@ int main(int argc, char** argv) {
     RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
     gaussian->SetInput(image);
     gaussian->SetSigma(sigma);
+    gaussian->Update();
     image = gaussian->GetOutput();
   }
 
@@ -115,6 +122,9 @@ int main(int argc, char** argv) {
     outSize[i] = image->GetLargestPossibleRegion().GetSize()[i] * image->GetSpacing()[i] / outSpacing[i];
   }
 
+  typedef itk::NearestNeighborInterpolateImageFunction<FloatImageType, double>  InterpolatorType;
+  InterpolatorType::Pointer interpolator = InterpolatorType::New();
+
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
   ResampleImageFilterType::Pointer resampler = ResampleImageFilterType::New();
   resampler->SetInput(image);
@@ -123,6 +133,8 @@ int main(int argc, char** argv) {
   resampler->SetOutputSpacing(outSpacing);
   resampler->SetOutputOrigin(image->GetOrigin());
   resampler->SetOutputDirection(image->GetDirection());
+  resampler->SetInterpolator(interpolator);
+  resampler->Update();
 
   //----------------------------------------------------------------------------
   // image processing
@@ -143,6 +155,7 @@ int main(int argc, char** argv) {
   holefilling->SetBackgroundValue(0);
   holefilling->SetForegroundValue(1);
   holefilling->SetRadius(nhoodRadius);
+  holefilling->Update();
   image = holefilling->GetOutput();
 
   if (sigma > 0) {
@@ -150,6 +163,7 @@ int main(int argc, char** argv) {
     RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
     gaussian->SetInput(image);
     gaussian->SetSigma(sigma);
+    gaussian->Update();
     image = gaussian->GetOutput();
   }
 
@@ -187,7 +201,7 @@ int main(int argc, char** argv) {
 
   // decimate surface
   if (numberOfPoints > 0) {
-    double reduction = 1 - numberOfPoints / (double) surface->GetNumberOfPoints();
+    double reduction = 1 - numberOfPoints / (double)surface->GetNumberOfPoints();
     std::cout << "reduction to decimate surface " << reduction << std::endl;
     vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
     decimate->SetInputData(surface);
@@ -241,8 +255,10 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "output surface polydata " << surfaceFile << std::endl;
-  std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
-  std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
+  std::cout << "       number of cells  " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "       number of points " << surface->GetNumberOfPoints() << std::endl;
+  std::cout << "average length of edges " << AverageLengthOfEdges(surface) << endl;
+  std::cout << "  average area of cells " << AverageAreaOfCells(surface) << endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -261,38 +277,9 @@ int main(int argc, char** argv) {
   bool isBinary = true;
   parser->GetCommandLineArgument("-binary", isBinary);
 
-  if ( isBinary ) {
+  if (isBinary) {
     distancemap = ComputeDistanceMapImage(image, labelValues->GetMinimum(), labelValues->GetMaximum());
-    /*
-    typedef itk::SignedMaurerDistanceMapImageFilter<FloatImageType, FloatImageType> DistanceFilterType;
-    DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
-    distanceToForeground->SetUseImageSpacing(true);
-    distanceToForeground->SetInput(image);
-    distanceToForeground->SetBackgroundValue(labelValues->GetMinimum());
-    distanceToForeground->SetInsideIsPositive(false);
-    distanceToForeground->Update();
 
-    DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
-    distanceToBackground->SetUseImageSpacing(true);
-    distanceToBackground->SetInput(image);
-    distanceToBackground->SetBackgroundValue(labelValues->GetMaximum());
-    distanceToBackground->SetInsideIsPositive(true);
-    distanceToBackground->Update();
-
-    typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
-    AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
-    addfilter->SetInput1(distanceToForeground->GetOutput());
-    addfilter->SetInput2(distanceToBackground->GetOutput());
-    addfilter->Update();
-
-    typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
-    FilterType::Pointer multiply = FilterType::New();
-    multiply->SetInput(addfilter->GetOutput());
-    multiply->SetConstant(0.5);
-    multiply->Update();
-
-    distancemap = multiply->GetOutput();
-    */
   }
 
   // compute metrics
@@ -313,6 +300,58 @@ int main(int argc, char** argv) {
 
   return EXIT_SUCCESS;
 }
+
+
+double AverageLengthOfEdges(vtkPolyData*poly)
+{
+  const unsigned int numberOfCells = poly->GetNumberOfCells();
+  double sum = 0;
+
+  for (int n = 0; n < poly->GetNumberOfCells(); ++n) {
+    double p1[3], p2[3], p3[3];
+
+    vtkSmartPointer<vtkCell> cell = poly->GetCell(n);
+    vtkSmartPointer<vtkPoints> points = cell->GetPoints();
+
+    points->GetPoint(0, p1);
+    points->GetPoint(1, p2);
+    points->GetPoint(2, p3);
+
+    sum += sqrt(vtkMath::Distance2BetweenPoints(p1, p2)) + 
+           sqrt(vtkMath::Distance2BetweenPoints(p1, p3)) +
+           sqrt(vtkMath::Distance2BetweenPoints(p2, p3));
+  }
+
+  return sum / (3*numberOfCells);
+}
+
+
+double AverageAreaOfCells(vtkPolyData*poly)
+{
+  const unsigned int numberOfCells = poly->GetNumberOfCells();
+  double sum = 0;
+
+  for (int n = 0; n < numberOfCells; ++n) {
+    double a[3], b[3], c[3];
+    double p1[3], p2[3], p3[3];
+
+    vtkSmartPointer<vtkCell> cell = poly->GetCell(n);
+    vtkSmartPointer<vtkPoints> points = cell->GetPoints();
+
+    points->GetPoint(0, p1);
+    points->GetPoint(1, p2);
+    points->GetPoint(2, p3);
+    
+    vtkMath::Subtract(p1, p2, a);
+    vtkMath::Subtract(p1, p3, b);
+    vtkMath::Cross(a, b, c);
+
+    sum += sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]) / 2;
+  }
+
+  return sum / numberOfCells;
+}
+
 
 FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground)
 {
