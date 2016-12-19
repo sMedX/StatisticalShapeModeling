@@ -32,8 +32,8 @@ typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
 
 
-double EdgeAverageLength(vtkPolyData*poly);
-double SquareAverage(vtkPolyData*poly);
+double AverageLengthOfEdges(vtkPolyData*poly);
+double AverageAreaOfCells(vtkPolyData*poly);
 FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground);
 
 int main(int argc, char** argv) {
@@ -54,9 +54,6 @@ int main(int argc, char** argv) {
   int radius = 0;
   parser->GetCommandLineArgument("-radius", radius);
 
-  int repair = 0;
-  parser->GetCommandLineArgument("-repair", repair);
-
   float sigma = 0;
   parser->GetCommandLineArgument("-sigma", sigma);
 
@@ -73,7 +70,6 @@ int main(int argc, char** argv) {
   std::cout << "      parameters " << std::endl;
   std::cout << "         spacing " << spacing << std::endl;
   std::cout << "          radius " << radius << std::endl;
-  std::cout << "          repair " << repair << std::endl;
   std::cout << "           sigma " << sigma << std::endl;
   std::cout << "      relaxation " << relaxation << std::endl;
   std::cout << "      iterations " << numberOfIterations << std::endl;
@@ -143,10 +139,9 @@ int main(int argc, char** argv) {
   for (int i = 0; i < Dimension; ++i) {
     outSize[i] = image->GetLargestPossibleRegion().GetSize()[i] * image->GetSpacing()[i] / outSpacing[i];
   }
-
+  std::cout << "ResampleImageFilter" << std::endl;
 
   typedef itk::NearestNeighborInterpolateImageFunction< FloatImageType, double >  InterpolatorType;
-
   typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
   ResampleImageFilterType::Pointer resampler = ResampleImageFilterType::New();
   resampler->SetInput(image);
@@ -168,33 +163,13 @@ int main(int argc, char** argv) {
   threshold->SetUpperThreshold(std::numeric_limits<FloatImageType::PixelType>::max());
   threshold->SetInsideValue(1);
   threshold->SetOutsideValue(0);
-
   threshold->Update();
-
   image = threshold->GetOutput();
-
-  if (repair > 0) {
-
-    typedef itk::BinaryBallStructuringElement < FloatImageType::PixelType, FloatImageType::ImageDimension >
-      StructuringElementType;
-    StructuringElementType structuringElement;
-    structuringElement.SetRadius(repair);
-    structuringElement.CreateStructuringElement();
-
-    typedef itk::BinaryMorphologicalClosingImageFilter < FloatImageType, FloatImageType, StructuringElementType >
-      BinaryMorphologicalClosingImageFilterType;
-
-    BinaryMorphologicalClosingImageFilterType::Pointer closingFilter = BinaryMorphologicalClosingImageFilterType::New();
-    closingFilter->SetInput(threshold->GetOutput());
-    closingFilter->SetKernel(structuringElement);
-    closingFilter->SetForegroundValue(1.0);
-
-    closingFilter->Update();
-    image = closingFilter->GetOutput();
-  }
 
   BinaryImageType::SizeType nhoodRadius;
   nhoodRadius.Fill(radius);
+
+  std::cout << "VotingBinaryHoleFillingImageFilter" << std::endl;
 
   typedef itk::VotingBinaryHoleFillingImageFilter<FloatImageType, FloatImageType> VotingBinaryIterativeHoleFillingImageFilterType;
   VotingBinaryIterativeHoleFillingImageFilterType::Pointer holefilling = VotingBinaryIterativeHoleFillingImageFilterType::New();
@@ -204,15 +179,17 @@ int main(int argc, char** argv) {
   holefilling->SetRadius(nhoodRadius);
   holefilling->Update();
   image = holefilling->GetOutput();
-  //image->Update();
 
   if (sigma > 0) {
     typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
     RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
     gaussian->SetInput(image);
     gaussian->SetSigma(sigma);
+    gaussian->Update();
     image = gaussian->GetOutput();
   }
+
+  std::cout << "GrayscaleFillholeImageFilter" << std::endl;
 
   typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
   GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
@@ -228,6 +205,7 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // convert ITK image to VTK image
+  std::cout << "convert" << std::endl;
   typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
   ConvertorType::Pointer convertor = ConvertorType::New();
   convertor->SetInput(fillholes->GetOutput());
@@ -302,10 +280,10 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "output surface polydata " << surfaceFile << std::endl;
-  std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
-  std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
-  cout << "edge average length " << EdgeAverageLength(surface) << endl;
-  cout << "square average  " << SquareAverage(surface) << endl;
+  std::cout << "       number of cells  " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "       number of points " << surface->GetNumberOfPoints() << std::endl;
+  std::cout << "average length of edges " << AverageLengthOfEdges(surface) << endl;
+  std::cout << "  average area of cells " << AverageAreaOfCells(surface) << endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -349,59 +327,54 @@ int main(int argc, char** argv) {
 }
 
 
-double EdgeAverageLength(vtkPolyData*poly)
+double AverageLengthOfEdges(vtkPolyData*poly)
 {
-  double length = 0;
-  const int N = poly->GetNumberOfCells();
+  const unsigned int numberOfCells = poly->GetNumberOfCells();
+  double sum = 0;
 
-  for (int c = 0; c < N; c++)
-  {
+  for (int n = 0; n < poly->GetNumberOfCells(); ++n) {
+    double p1[3], p2[3], p3[3];
 
-    double pc[3][3];
+    vtkSmartPointer<vtkCell> cell = poly->GetCell(n);
+    vtkSmartPointer<vtkPoints> points = cell->GetPoints();
 
-    vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
+    points->GetPoint(0, p1);
+    points->GetPoint(1, p2);
+    points->GetPoint(2, p3);
 
-    vtkSmartPointer<vtkPoints> p = cell->GetPoints();
-    p->GetPoint(0, pc[0]);
-    p->GetPoint(1, pc[1]);
-    p->GetPoint(2, pc[2]);
-    length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[1]));
-    length += sqrt(vtkMath::Distance2BetweenPoints(pc[0], pc[2]));
-    length += sqrt(vtkMath::Distance2BetweenPoints(pc[1], pc[2]));
-    
+    sum += sqrt(vtkMath::Distance2BetweenPoints(p1, p2)) + 
+           sqrt(vtkMath::Distance2BetweenPoints(p1, p3)) +
+           sqrt(vtkMath::Distance2BetweenPoints(p2, p3));
   }
-  return length / (N * 3);
+
+  return sum / (3*numberOfCells);
 }
 
 
-double SquareAverage(vtkPolyData*poly)
+double AverageAreaOfCells(vtkPolyData*poly)
 {
-  
-  int edgesN = 0;
-  double length = 0;
-  const int N = poly->GetNumberOfCells();
-  
-  for (int c = 0; c < N; c++)
-  {
-    double pc[3][3];
-    double a[3], b[3], cv[3];
+  const unsigned int numberOfCells = poly->GetNumberOfCells();
+  double sum = 0;
 
-    vtkSmartPointer<vtkCell> cell = poly->GetCell(c);
+  for (int n = 0; n < numberOfCells; ++n) {
+    double a[3], b[3], c[3];
+    double p1[3], p2[3], p3[3];
 
-    vtkSmartPointer<vtkPoints> p = cell->GetPoints();
-    p->GetPoint(0, pc[0]);
-    p->GetPoint(1, pc[1]);
-    p->GetPoint(2, pc[2]);
+    vtkSmartPointer<vtkCell> cell = poly->GetCell(n);
+    vtkSmartPointer<vtkPoints> points = cell->GetPoints();
+
+    points->GetPoint(0, p1);
+    points->GetPoint(1, p2);
+    points->GetPoint(2, p3);
     
-    vtkMath::Subtract(pc[0], pc[1], a);
-    vtkMath::Subtract(pc[0], pc[2], b);
-    vtkMath::Cross(a, b, cv);
-    
-    length += sqrt(cv[0] * cv[0] + cv[1] * cv[1] + cv[2] * cv[2]) / 2;
-    
+    vtkMath::Subtract(p1, p2, a);
+    vtkMath::Subtract(p1, p3, b);
+    vtkMath::Cross(a, b, c);
+
+    sum += sqrt(c[0] * c[0] + c[1] * c[1] + c[2] * c[2]) / 2;
   }
-  return length / N;
 
+  return sum / numberOfCells;
 }
 
 
