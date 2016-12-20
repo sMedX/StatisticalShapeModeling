@@ -9,11 +9,11 @@
 namespace itk
 {
   template <typename TInputMesh, typename TOutputMesh = TInputMesh>
-  class SurfaceToImageRegistrationFilter : public itk::MeshToMeshFilter < TInputMesh, TOutputMesh >
+  class SurfaceToImageRegistrationMethod : public itk::MeshToMeshFilter < TInputMesh, TOutputMesh >
   {
   public:
     // Standard typedefs
-    typedef SurfaceToImageRegistrationFilter Self;
+    typedef SurfaceToImageRegistrationMethod Self;
     typedef itk::MeshToMeshFilter<TInputMesh, TOutputMesh> Superclass;
     typedef itk::SmartPointer<Self> Pointer;
     typedef itk::SmartPointer<const Self> ConstPointer;
@@ -28,7 +28,7 @@ namespace itk
     typedef itk::LinearInterpolateImageFunction<LevelsetImageType, double> InterpolatorType;
 
     itkNewMacro(Self);
-    itkTypeMacro(SurfaceToImageRegistrationFilter, itk::MeshToMeshFilter);
+    itkTypeMacro(SurfaceToImageRegistrationMethod, itk::MeshToMeshFilter);
 
     //Set spatial transform type
     typedef  enum { Translation, Euler3D, Similarity, Affine } EnumTransformType;
@@ -67,8 +67,8 @@ namespace itk
     void PrintReport(std::ostream& os) const;
 
   protected:
-    SurfaceToImageRegistrationFilter();
-    ~SurfaceToImageRegistrationFilter() {}
+    SurfaceToImageRegistrationMethod();
+    ~SurfaceToImageRegistrationMethod() {}
 
     virtual void GenerateData() override;
     void InitializeTransform();
@@ -103,5 +103,5 @@ namespace itk
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkSurfaceToImageRegistrationFilter.hxx"
+#include "itkSurfaceToImageRegistrationMethod.hxx"
 #endif

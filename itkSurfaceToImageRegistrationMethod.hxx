@@ -14,13 +14,13 @@
 #include <itkMeanSquaresPointSetToImageMetric.h>
 #include <itkBinaryThresholdImageFilter.h>
 
-#include "itkSurfaceToImageRegistrationFilter.h"
+#include "itkSurfaceToImageRegistrationMethod.h"
 
 namespace itk
 {
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::SurfaceToImageRegistrationFilter()
+  SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::SurfaceToImageRegistrationMethod()
   {
     this->SetNumberOfRequiredInputs(1);
     this->SetNumberOfRequiredOutputs(1);
@@ -28,7 +28,7 @@ namespace itk
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateData()
+  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::GenerateData()
   {
     m_Surface = const_cast <TInputMesh*> (this->GetInput());
 
@@ -86,7 +86,7 @@ namespace itk
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::ComputeLabelImage()
+  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::ComputeLabelImage()
   {
     typedef itk::BinaryThresholdImageFilter <LevelsetImageType, BinaryImageType> BinaryThresholdImageFilterType;
     BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
@@ -102,7 +102,7 @@ namespace itk
 
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::InitializeTransform()
+  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::InitializeTransform()
   {
     // compute label of the input level set image to initialize transform
     this->ComputeLabelImage();
@@ -279,7 +279,7 @@ namespace itk
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::GenerateOutputData()
+  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::GenerateOutputData()
   {
     //compute moved output
     typedef itk::TransformMeshFilter<TOutputMesh, TOutputMesh, TransformType> TransformFilterType;
@@ -299,7 +299,7 @@ namespace itk
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationFilter<TInputMesh, TOutputMesh>::PrintReport(std::ostream& os) const
+  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::PrintReport(std::ostream& os) const
   {
     os << this->GetNameOfClass() << std::endl;
     os << std::endl;

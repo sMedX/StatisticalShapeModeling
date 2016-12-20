@@ -8,7 +8,6 @@
 #include "utils/itkCommandLineArgumentParser.h"
 #include "utils/PointSetToImageMetrics.h"
 #include "SurfaceToLevelSetImageFilter.h"
-#include "itkSurfaceToImageRegistrationFilter.h"
 
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
