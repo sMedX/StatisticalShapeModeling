@@ -77,7 +77,7 @@ bool readMesh(typename TMesh::Pointer mesh, const std::string& fileName)
     reader->Update();
   }
   catch (itk::ExceptionObject& err) {
-    std::cerr << "Unable to write mesh to file '" << fileName << "'" << std::endl;
+    std::cerr << "Unable to read mesh to file '" << fileName << "'" << std::endl;
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
