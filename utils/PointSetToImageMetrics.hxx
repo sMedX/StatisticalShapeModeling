@@ -138,6 +138,14 @@ void PointSetToImageMetrics<TFixedPointSet, TMovingImage>::PrintReportToFile(con
   header += "Maximal" + dlm;
   scores += std::to_string(m_MaximalValue) + dlm;
 
+  header += dlm;
+  scores += dlm;
+
+  for (auto it = m_Info.begin(); it != m_Info.end(); ++it) {
+    header += (*it).first + dlm;
+    scores += (*it).second + dlm;
+  }
+
   bool exist = boost::filesystem::exists(fileName);
   std::ofstream ofile;
 

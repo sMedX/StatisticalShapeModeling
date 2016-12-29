@@ -48,6 +48,9 @@ public itk::PointSetToImageMetric < TFixedPointSet, TMovingImage >
   /**  Type of the parameters. */
   typedef typename Superclass::ParametersType ParametersType;
 
+  typedef std::pair<std::string, std::string> PairType;
+  typedef std::vector<PairType> InfoType;
+
   /**  Compute values. */
   void Compute();
 
@@ -57,6 +60,8 @@ public itk::PointSetToImageMetric < TFixedPointSet, TMovingImage >
 
   itkSetMacro(HistogramSize, unsigned int);
   itkGetMacro(HistogramSize, unsigned int);
+
+  itkSetMacro(Info, InfoType);
 
   /*Get metrics values. */
   itkGetMacro(MeanValue, MeasureType);
@@ -99,7 +104,7 @@ private:
   MeasureType m_RMSEValue = itk::NumericTraits<MeasureType>::Zero;
   MeasureType m_QuantileValue = itk::NumericTraits<MeasureType>::Zero;
   MeasureType m_MaximalValue = itk::NumericTraits<MeasureType>::Zero;
-
+  InfoType m_Info;
 };
 
 #ifndef ITK_MANUAL_INSTANTIATION
