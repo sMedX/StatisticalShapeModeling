@@ -7,7 +7,7 @@
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 #include "utils/PointSetToImageMetrics.h"
-#include "SurfaceToLevelSetImageFilter.h"
+#include "ssmSurfaceToLevelSetImageFilter.h"
 #include "itkSurfaceToImageRegistrationMethod.h"
 
 const unsigned int Dimension = 3;
@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-list", listFile);
 
   std::string surfaceFile;
-  parser->GetCommandLineArgument("-surface", surfaceFile);
+  parser->GetCommandLineArgument("-output", surfaceFile);
 
   int numberOfStages = 3;
   parser->GetCommandLineArgument("-stages", numberOfStages);
@@ -37,7 +37,6 @@ int main(int argc, char** argv) {
   int numberOfIterations = 100;
   parser->GetCommandLineArgument("-iteration", numberOfIterations);
 
-
   std::cout << std::endl;
   std::cout << "parameters" << std::endl;
   std::cout << "    list of files " << listFile << std::endl;
@@ -47,8 +46,16 @@ int main(int argc, char** argv) {
   std::cout << "       iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
-  // read surface in to vector
-  StringList listOfFiles = getFileList(listFile);
+  // read list of files
+  StringList listOfFiles;
+  try {
+    listOfFiles = getFileList(listFile);
+  }
+  catch (ifstream::failure & e) {
+    cerr << "Could not read the data-list:" << endl;
+    cerr << e.what() << endl;
+    return EXIT_FAILURE;
+  }
 
   std::vector<MeshType::Pointer> vectorOfSurfaces;
   std::vector<std::string> vectorOfFiles;
@@ -73,25 +80,24 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // compute initial reference level set image
+  // compute initial level set image
   FloatImageType::SpacingType spacing;
   spacing.Fill(1);
 
-  typedef SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
-  SurfaceToLevelSetImageFilterType::Pointer levelset = SurfaceToLevelSetImageFilterType::New();
-  levelset->SetMargin(0.5);
-  levelset->SetSpacing(spacing);
-  levelset->SetInput(vectorOfSurfaces[0]);
-
+  typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
+  SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
+  surfaceToLevelSetImage->SetMargin(1.0);
+  surfaceToLevelSetImage->SetSpacing(spacing);
+  surfaceToLevelSetImage->SetInput(vectorOfSurfaces[0]);
   try {
-    levelset->Update();
+    surfaceToLevelSetImage->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
 
-  FloatImageType::Pointer reference = levelset->GetOutput();
+  FloatImageType::Pointer levelSetImage = surfaceToLevelSetImage->GetOutput();
 
   //----------------------------------------------------------------------------
   // compute reference image 
@@ -119,11 +125,11 @@ int main(int argc, char** argv) {
     std::cout << std::endl;
 
     // allocate image to update reference image
-    FloatImageType::Pointer updateReference = FloatImageType::New();
-    updateReference->SetRegions(reference->GetLargestPossibleRegion());
-    updateReference->Allocate();
-    updateReference->FillBuffer(0);
-    updateReference->CopyInformation(reference);
+    FloatImageType::Pointer updateLevelSetImage = FloatImageType::New();
+    updateLevelSetImage->SetRegions(levelSetImage->GetLargestPossibleRegion());
+    updateLevelSetImage->Allocate();
+    updateLevelSetImage->FillBuffer(0);
+    updateLevelSetImage->CopyInformation(levelSetImage);
 
     for (int n = 0; n < vectorOfSurfaces.size(); ++n) {
       std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << n + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[n] << std::endl;
@@ -133,8 +139,7 @@ int main(int argc, char** argv) {
       surfaceToImageRegistration->SetInput(vectorOfSurfaces[n]);
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
       surfaceToImageRegistration->SetTypeOfTransform(typeOfTransform);
-      surfaceToImageRegistration->SetLevelsetImage(reference);
-
+      surfaceToImageRegistration->SetLevelsetImage(levelSetImage);
       try {
         surfaceToImageRegistration->Update();
       }
@@ -149,37 +154,42 @@ int main(int argc, char** argv) {
       vectorOfSurfaces[n] = surfaceToImageRegistration->GetOutput();
 
       // compute level set image
-      SurfaceToLevelSetImageFilterType::Pointer levelset = SurfaceToLevelSetImageFilterType::New();
-      levelset->SetOrigin(reference->GetOrigin());
-      levelset->SetSpacing(reference->GetSpacing());
-      levelset->SetSize(reference->GetLargestPossibleRegion().GetSize());
-      levelset->SetInput(vectorOfSurfaces[n]);
+      SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
+      surfaceToLevelSetImage->SetInput(vectorOfSurfaces[n]);
+      surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
+      surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
+      surfaceToLevelSetImage->SetSize(levelSetImage->GetLargestPossibleRegion().GetSize());
       try {
-        levelset->Update();
+        surfaceToLevelSetImage->Update();
       }
       catch (itk::ExceptionObject& excep) {
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
       }
 
-      // add current levelset to update reference image
+      // add current level set image to update reference image
       typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
       FilterType::Pointer multiply = FilterType::New();
-      multiply->SetInput(levelset->GetOutput());
+      multiply->SetInput(surfaceToLevelSetImage->GetOutput());
       multiply->SetConstant(1 / (double) vectorOfSurfaces.size());
-      multiply->Update();
 
       typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
-      AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
-      addfilter->SetInput1(updateReference);
-      addfilter->SetInput2(multiply->GetOutput());
-      addfilter->Update();
+      AddImageFilterType::Pointer add = AddImageFilterType::New();
+      add->SetInput1(updateLevelSetImage);
+      add->SetInput2(multiply->GetOutput());
+      try {
+        add->Update();
+      }
+      catch (itk::ExceptionObject& excep) {
+        std::cerr << excep << std::endl;
+        return EXIT_FAILURE;
+      }
 
-      updateReference = addfilter->GetOutput();
+      updateLevelSetImage = add->GetOutput();
     }
 
     //update reference image
-    reference = updateReference;
+    levelSetImage = updateLevelSetImage;
   }
 
   //----------------------------------------------------------------------------
@@ -189,14 +199,14 @@ int main(int argc, char** argv) {
     parser->GetCommandLineArgument("-reference", fileName);
 
     std::cout << "output reference image " << fileName << std::endl;
-    std::cout << "   size " << reference->GetLargestPossibleRegion().GetSize() << std::endl;
-    std::cout << "spacing " << reference->GetSpacing() << std::endl;
-    std::cout << " origin " << reference->GetOrigin() << std::endl;
+    std::cout << "   size " << levelSetImage->GetLargestPossibleRegion().GetSize() << std::endl;
+    std::cout << "spacing " << levelSetImage->GetSpacing() << std::endl;
+    std::cout << " origin " << levelSetImage->GetOrigin() << std::endl;
     std::cout << std::endl;
 
     typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
     FilterType::Pointer multiply = FilterType::New();
-    multiply->SetInput(reference);
+    multiply->SetInput(levelSetImage);
     multiply->SetConstant(-1);
 
     if (!writeImage<FloatImageType>(multiply->GetOutput(), fileName)) {
@@ -209,15 +219,15 @@ int main(int argc, char** argv) {
 
     // define full file name for output surface
     fp path = fp(surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(surfaceFile).filename().string());
-    std::string fileName = path.string();
+    std::string outputSurfaceFile = path.string();
 
     std::cout << "output surface info" << std::endl;
-    std::cout << fileName << std::endl;
+    std::cout << outputSurfaceFile << std::endl;
     std::cout << " number of cells " << vectorOfSurfaces[count]->GetNumberOfCells() << std::endl;
     std::cout << "number of points " << vectorOfSurfaces[count]->GetNumberOfPoints() << std::endl;
     std::cout << std::endl;
 
-    if (!writeMesh<MeshType>(vectorOfSurfaces[count], fileName)) {
+    if (!writeMesh<MeshType>(vectorOfSurfaces[count], outputSurfaceFile)) {
       EXIT_FAILURE;
     }
 
@@ -229,7 +239,7 @@ int main(int argc, char** argv) {
     typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
     PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
     metrics->SetFixedPointSet(pointSet);
-    metrics->SetMovingImage(reference);
+    metrics->SetMovingImage(levelSetImage);
     metrics->Compute();
     metrics->PrintReport(std::cout);
 
@@ -238,7 +248,7 @@ int main(int argc, char** argv) {
       std::string fileName;
       parser->GetCommandLineArgument("-report", fileName);
       std::cout << "print report to the file: " << fileName << std::endl;
-      metrics->PrintReportToFile(fileName, getBaseNameFromPath(surfaceFile));
+      metrics->PrintReportToFile(fileName, getBaseNameFromPath(outputSurfaceFile));
     }
   }
 
