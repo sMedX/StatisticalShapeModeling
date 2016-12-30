@@ -34,11 +34,8 @@ int main(int argc, char** argv)
   std::string listFile;
   parser->GetCommandLineArgument("-list", listFile);
 
-  int numberOfComponents = -1;
+  std::vector<unsigned int> numberOfComponents;
   parser->GetCommandLineArgument("-components", numberOfComponents);
-
-  unsigned int folds = 0;
-  parser->GetCommandLineArgument("-folds", folds);
 
   bool write = false;
   parser->GetCommandLineArgument("-write", write);
@@ -79,127 +76,139 @@ int main(int argc, char** argv)
       dataManager->AddDataset(surface, fileName);
     }
 
-    if (folds == 0) {
-      folds = dataManager->GetNumberOfSamples();
-    }
+    CVFoldListType cvFoldList = dataManager->GetCrossValidationFolds(dataManager->GetNumberOfSamples(), true);
 
-    CVFoldListType cvFoldList = dataManager->GetCrossValidationFolds(folds, true);
+    if (numberOfComponents.size() == 0) {
+      numberOfComponents.push_back(dataManager->GetNumberOfSamples());
+    }
 
     std::cout << "successfully loaded " << dataManager->GetNumberOfSamples() << " samples " << std::endl;
     std::cout << "    number of folds " << cvFoldList.size() << std::endl;
     std::cout << std::endl;
 
     // iterate over cvFoldList to get all the folds
-    for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
+    for (const auto & components : numberOfComponents) {
+      for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
 
-      // create the model
-      ModelBuilderType::Pointer pcaModelBuilder = ModelBuilderType::New();
-      StatisticalModelType::Pointer model = pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0);
+        // create the model
+        ModelBuilderType::Pointer pcaModelBuilder = ModelBuilderType::New();
+        StatisticalModelType::Pointer model = pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0);
 
-      //reduce the number of components
-      if (numberOfComponents >= 0) {
+        //reduce the number of components
         ReducedVarianceModelBuilderType::Pointer reducedVarModelBuilder = ReducedVarianceModelBuilderType::New();
-        model = reducedVarModelBuilder->BuildNewModelWithLeadingComponents(model, numberOfComponents);
-      }
-
-      std::cout << "built model from " << it->GetTrainingData().size() << " samples" << std::endl;
-      std::cout << "number of principal components " << model->GetNumberOfPrincipalComponents() << std::endl;
-      std::cout << std::endl;
-
-      // Now we can iterate over the test data and do whatever validation we would like to do.
-      const DataItemListType testSamplesList = it->GetTestingData();
-
-      for (DataItemListType::const_iterator it = testSamplesList.begin(); it != testSamplesList.end(); ++it) {
-        std::string surfaceName = (*it)->GetDatasetURI();
-
-        MeshType::Pointer testSample = (*it)->GetSample();
-        MeshType::Pointer outputSample = model->DrawSample(model->ComputeCoefficientsForDataset(testSample));
-
-        if (write) {
-          std::string fileName = addFileNameSuffix(surfaceName, "_cv");
-          if (!writeMesh<MeshType>(outputSample, fileName)) {
-            return EXIT_FAILURE;
-          }
+        if (components < model->GetNumberOfPrincipalComponents()) {
+          model = reducedVarModelBuilder->BuildNewModelWithLeadingComponents(model, components);
         }
 
-        double probability = model->ComputeProbabilityOfDataset(testSample);
-        double mean = 0;
-        double rmse = 0;
-        double maximal = 0;
-        PointType p1, p2;
-
-        typedef itk::Vector<double, 1> VectorType;
-        typedef itk::Statistics::ListSample<VectorType> ListSampleType;
-        ListSampleType::Pointer sample = ListSampleType::New();
-
-        for (size_t n = 0; n < testSample->GetNumberOfPoints(); ++n) {
-          p1.CastFrom<float>(testSample->GetPoint(n));
-          p2.CastFrom<float>(outputSample->GetPoint(n));
-          double dist = p1.EuclideanDistanceTo(p2);
-
-          sample->PushBack(dist);
-          mean += dist;
-          rmse += dist * dist;
-          maximal = std::max(maximal, dist);
-        }
-
-        mean = mean / testSample->GetNumberOfPoints();
-        rmse = std::sqrt(rmse / testSample->GetNumberOfPoints());
-
-        typedef itk::Statistics::Histogram<float, itk::Statistics::DenseFrequencyContainer2> HistogramType;
-        typedef itk::Statistics::SampleToHistogramFilter<ListSampleType, HistogramType> SampleToHistogramFilterType;
-        SampleToHistogramFilterType::Pointer sampleToHistogram = SampleToHistogramFilterType::New();
-        sampleToHistogram->SetInput(sample);
-        sampleToHistogram->SetAutoMinimumMaximum(true);
-        SampleToHistogramFilterType::HistogramSizeType histogramSize(1);
-        histogramSize.Fill(1000);
-        sampleToHistogram->SetHistogramSize(histogramSize);
-        sampleToHistogram->Update();
-
-        const HistogramType* histogram = sampleToHistogram->GetOutput();
-        double quantileValue = histogram->Quantile(0, 0.95);
-
-        std::cout << surfaceName << std::endl;
-        std::cout << "Probability = " << probability << std::endl;
-        std::cout << "       Mean = " << mean << " mm" << std::endl;
-        std::cout << "       RMSE = " << rmse << " mm" << std::endl;
-        std::cout << "   Quantile = " << quantileValue << ", level = " << 0.95 << std::endl;
-        std::cout << "    Maximal = " << maximal << " mm" << std::endl;
+        std::cout << "built model from " << it->GetTrainingData().size() << " samples" << std::endl;
+        std::cout << "number of principal components " << model->GetNumberOfPrincipalComponents() << std::endl;
         std::cout << std::endl;
 
-        if (parser->ArgumentExists("-report")) {
-          std::string reportFile;
-          parser->GetCommandLineArgument("-report", reportFile);
+        // Now we can iterate over the test data and do whatever validation we would like to do.
+        const DataItemListType testSamplesList = it->GetTestingData();
 
-          std::string dlm = ";";
-          std::string header = dlm;
-          std::string scores = getBaseNameFromPath(surfaceName) + dlm;
+        for (DataItemListType::const_iterator it = testSamplesList.begin(); it != testSamplesList.end(); ++it) {
+          std::string surfaceName = (*it)->GetDatasetURI();
 
-          header += "Probability" + dlm;
-          scores += std::to_string(probability) + dlm;
+          MeshType::Pointer testSample = (*it)->GetSample();
+          MeshType::Pointer outputSample = model->DrawSample(model->ComputeCoefficientsForDataset(testSample));
 
-          header += "Mean, mm" + dlm;
-          scores += std::to_string(mean) + dlm;
-
-          header += "RMSE, mm" + dlm;
-          scores += std::to_string(rmse) + dlm;
-
-          header += "Quantile " + std::to_string(0.95) + dlm;
-          scores += std::to_string(quantileValue) + dlm;
-
-          header += "Maximal, mm" + dlm;
-          scores += std::to_string(maximal) + dlm;
-
-          bool fileExist = boost::filesystem::exists(reportFile);
-
-          std::ofstream ofile;
-          ofile.open(reportFile, std::ofstream::out | std::ofstream::app);
-
-          if (!fileExist) {
-            ofile << header << std::endl;
+          if (write) {
+            std::string suffix = "-cv-components-" + std::to_string(model->GetNumberOfPrincipalComponents());
+            std::string fileName = addFileNameSuffix(surfaceName, suffix);
+            if (!writeMesh<MeshType>(outputSample, fileName)) {
+              return EXIT_FAILURE;
+            }
           }
-          ofile << scores << std::endl;
-          ofile.close();
+
+          double probability = model->ComputeProbabilityOfDataset(testSample);
+          double mean = 0;
+          double rmse = 0;
+          double maximal = 0;
+          PointType p1, p2;
+
+          typedef itk::Vector<double, 1> VectorType;
+          typedef itk::Statistics::ListSample<VectorType> ListSampleType;
+          ListSampleType::Pointer sample = ListSampleType::New();
+
+          for (size_t n = 0; n < testSample->GetNumberOfPoints(); ++n) {
+            p1.CastFrom<float>(testSample->GetPoint(n));
+
+            p2.CastFrom<float>(outputSample->GetPoint(n));
+            double dist = p1.EuclideanDistanceTo(p2);
+
+            for (size_t m = 0; m < outputSample->GetNumberOfPoints(); ++m) {
+              p2.CastFrom<float>(outputSample->GetPoint(m));
+              dist = std::min(dist, p1.EuclideanDistanceTo(p2));
+            }
+
+            sample->PushBack(dist);
+            mean += dist;
+            rmse += dist * dist;
+            maximal = std::max(maximal, dist);
+          }
+
+          mean = mean / testSample->GetNumberOfPoints();
+          rmse = std::sqrt(rmse / testSample->GetNumberOfPoints());
+
+          typedef itk::Statistics::Histogram<float, itk::Statistics::DenseFrequencyContainer2> HistogramType;
+          typedef itk::Statistics::SampleToHistogramFilter<ListSampleType, HistogramType> SampleToHistogramFilterType;
+          SampleToHistogramFilterType::Pointer sampleToHistogram = SampleToHistogramFilterType::New();
+          sampleToHistogram->SetInput(sample);
+          sampleToHistogram->SetAutoMinimumMaximum(true);
+          SampleToHistogramFilterType::HistogramSizeType histogramSize(1);
+          histogramSize.Fill(1000);
+          sampleToHistogram->SetHistogramSize(histogramSize);
+          sampleToHistogram->Update();
+
+          const HistogramType* histogram = sampleToHistogram->GetOutput();
+          double quantileValue = histogram->Quantile(0, 0.95);
+
+          std::cout << surfaceName << std::endl;
+          std::cout << "Probability = " << probability << std::endl;
+          std::cout << "       Mean = " << mean << " mm" << std::endl;
+          std::cout << "       RMSE = " << rmse << " mm" << std::endl;
+          std::cout << "   Quantile = " << quantileValue << ", level = " << 0.95 << std::endl;
+          std::cout << "    Maximal = " << maximal << " mm" << std::endl;
+          std::cout << std::endl;
+
+          if (parser->ArgumentExists("-report")) {
+            std::string reportFile;
+            parser->GetCommandLineArgument("-report", reportFile);
+
+            std::string dlm = ";";
+            std::string header = dlm;
+            std::string scores = getBaseNameFromPath(surfaceName) + dlm;
+
+            header += "Components" + dlm;
+            scores += std::to_string(model->GetNumberOfPrincipalComponents()) + dlm;
+
+            header += "Probability" + dlm;
+            scores += std::to_string(probability) + dlm;
+
+            header += "Mean, mm" + dlm;
+            scores += std::to_string(mean) + dlm;
+
+            header += "RMSE, mm" + dlm;
+            scores += std::to_string(rmse) + dlm;
+
+            header += "Quantile " + std::to_string(0.95) + dlm;
+            scores += std::to_string(quantileValue) + dlm;
+
+            header += "Maximal, mm" + dlm;
+            scores += std::to_string(maximal) + dlm;
+
+            bool fileExist = boost::filesystem::exists(reportFile);
+
+            std::ofstream ofile;
+            ofile.open(reportFile, std::ofstream::out | std::ofstream::app);
+
+            if (!fileExist) {
+              ofile << header << std::endl;
+            }
+            ofile << scores << std::endl;
+            ofile.close();
+          }
         }
       }
     }
