@@ -9,7 +9,7 @@
 
 #include "utils/PointSetToImageMetrics.h"
 #include "itkShapeModelRegistrationMethod.h"
-#include "SurfaceToLevelSetImageFilter.h"
+#include "ssmSurfaceToLevelSetImageFilter.h"
 
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> BinaryImageType;
@@ -113,7 +113,7 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // compute level set image
-  typedef SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
+  typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
   levelset->SetMargin(0.10);
   levelset->SetSpacing(0.5);
