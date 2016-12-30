@@ -62,8 +62,9 @@ int main(int argc, char** argv)
   std::cout << "                degree " << degree << std::endl;
 
   unsigned int numberOfStages = parameters.size() + 1;
+
   for (int n = regularization.size(); n < numberOfStages; ++n) {
-    regularization.push_back(*regularization.end());
+    regularization.push_back(regularization.back());
   }
 
   std::cout << "        regularization ";
@@ -115,7 +116,7 @@ int main(int argc, char** argv)
   // compute level set image
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(0.10);
+  levelset->SetMargin(0.20);
   levelset->SetSpacing(0.5);
   levelset->SetInput(surface);
   try {
