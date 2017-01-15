@@ -11,19 +11,22 @@ namespace ssm
   class SurfaceToLevelSetImageFilter : public itk::LightProcessObject
   {
   public:
-    typedef SurfaceToLevelSetImageFilter Self;
-    typedef itk::LightProcessObject Superclass;
-    typedef itk::SmartPointer<Self> Pointer;
-    typedef itk::SmartPointer<const Self> ConstPointer;
+    typedef SurfaceToLevelSetImageFilter   Self;
+    typedef itk::LightProcessObject        Superclass;
+    typedef itk::SmartPointer<Self>        Pointer;
+    typedef itk::SmartPointer<const Self>  ConstPointer;
 
     itkNewMacro(Self);
     itkTypeMacro(SurfaceToLevelSetImageFilter, itk::LightProcessObject);
 
-  public:
+    itkStaticConstMacro(Dimension, unsigned int, TInputMesh::PointDimension);
+    typedef itk::Image<unsigned char, Dimension> MaskImageType;
 
+  public:
     //inputs and output
     itkSetObjectMacro(Input, TInputMesh);
     itkGetObjectMacro(Output, TOutputImage);
+    itkGetObjectMacro(Mask, MaskImageType);
 
     // parameters
     itkSetMacro(Margin, double);
@@ -51,6 +54,7 @@ namespace ssm
   protected:
     typename TInputMesh::Pointer m_Input;
     typename TOutputImage::Pointer m_Output;
+    typename MaskImageType::Pointer m_Mask;
     typename TInputMesh::BoundingBoxType::ConstPointer m_BoundingBox;
 
     typename TOutputImage::PointType m_Origin;
@@ -62,6 +66,9 @@ namespace ssm
     typename TOutputImage::SizeType m_Size;
     bool m_UseSize;
     double m_Margin = 0.25;
+
+    float m_BackgroundValue;
+    float m_ForegroundValue;
 
   private:
     SurfaceToLevelSetImageFilter(const Self&);
