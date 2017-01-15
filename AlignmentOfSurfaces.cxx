@@ -34,8 +34,8 @@ int main(int argc, char** argv) {
   int transform = 1;
   parser->GetCommandLineArgument("-transform", transform);
 
-  int numberOfIterations = 100;
-  parser->GetCommandLineArgument("-iteration", numberOfIterations);
+  int numberOfIterations = 500;
+  parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
   std::cout << std::endl;
   std::cout << "parameters" << std::endl;
@@ -187,11 +187,12 @@ int main(int argc, char** argv) {
       std::cout << excep << std::endl;
       return EXIT_FAILURE;
     }
+    vectorOfSurfaces[n] = transformSurface->GetOutput();
 
     // compute level-set image for the n-th surface
     typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
     SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
-    surfaceToLevelSetImage->SetInput(transformSurface->GetOutput());
+    surfaceToLevelSetImage->SetInput(vectorOfSurfaces[n]);
     surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
     surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
     surfaceToLevelSetImage->SetSize(levelSetImage->GetLargestPossibleRegion().GetSize());
@@ -223,27 +224,15 @@ int main(int argc, char** argv) {
     levelSetImage = add->GetOutput();
   }
 
-  writeImage<FloatImageType>(levelSetImage, "levelset.nrrd");
-
   //----------------------------------------------------------------------------
   // compute reference image 
 
   // define types
   typedef itk::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
-  typedef SurfaceToImageRegistrationMethodType::EnumTransformType EnumTransformType;
-  EnumTransformType typeOfTransform;
 
   for (int stage = 0; stage < numberOfStages; ++stage) {
-    switch (stage) {
-    case 0:
-      typeOfTransform = EnumTransformType::Translation;
-      break;
-    case 1:
-      typeOfTransform = EnumTransformType::Euler3D;
-      break;
-    default:
-      typeOfTransform = static_cast<EnumTransformType>(transform);
-    }
+    typedef SurfaceToImageRegistrationMethodType::EnumTransformType EnumTransformType;
+    EnumTransformType typeOfTransform = static_cast<EnumTransformType>(transform);
 
     std::cout << "perform registration" << std::endl;
     std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
@@ -273,10 +262,7 @@ int main(int argc, char** argv) {
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
       }
-
       surfaceToImageRegistration->PrintReport(std::cout);
-
-      // update surface in the vector
       vectorOfSurfaces[n] = surfaceToImageRegistration->GetOutput();
 
       // compute level set image
@@ -321,11 +307,11 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  if (parser->ArgumentExists("-reference")) {
+  if (parser->ArgumentExists("-levelset")) {
     std::string fileName;
-    parser->GetCommandLineArgument("-reference", fileName);
+    parser->GetCommandLineArgument("-levelset", fileName);
 
-    std::cout << "output reference image " << fileName << std::endl;
+    std::cout << "output the level-set image " << fileName << std::endl;
     std::cout << "   size " << levelSetImage->GetLargestPossibleRegion().GetSize() << std::endl;
     std::cout << "spacing " << levelSetImage->GetSpacing() << std::endl;
     std::cout << " origin " << levelSetImage->GetOrigin() << std::endl;
@@ -348,12 +334,7 @@ int main(int argc, char** argv) {
     fp path = fp(surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(surfaceFile).filename().string());
     std::string outputSurfaceFile = path.string();
 
-    std::cout << "output surface info" << std::endl;
-    std::cout << outputSurfaceFile << std::endl;
-    std::cout << " number of cells " << vectorOfSurfaces[count]->GetNumberOfCells() << std::endl;
-    std::cout << "number of points " << vectorOfSurfaces[count]->GetNumberOfPoints() << std::endl;
-    std::cout << std::endl;
-
+    std::cout << "output file " << outputSurfaceFile << std::endl;
     if (!writeMesh<MeshType>(vectorOfSurfaces[count], outputSurfaceFile)) {
       EXIT_FAILURE;
     }
