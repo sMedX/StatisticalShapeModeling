@@ -41,42 +41,37 @@ int main(int argc, char** argv) {
   parser->SetCommandLineArguments(argc, argv);
 
   std::string imageFile;
-  parser->GetCommandLineArgument("-label", imageFile);
+  parser->GetCommandLineArgument("-image", imageFile);
 
   std::string surfaceFile;
-  parser->GetCommandLineArgument("-surface", surfaceFile);
+  parser->GetCommandLineArgument("-output", surfaceFile);
 
-  float spacing = 1;
-  parser->GetCommandLineArgument("-spacing", spacing);
-
-  int radius = 0;
-  parser->GetCommandLineArgument("-radius", radius);
-
-  float sigma = 0;
+  double sigma = 1;
   parser->GetCommandLineArgument("-sigma", sigma);
 
-  float relaxation = 0.2;
+  double relaxation = 0.2;
   parser->GetCommandLineArgument("-relaxation", relaxation);
 
-  int numberOfIterations = 100;
+  unsigned int numberOfIterations = 100;
   parser->GetCommandLineArgument("-iteration", numberOfIterations);
 
-  int numberOfPoints = 0;
+  unsigned int numberOfPoints = 0;
   parser->GetCommandLineArgument("-points", numberOfPoints);
+
+  bool isbinary = true;
+  parser->GetCommandLineArgument("-binary", isbinary);
 
   std::cout << std::endl;
   std::cout << "      parameters " << std::endl;
-  std::cout << "         spacing " << spacing << std::endl;
-  std::cout << "          radius " << radius << std::endl;
   std::cout << "           sigma " << sigma << std::endl;
   std::cout << "      relaxation " << relaxation << std::endl;
   std::cout << "      iterations " << numberOfIterations << std::endl;
   std::cout << "number of points " << numberOfPoints << std::endl;
+  std::cout << " image is binary " << isbinary << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   // read image
-
   FloatImageType::Pointer image = FloatImageType::New();
   if (!readImage<FloatImageType>(image, imageFile)) {
     return EXIT_FAILURE;
@@ -104,92 +99,23 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // resampling of input image
-  if (sigma > 0) {
-    typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
-    RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
-    gaussian->SetInput(image);
-    gaussian->SetSigma(sigma);
-    gaussian->Update();
-    image = gaussian->GetOutput();
-  }
-
-  BinaryImageType::SizeType outSize;
-  BinaryImageType::SpacingType outSpacing;
-  outSpacing.Fill(spacing);
-
-  for (int i = 0; i < Dimension; ++i) {
-    outSize[i] = image->GetLargestPossibleRegion().GetSize()[i] * image->GetSpacing()[i] / outSpacing[i];
-  }
-
-  typedef itk::NearestNeighborInterpolateImageFunction<FloatImageType, double>  InterpolatorType;
-  InterpolatorType::Pointer interpolator = InterpolatorType::New();
-
-  typedef itk::ResampleImageFilter<FloatImageType, FloatImageType> ResampleImageFilterType;
-  ResampleImageFilterType::Pointer resampler = ResampleImageFilterType::New();
-  resampler->SetInput(image);
-  resampler->SetDefaultPixelValue(labelValues->GetMinimum());
-  resampler->SetSize(outSize);
-  resampler->SetOutputSpacing(outSpacing);
-  resampler->SetOutputOrigin(image->GetOrigin());
-  resampler->SetOutputDirection(image->GetDirection());
-  resampler->SetInterpolator(interpolator);
-  resampler->Update();
-
-  //----------------------------------------------------------------------------
   // image processing
-  typedef itk::BinaryThresholdImageFilter<FloatImageType, FloatImageType> ThresholdImageFilterType;
-  ThresholdImageFilterType::Pointer threshold = ThresholdImageFilterType::New();
-  threshold->SetInput(resampler->GetOutput());
-  threshold->SetLowerThreshold(levelValue);
-  threshold->SetUpperThreshold(std::numeric_limits<FloatImageType::PixelType>::max());
-  threshold->SetInsideValue(1);
-  threshold->SetOutsideValue(0);
-
-  BinaryImageType::SizeType nhoodRadius;
-  nhoodRadius.Fill(radius);
-
-  typedef itk::VotingBinaryHoleFillingImageFilter<FloatImageType, FloatImageType> VotingBinaryIterativeHoleFillingImageFilterType;
-  VotingBinaryIterativeHoleFillingImageFilterType::Pointer holefilling = VotingBinaryIterativeHoleFillingImageFilterType::New();
-  holefilling->SetInput(threshold->GetOutput());
-  holefilling->SetBackgroundValue(0);
-  holefilling->SetForegroundValue(1);
-  holefilling->SetRadius(nhoodRadius);
-  holefilling->Update();
-  image = holefilling->GetOutput();
-
-  if (sigma > 0) {
-    typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
-    RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
-    gaussian->SetInput(image);
-    gaussian->SetSigma(sigma);
-    gaussian->Update();
-    image = gaussian->GetOutput();
-  }
-
-  typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
-  GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
-  fillholes->SetInput(image);
-  fillholes->SetFullyConnected(true);
-  try {
-    fillholes->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
-  }
+  typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
+  RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
+  gaussian->SetInput(image);
+  gaussian->SetSigma(sigma);
 
   //----------------------------------------------------------------------------
   // convert ITK image to VTK image
   typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
   ConvertorType::Pointer convertor = ConvertorType::New();
-  convertor->SetInput(fillholes->GetOutput());
+  convertor->SetInput(gaussian->GetOutput());
   convertor->Update();
 
   typedef vtkSmartPointer<vtkMarchingCubes> MarchingCubes;
   MarchingCubes mcubes = MarchingCubes::New();
   mcubes->SetInputData(convertor->GetOutput());
-  mcubes->SetValue(0, 0.5);
+  mcubes->SetValue(0, levelValue);
   try {
     mcubes->Update();
   }
@@ -246,13 +172,19 @@ int main(int argc, char** argv) {
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
-
   surface = normals->GetOutput();
 
   // write polydata to the file
   if (!writeVTKPolydata(surface, surfaceFile)) {
     return EXIT_FAILURE;
   }
+
+  typedef std::pair<std::string, std::string> PairType;
+  std::vector<PairType> surfaceInfo;
+  surfaceInfo.push_back(PairType("number of points", std::to_string(surface->GetNumberOfPoints())));
+  surfaceInfo.push_back(PairType("number of cells", std::to_string(surface->GetNumberOfCells())));
+  surfaceInfo.push_back(PairType("length of edges", std::to_string(AverageLengthOfEdges(surface))));
+  surfaceInfo.push_back(PairType("area of cells", std::to_string(AverageAreaOfCells(surface))));
 
   std::cout << "output surface polydata " << surfaceFile << std::endl;
   std::cout << "       number of cells  " << surface->GetNumberOfCells() << std::endl;
@@ -271,22 +203,17 @@ int main(int argc, char** argv) {
     pointSet->SetPoint(n, point);
   }
 
-  // compute distance map
-  FloatImageType::Pointer distancemap = image;
-
-  bool isBinary = true;
-  parser->GetCommandLineArgument("-binary", isBinary);
-
-  if (isBinary) {
-    distancemap = ComputeDistanceMapImage(image, labelValues->GetMinimum(), labelValues->GetMaximum());
-
-  }
-
   // compute metrics
   typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
-  metrics->SetMovingImage(distancemap);
+  metrics->SetInfo(surfaceInfo);
+  if (isbinary) {
+    metrics->SetMovingImage(ComputeDistanceMapImage(image, labelValues->GetMinimum(), labelValues->GetMaximum()));
+  }
+  else {
+    metrics->SetMovingImage(image);
+  }
   metrics->Compute();
   metrics->PrintReport(std::cout);
 
