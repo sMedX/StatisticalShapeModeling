@@ -225,12 +225,9 @@ int main(int argc, char** argv) {
   }
 
   //----------------------------------------------------------------------------
-  // compute reference image 
-
-  // define types
-  typedef itk::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
-
+  // perform alignment of the surfaces
   for (int stage = 0; stage < numberOfStages; ++stage) {
+    typedef itk::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
     typedef SurfaceToImageRegistrationMethodType::EnumTransformType EnumTransformType;
     EnumTransformType typeOfTransform = static_cast<EnumTransformType>(transform);
 
@@ -250,6 +247,7 @@ int main(int argc, char** argv) {
       std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << n + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[n] << std::endl;
 
       // perform surface to image registration
+      typedef itk::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
       SurfaceToImageRegistrationMethodType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationMethodType::New();
       surfaceToImageRegistration->SetInput(vectorOfSurfaces[n]);
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
@@ -262,8 +260,8 @@ int main(int argc, char** argv) {
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
       }
-      surfaceToImageRegistration->PrintReport(std::cout);
       vectorOfSurfaces[n] = surfaceToImageRegistration->GetOutput();
+      surfaceToImageRegistration->PrintReport(std::cout);
 
       // compute level set image
       typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
