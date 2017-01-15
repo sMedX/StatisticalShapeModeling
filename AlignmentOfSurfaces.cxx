@@ -11,7 +11,7 @@
 #include "itkSurfaceToImageRegistrationMethod.h"
 
 const unsigned int Dimension = 3;
-typedef itk::Image<unsigned char, Dimension> BinaryImageType;
+typedef itk::Image<unsigned char, Dimension> MaskImageType;
 typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
 using fp = boost::filesystem::path;
@@ -81,23 +81,149 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // compute initial level set image
-  FloatImageType::SpacingType spacing;
-  spacing.Fill(1);
 
-  typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
-  SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
-  surfaceToLevelSetImage->SetMargin(1.0);
-  surfaceToLevelSetImage->SetSpacing(spacing);
-  surfaceToLevelSetImage->SetInput(vectorOfSurfaces[0]);
-  try {
-    surfaceToLevelSetImage->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
+  // compute size of the initial level set image
+  typedef itk::Vector<double, Dimension> VectorType;
+  std::vector<MeshType::BoundingBoxType::ConstPointer> vectorOfBoundingBoxes;
+  std::vector<VectorType> vectorOfCenters;
+  itk::Matrix<double, Dimension, 2> maximalBoundingBox;
+  for (unsigned int i = 0; i < Dimension; ++i) {
+    maximalBoundingBox[i][0] = std::numeric_limits<double>::max();
+    maximalBoundingBox[i][1] = std::numeric_limits<double>::min();
   }
 
-  FloatImageType::Pointer levelSetImage = surfaceToLevelSetImage->GetOutput();
+  VectorType centerOfMaximalBoundingBox;
+  centerOfMaximalBoundingBox.Fill(0);
+
+  for (int n = 0; n < vectorOfSurfaces.size(); ++n) {
+    MeshType::BoundingBoxType::ConstPointer boundingbox = vectorOfSurfaces[n]->GetBoundingBox();
+
+    // compute mask for surface
+    MaskImageType::SpacingType spacing(1);
+    MaskImageType::SizeType size;
+
+    for (unsigned i = 0; i < Dimension; ++i) {
+      spacing[i] = 1;
+      size[i] = (boundingbox->GetMaximum()[i] - boundingbox->GetMinimum()[i]) / spacing[i];
+    }
+
+    typedef itk::TriangleMeshToBinaryImageFilter<MeshType, MaskImageType> TriangleMeshToBinaryImageFilterType;
+    TriangleMeshToBinaryImageFilterType::Pointer surfaceToMask = TriangleMeshToBinaryImageFilterType::New();
+    surfaceToMask->SetInput(vectorOfSurfaces[n]);
+    surfaceToMask->SetInsideValue(1);
+    surfaceToMask->SetSize(size);
+    surfaceToMask->SetSpacing(spacing);
+    surfaceToMask->SetOrigin(vectorOfSurfaces[n]->GetBoundingBox()->GetMinimum());
+    try {
+      surfaceToMask->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      throw;
+    }
+
+    // compute center
+    typedef itk::ImageMomentsCalculator<MaskImageType>  ImageCalculatorType;
+    ImageCalculatorType::Pointer calculator = ImageCalculatorType::New();
+    calculator->SetImage(surfaceToMask->GetOutput());
+    calculator->Compute();
+    VectorType center = calculator->GetCenterOfGravity();
+
+    vectorOfBoundingBoxes.push_back(boundingbox);
+    vectorOfCenters.push_back(center);
+
+    for (unsigned int i = 0; i < Dimension; ++i) {
+      maximalBoundingBox[i][0] = std::min(maximalBoundingBox[i][0], boundingbox->GetMinimum()[i] - center[i]);
+      maximalBoundingBox[i][1] = std::max(maximalBoundingBox[i][1], boundingbox->GetMaximum()[i] - center[i]);
+    }
+  }
+
+  std::cout << "maximal bounding box, mm" << std::endl;
+  std::cout << maximalBoundingBox << std::endl;
+  std::cout << "center " << centerOfMaximalBoundingBox << std::endl;
+
+  // allocate zero image
+  FloatImageType::SpacingType spacing(1);
+  FloatImageType::PointType origin;
+  itk::Size<Dimension> size;
+
+  for (unsigned int i = 0; i < Dimension; ++i) {
+    double distance = maximalBoundingBox[i][1] - maximalBoundingBox[i][0];
+    double offset = 0.25;
+
+    size[i] = (1 + 2*offset) * distance / spacing[i];
+    origin[i] = maximalBoundingBox[i][0] - offset*distance;
+  }
+
+  FloatImageType::RegionType region;
+  region.SetSize(size);
+
+  FloatImageType::Pointer levelSetImage = FloatImageType::New();
+  levelSetImage->SetRegions(region);
+  levelSetImage->Allocate();
+  levelSetImage->FillBuffer(0);
+  levelSetImage->SetSpacing(spacing);
+  levelSetImage->SetOrigin(origin);
+
+  std::cout << levelSetImage->GetLargestPossibleRegion() << std::endl;
+  std::cout << "spacing " << levelSetImage->GetSpacing() << std::endl;
+  std::cout << " origin " << levelSetImage->GetOrigin() << std::endl;
+
+  // compute initial level-set image
+  for (int n = 0; n < vectorOfSurfaces.size(); ++n) {
+    // transform the n-th surface
+    typedef itk::TranslationTransform<double, Dimension> TransformType;
+    TransformType::Pointer transform = TransformType::New();
+    transform->SetOffset(centerOfMaximalBoundingBox - vectorOfCenters[n]);
+
+    typedef itk::TransformMeshFilter<MeshType, MeshType, TransformType> TransformFilterType;
+    TransformFilterType::Pointer transformSurface = TransformFilterType::New();
+    transformSurface->SetInput(vectorOfSurfaces[n]);
+    transformSurface->SetTransform(transform);
+    try {
+      transformSurface->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cout << excep << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    // compute level-set image for the n-th surface
+    typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
+    SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
+    surfaceToLevelSetImage->SetInput(transformSurface->GetOutput());
+    surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
+    surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
+    surfaceToLevelSetImage->SetSize(levelSetImage->GetLargestPossibleRegion().GetSize());
+    try {
+      surfaceToLevelSetImage->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    // add the n-th image to the level-set image
+    typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
+    FilterType::Pointer multiply = FilterType::New();
+    multiply->SetInput(surfaceToLevelSetImage->GetOutput());
+    multiply->SetConstant(1 / (double)vectorOfSurfaces.size());
+
+    typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
+    AddImageFilterType::Pointer add = AddImageFilterType::New();
+    add->SetInput1(levelSetImage);
+    add->SetInput2(multiply->GetOutput());
+    try {
+      add->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      return EXIT_FAILURE;
+    }
+    levelSetImage = add->GetOutput();
+  }
+
+  writeImage<FloatImageType>(levelSetImage, "levelset.nrrd");
 
   //----------------------------------------------------------------------------
   // compute reference image 
@@ -154,6 +280,7 @@ int main(int argc, char** argv) {
       vectorOfSurfaces[n] = surfaceToImageRegistration->GetOutput();
 
       // compute level set image
+      typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
       SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
       surfaceToLevelSetImage->SetInput(vectorOfSurfaces[n]);
       surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
