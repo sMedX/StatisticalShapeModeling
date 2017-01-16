@@ -28,13 +28,13 @@ int main(int argc, char** argv) {
   std::string surfaceFile;
   parser->GetCommandLineArgument("-output", surfaceFile);
 
-  int numberOfStages = 1;
+  unsigned int numberOfStages = 1;
   parser->GetCommandLineArgument("-stages", numberOfStages);
 
-  int transform = 1;
+  unsigned int transform = 1;
   parser->GetCommandLineArgument("-transform", transform);
 
-  int numberOfIterations = 500;
+  unsigned int numberOfIterations = 500;
   parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
   std::cout << std::endl;
