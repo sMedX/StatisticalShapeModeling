@@ -1,5 +1,3 @@
-#include <boost/filesystem.hpp>
-
 #include <itkMesh.h>
 #include <vtkPolyData.h>
 #include <vtkMarchingCubes.h>
@@ -7,16 +5,12 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkDecimatePro.h>
 #include <itkImageToVTKImageFilter.h>
-#include <itkVotingBinaryHoleFillingImageFilter.h>
-#include <itkResampleImageFilter.h>
 #include <itkGrayscaleFillholeImageFilter.h>
 #include <itkRecursiveGaussianImageFilter.h>
 #include <itkMinimumMaximumImageCalculator.h>
-#include <itkBinaryThresholdImageFilter.h>
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkMultiplyImageFilter.h>
-#include <itkNearestNeighborInterpolateImageFunction.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
 
@@ -100,16 +94,31 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // image processing
+
+  // smoothing
   typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
   RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
   gaussian->SetInput(image);
   gaussian->SetSigma(sigma);
 
+  // fill holes after smoothing
+  typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
+  GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
+  fillholes->SetInput(gaussian->GetOutput());
+  fillholes->SetFullyConnected(true);
+  try {
+    fillholes->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+
   //----------------------------------------------------------------------------
   // convert ITK image to VTK image
   typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
   ConvertorType::Pointer convertor = ConvertorType::New();
-  convertor->SetInput(gaussian->GetOutput());
+  convertor->SetInput(fillholes->GetOutput());
   convertor->Update();
 
   typedef vtkSmartPointer<vtkMarchingCubes> MarchingCubes;
