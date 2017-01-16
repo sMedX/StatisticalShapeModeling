@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
   std::string surfaceFile;
   parser->GetCommandLineArgument("-output", surfaceFile);
 
-  int numberOfStages = 3;
+  int numberOfStages = 1;
   parser->GetCommandLineArgument("-stages", numberOfStages);
 
   int transform = 1;
@@ -84,7 +84,6 @@ int main(int argc, char** argv) {
 
   // compute size of the initial level set image
   typedef itk::Vector<double, Dimension> VectorType;
-  std::vector<MeshType::BoundingBoxType::ConstPointer> vectorOfBoundingBoxes;
   std::vector<VectorType> vectorOfCenters;
   itk::Matrix<double, Dimension, 2> maximalBoundingBox;
   for (unsigned int i = 0; i < Dimension; ++i) {
@@ -119,7 +118,7 @@ int main(int argc, char** argv) {
     }
     catch (itk::ExceptionObject& excep) {
       std::cerr << excep << std::endl;
-      throw;
+      return EXIT_FAILURE;
     }
 
     // compute center
@@ -129,7 +128,6 @@ int main(int argc, char** argv) {
     calculator->Compute();
     VectorType center = calculator->GetCenterOfGravity();
 
-    vectorOfBoundingBoxes.push_back(boundingbox);
     vectorOfCenters.push_back(center);
 
     for (unsigned int i = 0; i < Dimension; ++i) {
@@ -148,8 +146,8 @@ int main(int argc, char** argv) {
   itk::Size<Dimension> size;
 
   for (unsigned int i = 0; i < Dimension; ++i) {
-    double distance = maximalBoundingBox[i][1] - maximalBoundingBox[i][0];
     double offset = 0.25;
+    double distance = maximalBoundingBox[i][1] - maximalBoundingBox[i][0];
 
     size[i] = (1 + 2*offset) * distance / spacing[i];
     origin[i] = maximalBoundingBox[i][0] - offset*distance;

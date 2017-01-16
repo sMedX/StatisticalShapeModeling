@@ -95,13 +95,13 @@ namespace ssm
     distanceToBackground->SetInsideIsPositive(true);
 
     typedef itk::AddImageFilter <TOutputImage> AddImageFilterType;
-    AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
-    addfilter->SetInput1(distanceToForeground->GetOutput());
-    addfilter->SetInput2(distanceToBackground->GetOutput());
+    AddImageFilterType::Pointer add = AddImageFilterType::New();
+    add->SetInput1(distanceToForeground->GetOutput());
+    add->SetInput2(distanceToBackground->GetOutput());
 
     typedef itk::MultiplyImageFilter <TOutputImage> FilterType;
     FilterType::Pointer multiply = FilterType::New();
-    multiply->SetInput(addfilter->GetOutput());
+    multiply->SetInput(add->GetOutput());
     multiply->SetConstant(0.5);
     try {
       multiply->Update();
