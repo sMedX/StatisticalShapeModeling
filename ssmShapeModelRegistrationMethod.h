@@ -7,9 +7,9 @@
 #include <itkStatisticalShapeModelTransform.h>
 #include <itkLBFGSOptimizer.h>
 
-#include "itkShapeModelToImageMetric.h"
+#include "ssmShapeModelToImageMetric.h"
 
-namespace itk
+namespace ssm
 {
   template <typename TShapeModel, typename TOutputMesh>
   class ShapeModelRegistrationMethod : public itk::ProcessObject
@@ -120,5 +120,5 @@ namespace itk
   };
 }
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkShapeModelRegistrationMethod.hxx"
+#include "ssmShapeModelRegistrationMethod.hxx"
 #endif

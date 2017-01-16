@@ -3,7 +3,7 @@
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
 
-#include "itkShapeModelToImageMetric.h"
+#include "ssmShapeModelToImageMetric.h"
 
 namespace itk
 {

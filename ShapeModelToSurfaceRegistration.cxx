@@ -8,7 +8,7 @@
 #include "utils/itkCommandLineArgumentParser.h"
 
 #include "utils/PointSetToImageMetrics.h"
-#include "itkShapeModelRegistrationMethod.h"
+#include "ssmShapeModelRegistrationMethod.h"
 #include "ssmSurfaceToLevelSetImageFilter.h"
 
 const unsigned int Dimension = 3;
@@ -129,13 +129,13 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // shape model to image registration
-  typedef itk::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
+  typedef ssm::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
   ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
 
   for (int n = 0; n < numberOfStages; ++n) {
     std::cout << "---------- stage (" << n + 1 << " / " << numberOfStages << ") ----------" << std::endl;
 
-    // run registration
+    // perform registration
     shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
     shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());

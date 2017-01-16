@@ -8,7 +8,7 @@
 #include "utils/itkCommandLineArgumentParser.h"
 #include "utils/PointSetToImageMetrics.h"
 #include "ssmSurfaceToLevelSetImageFilter.h"
-#include "itkSurfaceToImageRegistrationMethod.h"
+#include "ssmSurfaceToImageRegistrationMethod.h"
 
 const unsigned int Dimension = 3;
 typedef itk::Image<unsigned char, Dimension> MaskImageType;
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
   //----------------------------------------------------------------------------
   // perform alignment of the surfaces
   for (int stage = 0; stage < numberOfStages; ++stage) {
-    typedef itk::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
+    typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
     typedef SurfaceToImageRegistrationMethodType::EnumTransformType EnumTransformType;
     EnumTransformType typeOfTransform = static_cast<EnumTransformType>(transform);
 
@@ -245,7 +245,7 @@ int main(int argc, char** argv) {
       std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << n + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[n] << std::endl;
 
       // perform surface to image registration
-      typedef itk::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
+      typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
       SurfaceToImageRegistrationMethodType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationMethodType::New();
       surfaceToImageRegistration->SetInput(vectorOfSurfaces[n]);
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);

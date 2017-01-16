@@ -158,10 +158,9 @@ protected:
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
-
 };
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkShapeModelToImageMetric.hxx"
+#include "ssmShapeModelToImageMetric.hxx"
 #endif

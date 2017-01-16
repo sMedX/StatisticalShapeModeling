@@ -6,7 +6,7 @@
 #include <itkCompositeTransform.h>
 #include <itkPointSet.h>
 
-namespace itk
+namespace ssm
 {
   template <typename TInputMesh, typename TOutputMesh = TInputMesh>
   class SurfaceToImageRegistrationMethod : public itk::MeshToMeshFilter < TInputMesh, TOutputMesh >
@@ -103,5 +103,5 @@ namespace itk
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkSurfaceToImageRegistrationMethod.hxx"
+#include "ssmSurfaceToImageRegistrationMethod.hxx"
 #endif

@@ -14,9 +14,9 @@
 #include <itkMeanSquaresPointSetToImageMetric.h>
 #include <itkBinaryThresholdImageFilter.h>
 
-#include "itkSurfaceToImageRegistrationMethod.h"
+#include "ssmSurfaceToImageRegistrationMethod.h"
 
-namespace itk
+namespace ssm
 {
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>

@@ -3,9 +3,9 @@
 #include <itkTransformMeshFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
 
-#include "itkShapeModelRegistrationMethod.h"
+#include "ssmShapeModelRegistrationMethod.h"
 
-namespace itk
+namespace ssm
 {
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
