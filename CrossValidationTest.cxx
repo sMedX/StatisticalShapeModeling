@@ -131,10 +131,8 @@ int main(int argc, char** argv)
           ListSampleType::Pointer sample = ListSampleType::New();
 
           for (size_t n = 0; n < testSample->GetNumberOfPoints(); ++n) {
+            double dist = std::numeric_limits<double>::max();
             p1.CastFrom<float>(testSample->GetPoint(n));
-
-            p2.CastFrom<float>(outputSample->GetPoint(n));
-            double dist = p1.EuclideanDistanceTo(p2);
 
             for (size_t m = 0; m < outputSample->GetNumberOfPoints(); ++m) {
               p2.CastFrom<float>(outputSample->GetPoint(m));
