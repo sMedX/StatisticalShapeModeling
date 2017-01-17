@@ -48,6 +48,3 @@ target_link_libraries(shapeModelToSurfaceRegistration ${statismo_LIBRARIES} ${IT
 
 add_executable(crossValidationTest CrossValidationTest.cxx)
 target_link_libraries(crossValidationTest ${statismo_LIBRARIES} ${ITK_LIBRARIES})
-
-add_executable(decimateSurface DecimateSurface.cxx)
-target_link_libraries(decimateSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES})
