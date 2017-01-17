@@ -1,20 +1,13 @@
-#include <itkMesh.h>
-#include <itkImage.h>
 #include <itkMultiplyImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <utils/statismo-build-models-utils.h>
 
+#include "utils/ssmTypes.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
-#include "utils/PointSetToImageMetrics.h"
-#include "ssmSurfaceToLevelSetImageFilter.h"
-#include "ssmSurfaceToImageRegistrationMethod.h"
-
-const unsigned int Dimension = 3;
-typedef itk::Image<unsigned char, Dimension> MaskImageType;
-typedef itk::Image<float, Dimension> FloatImageType;
-typedef itk::Mesh<float, Dimension> MeshType;
-using fp = boost::filesystem::path;
+#include "ssm/ssmPointSetToImageMetrics.h"
+#include "ssm/ssmSurfaceToLevelSetImageFilter.h"
+#include "ssm/ssmSurfaceToImageRegistrationMethod.h"
 
 int main(int argc, char** argv) {
 
@@ -98,15 +91,15 @@ int main(int argc, char** argv) {
     MeshType::BoundingBoxType::ConstPointer boundingbox = vectorOfSurfaces[n]->GetBoundingBox();
 
     // compute mask for surface
-    MaskImageType::SpacingType spacing(1);
-    MaskImageType::SizeType size;
+    BinaryImageType::SpacingType spacing(1);
+    BinaryImageType::SizeType size;
 
     for (unsigned i = 0; i < Dimension; ++i) {
       spacing[i] = 1;
       size[i] = (boundingbox->GetMaximum()[i] - boundingbox->GetMinimum()[i]) / spacing[i];
     }
 
-    typedef itk::TriangleMeshToBinaryImageFilter<MeshType, MaskImageType> TriangleMeshToBinaryImageFilterType;
+    typedef itk::TriangleMeshToBinaryImageFilter<MeshType, BinaryImageType> TriangleMeshToBinaryImageFilterType;
     TriangleMeshToBinaryImageFilterType::Pointer surfaceToMask = TriangleMeshToBinaryImageFilterType::New();
     surfaceToMask->SetInput(vectorOfSurfaces[n]);
     surfaceToMask->SetInsideValue(1);
@@ -122,7 +115,7 @@ int main(int argc, char** argv) {
     }
 
     // compute center
-    typedef itk::ImageMomentsCalculator<MaskImageType>  ImageCalculatorType;
+    typedef itk::ImageMomentsCalculator<BinaryImageType>  ImageCalculatorType;
     ImageCalculatorType::Pointer calculator = ImageCalculatorType::New();
     calculator->SetImage(surfaceToMask->GetOutput());
     calculator->Compute();
@@ -327,6 +320,7 @@ int main(int argc, char** argv) {
   for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
 
     // define full file name for output surface
+    typedef boost::filesystem::path fp;
     fp path = fp(surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(surfaceFile).filename().string());
     std::string outputSurfaceFile = path.string();
 
@@ -340,7 +334,7 @@ int main(int argc, char** argv) {
     PointSetType::Pointer pointSet = PointSetType::New();
     pointSet->SetPoints(vectorOfSurfaces[count]->GetPoints());
 
-    typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
+    typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
     PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
     metrics->SetFixedPointSet(pointSet);
     metrics->SetMovingImage(levelSetImage);

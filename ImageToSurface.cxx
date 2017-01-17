@@ -1,4 +1,3 @@
-#include <itkMesh.h>
 #include <vtkPolyData.h>
 #include <vtkMarchingCubes.h>
 #include <vtkSmoothPolyDataFilter.h>
@@ -14,15 +13,10 @@
 #include <vtkMath.h>
 #include <vtkCell.h>
 
+#include "utils/ssmTypes.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
-#include "utils/PointSetToImageMetrics.h"
-
-const unsigned int Dimension = 3;
-typedef itk::Image<unsigned char, Dimension> BinaryImageType;
-typedef itk::Image<float, Dimension> FloatImageType;
-typedef itk::Mesh<float, Dimension> MeshType;
-
+#include "ssm/ssmPointSetToImageMetrics.h"
 
 double AverageLengthOfEdges(vtkPolyData*poly);
 double AverageAreaOfCells(vtkPolyData*poly);
@@ -213,7 +207,7 @@ int main(int argc, char** argv) {
   }
 
   // compute metrics
-  typedef PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
+  typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
   metrics->SetInfo(surfaceInfo);

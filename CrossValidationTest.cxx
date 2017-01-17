@@ -9,12 +9,11 @@
 #include <itkListSample.h>
 #include <itkHistogram.h>
 
+#include "utils/ssmTypes.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
 // All the statismo classes have to be parameterized with the RepresenterType.
-const unsigned int Dimension = 3;
-typedef itk::Mesh<float, Dimension> MeshType;
 typedef MeshType::PointType PointType;
 typedef statismo::DataManager<MeshType> DataManagerType;
 typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;

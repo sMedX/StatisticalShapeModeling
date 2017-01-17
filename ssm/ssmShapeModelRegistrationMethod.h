@@ -119,6 +119,7 @@ namespace ssm
     itk::TimeProbe m_Clock;
   };
 }
+
 #ifndef ITK_MANUAL_INSTANTIATION
 #include "ssmShapeModelRegistrationMethod.hxx"
 #endif

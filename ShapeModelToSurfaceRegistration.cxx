@@ -1,20 +1,15 @@
-﻿#include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
+﻿#include <boost/program_options.hpp>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
 
+#include "utils/ssmTypes.h"
 #include "utils/io.h"
 #include "utils/itkCommandLineArgumentParser.h"
 
-#include "utils/PointSetToImageMetrics.h"
-#include "ssmShapeModelRegistrationMethod.h"
-#include "ssmSurfaceToLevelSetImageFilter.h"
-
-const unsigned int Dimension = 3;
-typedef itk::Image<unsigned char, Dimension> BinaryImageType;
-typedef itk::Image<float, Dimension> FloatImageType;
-typedef itk::Mesh<float, Dimension> MeshType;
+#include "ssm/ssmPointSetToImageMetrics.h"
+#include "ssm/ssmShapeModelRegistrationMethod.h"
+#include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
@@ -166,7 +161,7 @@ int main(int argc, char** argv)
   PointSetType::Pointer pointSet = PointSetType::New();
   pointSet->SetPoints(const_cast<PointSetType::PointsContainer*> (shapeModelToSurfaceRegistration->GetOutput()->GetPoints()));
 
-  typedef PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
+  typedef ssm::PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
   metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
