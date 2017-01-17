@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
   parser->GetCommandLineArgument("-relaxation", relaxation);
 
   unsigned int numberOfIterations = 100;
-  parser->GetCommandLineArgument("-iteration", numberOfIterations);
+  parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
   unsigned int numberOfPoints = 0;
   parser->GetCommandLineArgument("-points", numberOfPoints);

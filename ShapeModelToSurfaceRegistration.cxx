@@ -29,8 +29,8 @@ int main(int argc, char** argv)
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
-  unsigned int numberOfIterations = 100;
-  parser->GetCommandLineArgument("-iteration", numberOfIterations);
+  unsigned int numberOfIterations = 500;
+  parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
   double mscale = 1;
   parser->GetCommandLineArgument("-mscale", mscale);
