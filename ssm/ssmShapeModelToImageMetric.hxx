@@ -145,7 +145,9 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
     m_PerThreads[thread].m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
   }
 
-  #pragma omp parallel for
+#pragma omp parallel num_threads(m_NumberOfThreads)
+{
+  #pragma omp for
   for (int p = 0; p < m_PointsContainer->Size(); ++p) {
     unsigned int thread = omp_get_thread_num();
 
@@ -184,6 +186,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
       }
     }
   }
+}
 
   value = itk::NumericTraits<MeasureType>::ZeroValue();
   m_NumberOfPixelsCounted = 0;
