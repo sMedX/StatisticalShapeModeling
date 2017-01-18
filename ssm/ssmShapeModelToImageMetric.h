@@ -164,8 +164,6 @@ protected:
   struct PerThreadData
   {
     itk::SizeValueType    m_NumberOfSamplesCounted;
-    DerivativeType        m_MSEDerivative;
-    TransformPointer      m_Transform;
     MeasureType           m_Value;
     DerivativeType        m_Derivative;
     TransformJacobianType m_Jacobian;

@@ -109,9 +109,8 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::MultiThreadingInitialize()
   for (unsigned int t = 0; t < m_NumberOfThreads; ++t) {
     PerThreadData thread;
 
-    thread.m_Transform = m_Transform->Clone();
     thread.m_Derivative = DerivativeType(m_NumberOfParameters);
-    thread.m_Jacobian = TransformJacobianType(TImage::ImageDimension, this->m_Transform->GetNumberOfParameters());
+    thread.m_Jacobian = TransformJacobianType(TImage::ImageDimension, m_Transform->GetNumberOfParameters());
     thread.m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
 
     m_Threads.push_back(thread);
@@ -199,18 +198,17 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
 {
   thread.m_NumberOfSamplesCounted = 0;
   thread.m_Value = itk::NumericTraits<MeasureType>::ZeroValue();
-  thread.m_Transform->SetParameters(parameters);
   thread.m_Derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
 
   for (PointIteratorType iter = thread.m_Begin; iter != thread.m_End; ++iter) {
     InputPointType point = iter.Value();
-    OutputPointType transformedPoint = thread.m_Transform->TransformPoint(point);
+    OutputPointType transformedPoint = m_Transform->TransformPoint(point);
 
     if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
       thread.m_NumberOfSamplesCounted++;
 
       // compute the derivatives
-      thread.m_Transform->ComputeJacobianWithRespectToParametersCachedTemporaries(point, thread.m_Jacobian, thread.m_JacobianCache);
+      m_Transform->ComputeJacobianWithRespectToParametersCachedTemporaries(point, thread.m_Jacobian, thread.m_JacobianCache);
 
       // get the gradient by NearestNeighboorInterpolation, which is equivalent to round up the point components.
       typedef typename OutputPointType::CoordRepType CoordRepType;
