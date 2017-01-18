@@ -175,9 +175,9 @@ protected:
   unsigned int m_MaximalNumberOfThreads;
   unsigned int m_NumberOfThreads;
   unsigned int NumberOfSamplesPerThread;
-  mutable std::vector<PerThreadData> m_PerThreads;
+  mutable std::vector<PerThreadData> m_Threads;
 
-  void GetValueAndDerivativeThreadProcessSample(unsigned int thread, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
+  void GetValueAndDerivativeThreadProcessSample(PerThreadData & data, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;
