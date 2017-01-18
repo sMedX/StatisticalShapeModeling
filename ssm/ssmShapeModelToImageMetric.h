@@ -140,7 +140,7 @@ public:
   /**Compute penalty.  */
   void CalculateValuePenalty(const TransformParametersType& parameters, MeasureType & value) const;
   void CalculateDerivativePenalty(const TransformParametersType& parameters, DerivativeType & derivative) const;
-  inline void CalculatePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
+  void CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 protected:
   ShapeModelToImageMetric();

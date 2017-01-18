@@ -190,7 +190,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
     }
   }
 
-  this->CalculatePenalty(parameters, value, derivative);
+  this->CalculateValueAndDerivativePenalty(parameters, value, derivative);
 }
 
 template <typename TShapeModel, typename TImage>
@@ -214,21 +214,21 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
       typedef typename OutputPointType::CoordRepType CoordRepType;
       typedef itk::ContinuousIndex<CoordRepType, ImageType::ImageDimension> MovingImageContinuousIndexType;
 
-      MovingImageContinuousIndexType tempIndex;
-      m_Image->TransformPhysicalPointToContinuousIndex(transformedPoint, tempIndex);
+      MovingImageContinuousIndexType index;
+      m_Image->TransformPhysicalPointToContinuousIndex(transformedPoint, index);
       typename ImageType::IndexType mappedIndex;
-      mappedIndex.CopyWithRound(tempIndex);
+      mappedIndex.CopyWithRound(index);
       const GradientPixelType gradient = m_GradientImage->GetPixel(mappedIndex);
 
       // compute image value
-      const RealType imageValue = m_Interpolator->Evaluate(transformedPoint);
-      thread.m_Value += std::pow(imageValue, m_Degree);
+      const RealType value = m_Interpolator->Evaluate(transformedPoint);
+      thread.m_Value += std::pow(value, m_Degree);
 
       for (unsigned int i = 0; i < m_NumberOfParameters; i++) {
         RealType sum = itk::NumericTraits<RealType>::ZeroValue();
 
         for (unsigned int d = 0; d < Self::PointDimension; d++) {
-          sum += m_Degree * std::pow(imageValue, m_Degree - 1) * thread.m_Jacobian(d, i) * gradient[d];
+          sum += m_Degree * std::pow(value, m_Degree - 1) * thread.m_Jacobian[d][i] * gradient[d];
         }
 
         thread.m_Derivative[i] += sum;
@@ -259,7 +259,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateDerivativePenalty(co
 }
 
 template<typename TShapeModel, typename TImage>
-inline void ShapeModelToImageMetric<TShapeModel, TImage>::CalculatePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
+void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
 {
   MeasureType penaltyValue = 0;
 
