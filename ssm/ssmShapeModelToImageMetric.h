@@ -159,6 +159,7 @@ protected:
   unsigned int m_NumberOfComponents;
   unsigned int m_Degree = 2;
 
+  // multi threading members and methods
   struct PerThreadData
   {
     itk::SizeValueType    m_NumberOfPixelsCounted;
@@ -168,10 +169,15 @@ protected:
     DerivativeType        m_Derivative;
     TransformJacobianType m_Jacobian;
     TransformJacobianType m_JacobianCache;
+    PointIteratorType     m_Begin;
+    PointIteratorType     m_End;
   };
   unsigned int m_MaximalNumberOfThreads;
   unsigned int m_NumberOfThreads;
+  unsigned int NumberOfSamplesPerThread;
   mutable std::vector<PerThreadData> m_PerThreads;
+
+  void GetValueAndDerivativeThreadProcessSample(unsigned int thread, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;

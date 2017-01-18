@@ -97,11 +97,22 @@ throw ( itk::ExceptionObject )
   }
 
   m_PerThreads.clear();
-  for (int n = 0; n < m_NumberOfThreads; ++n) {
+
+  for (unsigned int thread = 0; thread < m_NumberOfThreads; ++thread) {
     PerThreadData perThread;
     perThread.m_Transform = m_Transform->Clone();
     m_PerThreads.push_back(perThread);
   }
+
+  NumberOfSamplesPerThread = itk::Math::Ceil<unsigned int, double>(m_PointsContainer->Size() / (double) m_NumberOfThreads);
+  PointIteratorType iter = m_PointsContainer->Begin(); 
+
+  for (unsigned int thread = 0; thread < m_NumberOfThreads; ++thread) {
+    m_PerThreads[thread].m_Begin = iter;
+    m_PerThreads[thread].m_End = (iter += NumberOfSamplesPerThread);
+  }
+
+  m_PerThreads[m_NumberOfThreads - 1].m_End = m_PointsContainer->End();
 }
 
 /**
@@ -135,24 +146,57 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 {
   m_Transform->SetParameters(parameters);
 
-  for (unsigned int thread = 0; thread < m_NumberOfThreads; ++thread) {
-    m_PerThreads[thread].m_Value = itk::NumericTraits<MeasureType>::ZeroValue();
-    m_PerThreads[thread].m_NumberOfPixelsCounted = 0;
-    m_PerThreads[thread].m_Transform->SetParameters(parameters);
-    m_PerThreads[thread].m_Derivative = DerivativeType(m_NumberOfParameters);
-    m_PerThreads[thread].m_Derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
-    m_PerThreads[thread].m_Jacobian = TransformJacobianType(TImage::ImageDimension, this->m_Transform->GetNumberOfParameters());
-    m_PerThreads[thread].m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
+  #pragma omp parallel num_threads(m_NumberOfThreads)
+  {
+    #pragma omp for
+    for (int thread = 0; thread < m_NumberOfThreads; ++thread) {
+      GetValueAndDerivativeThreadProcessSample(thread, parameters, value, derivative);
+    }
   }
 
-#pragma omp parallel num_threads(m_NumberOfThreads)
-{
-  #pragma omp for
-  for (int p = 0; p < m_PointsContainer->Size(); ++p) {
-    unsigned int thread = omp_get_thread_num();
+  m_NumberOfPixelsCounted = 0;
+  value = itk::NumericTraits<MeasureType>::ZeroValue();
+  derivative = DerivativeType(m_NumberOfParameters);
+  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
 
-    InputPointType inputPoint;
-    inputPoint.CastFrom(m_PointsContainer->at(p));
+  for (unsigned int thread = 0; thread < m_NumberOfThreads; ++thread ) {
+    value += m_PerThreads[thread].m_Value;
+    m_NumberOfPixelsCounted += m_PerThreads[thread].m_NumberOfPixelsCounted;
+
+    for (unsigned int par = 0; par < m_NumberOfParameters; ++par) {
+      derivative[par] += m_PerThreads[thread].m_Derivative[par];
+    }
+  }
+
+  if (!m_NumberOfPixelsCounted) {
+    itkExceptionMacro(<< "All the points mapped to outside of the image");
+  }
+  else {
+    value /= m_NumberOfPixelsCounted;
+    for (unsigned int i = 0; i < m_NumberOfParameters; i++) {
+      derivative[i] /= m_NumberOfPixelsCounted;
+    }
+  }
+
+  this->CalculateValuePenalty(parameters, value);
+  this->CalculateDerivativePenalty(parameters, derivative);
+}
+
+template <typename TShapeModel, typename TImage>
+void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeThreadProcessSample(unsigned int thread, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
+{
+  m_PerThreads[thread].m_NumberOfPixelsCounted = 0;
+  m_PerThreads[thread].m_Value = itk::NumericTraits<MeasureType>::ZeroValue();
+  m_PerThreads[thread].m_Transform->SetParameters(parameters);
+  m_PerThreads[thread].m_Derivative = DerivativeType(m_NumberOfParameters);
+  m_PerThreads[thread].m_Derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
+  m_PerThreads[thread].m_Jacobian = TransformJacobianType(TImage::ImageDimension, this->m_Transform->GetNumberOfParameters());
+  m_PerThreads[thread].m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
+
+  PointIteratorType end = m_PerThreads[thread].m_End;
+
+  for (PointIteratorType iter = m_PerThreads[thread].m_Begin; iter != end; ++iter) {
+    InputPointType inputPoint = iter.Value();
     OutputPointType transformedPoint = m_PerThreads[thread].m_Transform->TransformPoint(inputPoint);
 
     if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
@@ -186,34 +230,6 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
       }
     }
   }
-}
-
-  value = itk::NumericTraits<MeasureType>::ZeroValue();
-  m_NumberOfPixelsCounted = 0;
-  derivative = DerivativeType(m_NumberOfParameters);
-  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
-
-  for (unsigned int thread = 0; thread < this->m_NumberOfThreads; ++thread ) {
-    value += m_PerThreads[thread].m_Value;
-    m_NumberOfPixelsCounted += m_PerThreads[thread].m_NumberOfPixelsCounted;
-
-    for (unsigned int par = 0; par < m_NumberOfParameters; ++par) {
-      derivative[par] += m_PerThreads[thread].m_Derivative[par];
-    }
-  }
-
-  if (!m_NumberOfPixelsCounted) {
-    itkExceptionMacro(<< "All the points mapped to outside of the image");
-  }
-  else {
-    value /= m_NumberOfPixelsCounted;
-    for (unsigned int i = 0; i < m_NumberOfParameters; i++) {
-      derivative[i] /= m_NumberOfPixelsCounted;
-    }
-  }
-
-  this->CalculateValuePenalty(parameters, value);
-  this->CalculateDerivativePenalty(parameters, derivative);
 }
 
 /**
