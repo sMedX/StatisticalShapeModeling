@@ -224,10 +224,10 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
       const RealType value = m_Interpolator->Evaluate(transformedPoint);
       thread.m_Value += std::pow(value, m_Degree);
 
-      for (unsigned int i = 0; i < m_NumberOfParameters; i++) {
+      for (unsigned int i = 0; i < m_NumberOfParameters; ++i) {
         RealType sum = itk::NumericTraits<RealType>::ZeroValue();
 
-        for (unsigned int d = 0; d < Self::PointDimension; d++) {
+        for (unsigned int d = 0; d < Self::PointDimension; ++d) {
           sum += m_Degree * std::pow(value, m_Degree - 1) * thread.m_Jacobian[d][i] * gradient[d];
         }
 
