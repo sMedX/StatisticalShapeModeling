@@ -178,12 +178,11 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
     }
   }
 
-  this->CalculateValuePenalty(parameters, value);
-  this->CalculateDerivativePenalty(parameters, derivative);
+  this->CalculatePenalty(parameters, value, derivative);
 }
 
 template <typename TShapeModel, typename TImage>
-void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeThreadProcessSample(PerThreadData & thread, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
+inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeThreadProcessSample(PerThreadData & thread, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
 {
   thread.m_NumberOfPixelsCounted = 0;
   thread.m_Value = itk::NumericTraits<MeasureType>::ZeroValue();
@@ -249,6 +248,23 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateDerivativePenalty(co
   for (unsigned int n = 0; n < m_NumberOfComponents; ++n) {
     derivative[n] += 2 * parameters[n] * m_RegularizationParameter;
   }
+}
+
+template<typename TShapeModel, typename TImage>
+inline void ShapeModelToImageMetric<TShapeModel, TImage>::CalculatePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
+{
+  MeasureType penaltyValue = 0;
+
+  #pragma omp parallel reduction (+: penaltyValue) num_threads(m_NumberOfThreads)
+  {
+    # pragma omp for
+    for (int n = 0; n < m_NumberOfComponents; ++n) {
+      penaltyValue += parameters[n] * parameters[n];
+      derivative[n] += 2 * parameters[n] * m_RegularizationParameter;
+    }
+  }
+
+  value += penaltyValue * m_RegularizationParameter;
 }
 
 /**

@@ -140,6 +140,7 @@ public:
   /**Compute penalty.  */
   void CalculateValuePenalty(const TransformParametersType& parameters, MeasureType & value) const;
   void CalculateDerivativePenalty(const TransformParametersType& parameters, DerivativeType & derivative) const;
+  inline void CalculatePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 protected:
   ShapeModelToImageMetric();
@@ -177,7 +178,7 @@ protected:
   unsigned int NumberOfSamplesPerThread;
   mutable std::vector<PerThreadData> m_Threads;
 
-  void GetValueAndDerivativeThreadProcessSample(PerThreadData & data, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
+  inline void GetValueAndDerivativeThreadProcessSample(PerThreadData & data, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;
