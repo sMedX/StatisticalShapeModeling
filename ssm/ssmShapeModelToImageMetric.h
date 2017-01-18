@@ -108,6 +108,10 @@ public:
   itkSetMacro(Degree, unsigned int);
   itkGetMacro(Degree, unsigned int);
 
+  itkSetMacro(NumberOfThreads, unsigned int);
+  itkGetMacro(NumberOfThreads, unsigned int);
+  itkGetMacro(MaximalNumberOfThreads, unsigned int);
+
   /** Set/Get the flag for computing the image gradient.
    *  When ON the metric derivative is computed using the Jacobian of the
    *  transformation and the image gradient. When OFF the metric derivative
@@ -154,6 +158,20 @@ protected:
   unsigned int m_NumberOfParameters;
   unsigned int m_NumberOfComponents;
   unsigned int m_Degree = 2;
+
+  struct PerThreadData
+  {
+    itk::SizeValueType    m_NumberOfPixelsCounted;
+    DerivativeType        m_MSEDerivative;
+    TransformPointer      m_Transform;
+    MeasureType           m_Value;
+    DerivativeType        m_Derivative;
+    TransformJacobianType m_Jacobian;
+    TransformJacobianType m_JacobianCache;
+  };
+  unsigned int m_MaximalNumberOfThreads;
+  unsigned int m_NumberOfThreads;
+  mutable std::vector<PerThreadData> m_PerThreads;
 
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;

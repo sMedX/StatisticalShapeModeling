@@ -20,6 +20,8 @@ ShapeModelToImageMetric<TShapeModel, TImage>::ShapeModelToImageMetric()
   m_Interpolator = nullptr;
   m_ComputeGradient = true;
   m_GradientImage = nullptr;
+  m_NumberOfThreads = 0;
+  m_MaximalNumberOfThreads = 0;
 }
 
 /**
@@ -88,6 +90,18 @@ throw ( itk::ExceptionObject )
   if (m_PointsContainer->Size() < 1) {
     itkExceptionMacro(<< "number of points is zero");
   }
+
+  m_MaximalNumberOfThreads = omp_get_max_threads();
+  if (m_NumberOfThreads == 0 || m_NumberOfThreads > m_MaximalNumberOfThreads) {
+    m_NumberOfThreads = m_MaximalNumberOfThreads;
+  }
+
+  m_PerThreads.clear();
+  for (int n = 0; n < m_NumberOfThreads; ++n) {
+    PerThreadData perThread;
+    perThread.m_Transform = m_Transform->Clone();
+    m_PerThreads.push_back(perThread);
+  }
 }
 
 /**
@@ -121,27 +135,29 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 {
   m_Transform->SetParameters(parameters);
 
-  m_NumberOfPixelsCounted = 0;
-  value = itk::NumericTraits<MeasureType>::ZeroValue();
+  for (unsigned int thread = 0; thread < m_NumberOfThreads; ++thread) {
+    m_PerThreads[thread].m_Value = itk::NumericTraits<MeasureType>::ZeroValue();
+    m_PerThreads[thread].m_NumberOfPixelsCounted = 0;
+    m_PerThreads[thread].m_Transform->SetParameters(parameters);
+    m_PerThreads[thread].m_Derivative = DerivativeType(m_NumberOfParameters);
+    m_PerThreads[thread].m_Derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
+    m_PerThreads[thread].m_Jacobian = TransformJacobianType(TImage::ImageDimension, this->m_Transform->GetNumberOfParameters());
+    m_PerThreads[thread].m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
+  }
 
-  derivative = DerivativeType(m_NumberOfParameters);
-  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
+  #pragma omp parallel for
+  for (int p = 0; p < m_PointsContainer->Size(); ++p) {
+    unsigned int thread = omp_get_thread_num();
 
-  PointIteratorType pointIter = m_PointsContainer->Begin();
-
-  TransformJacobianType jacobian(TImage::ImageDimension, this->m_Transform->GetNumberOfParameters());
-  TransformJacobianType jacobianCache(TImage::ImageDimension, TImage::ImageDimension);
-
-  for (; pointIter != m_PointsContainer->End(); ++pointIter) {
     InputPointType inputPoint;
-    inputPoint.CastFrom(pointIter.Value());
-    OutputPointType transformedPoint = m_Transform->TransformPoint(inputPoint);
+    inputPoint.CastFrom(m_PointsContainer->at(p));
+    OutputPointType transformedPoint = m_PerThreads[thread].m_Transform->TransformPoint(inputPoint);
 
     if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
-      m_NumberOfPixelsCounted++;
+      m_PerThreads[thread].m_NumberOfPixelsCounted++;
 
       // compute the derivatives
-      m_Transform->ComputeJacobianWithRespectToParametersCachedTemporaries(inputPoint, jacobian, jacobianCache);
+      m_PerThreads[thread].m_Transform->ComputeJacobianWithRespectToParametersCachedTemporaries(inputPoint, m_PerThreads[thread].m_Jacobian, m_PerThreads[thread].m_JacobianCache);
 
       // get the gradient by NearestNeighboorInterpolation, which is equivalent to round up the point components.
       typedef typename OutputPointType::CoordRepType CoordRepType;
@@ -155,17 +171,31 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 
       // compute image value
       const RealType imageValue = m_Interpolator->Evaluate(transformedPoint);
-      value += std::pow(imageValue, m_Degree);
+      m_PerThreads[thread].m_Value += std::pow(imageValue, m_Degree);
 
       for (unsigned int par = 0; par < m_NumberOfParameters; par++) {
         RealType sum = itk::NumericTraits<RealType>::ZeroValue();
 
         for (unsigned int dim = 0; dim < Self::PointDimension; dim++) {
-          sum += m_Degree * std::pow(imageValue, m_Degree - 1) * jacobian(dim, par) * gradient[dim];
+          sum += m_Degree * std::pow(imageValue, m_Degree - 1) * m_PerThreads[thread].m_Jacobian(dim, par) * gradient[dim];
         }
 
-        derivative[par] += sum;
+        m_PerThreads[thread].m_Derivative[par] += sum;
       }
+    }
+  }
+
+  value = itk::NumericTraits<MeasureType>::ZeroValue();
+  m_NumberOfPixelsCounted = 0;
+  derivative = DerivativeType(m_NumberOfParameters);
+  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
+
+  for (unsigned int thread = 0; thread < this->m_NumberOfThreads; ++thread ) {
+    value += m_PerThreads[thread].m_Value;
+    m_NumberOfPixelsCounted += m_PerThreads[thread].m_NumberOfPixelsCounted;
+
+    for (unsigned int par = 0; par < m_NumberOfParameters; ++par) {
+      derivative[par] += m_PerThreads[thread].m_Derivative[par];
     }
   }
 
@@ -174,7 +204,6 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   }
   else {
     value /= m_NumberOfPixelsCounted;
-
     for (unsigned int i = 0; i < m_NumberOfParameters; i++) {
       derivative[i] /= m_NumberOfPixelsCounted;
     }
