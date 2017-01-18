@@ -97,7 +97,7 @@ public:
   itkGetModifiableObjectMacro(GradientImage, GradientImageType);
 
   /** Get the number of pixels considered in the computation. */
-  itkGetConstReferenceMacro(NumberOfPixelsCounted, itk::SizeValueType);
+  itkGetConstReferenceMacro(NumberOfSamplesCounted, itk::SizeValueType);
 
   /** Set the parameters defining the Transform. */
   void SetTransformParameters(const ParametersType & parameters) const;
@@ -147,7 +147,7 @@ protected:
   virtual ~ShapeModelToImageMetric() {}
   virtual void PrintSelf(std::ostream & os, itk::Indent indent) const ITK_OVERRIDE;
 
-  mutable itk::SizeValueType m_NumberOfPixelsCounted = 0;
+  mutable itk::SizeValueType m_NumberOfSamplesCounted;
   typename PointsContainerType::Pointer m_PointsContainer;
   ImageConstPointer m_Image;
   mutable TransformPointer m_Transform;
@@ -163,7 +163,7 @@ protected:
   // multi threading members and methods
   struct PerThreadData
   {
-    itk::SizeValueType    m_NumberOfPixelsCounted;
+    itk::SizeValueType    m_NumberOfSamplesCounted;
     DerivativeType        m_MSEDerivative;
     TransformPointer      m_Transform;
     MeasureType           m_Value;
@@ -179,6 +179,7 @@ protected:
   mutable std::vector<PerThreadData> m_Threads;
 
   inline void GetValueAndDerivativeThreadProcessSample(PerThreadData & data, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
+  void MultiThreadingInitialize();
 
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;
