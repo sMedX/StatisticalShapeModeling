@@ -19,7 +19,6 @@ struct options
   double scale = 100;
   unsigned int iterations = 500;
   unsigned int degree;
-
   double margin = 0.10;
   double spacing = 1.0;
 };
@@ -69,14 +68,14 @@ int main(int argc, char** argv)
   }
 
   std::cout << "        regularization ";
-  for (int n = 0; n < opt.regularization.size(); ++n) {
-    std::cout << opt.regularization[n] << " ";
+  for (auto value : opt.regularization) {
+    std::cout << value << " ";
   }
   std::cout << std::endl;
 
   std::cout << "            parameters ";
-  for (int n = 0; n < opt.parameters.size(); ++n) {
-    std::cout << opt.parameters[n] << " ";
+  for (auto value : opt.parameters) {
+    std::cout << value << " ";
   }
   std::cout << std::endl;
   std::cout << std::endl;
@@ -121,12 +120,15 @@ int main(int argc, char** argv)
     std::cout << std::endl;
   }
 
+  size_t numberOfSurfaces = vectorOfSurfaces.size();
+
   //----------------------------------------------------------------------------
   // perform establishing of correspondences
   itk::TimeProbe clock;
 
   for (unsigned int stage = 0; stage < numberOfStages; ++stage) {
-    std::string strInfo = "---------- stage (" + std::to_string(stage + 1) + " / " + std::to_string(numberOfStages);
+//    std::string strInfo = "---------- stage (" + std::to_string(stage + 1) + " / " + std::to_string(numberOfStages);
+    std::cout << "establish correspondence stage (" << stage + 1 << " / " << numberOfStages << ")" << std::endl;
 
     // build GP model for the reference surface
     StatisticalModelType::Pointer model = BuildGPModel(reference, opt.parameters[0], opt.scale, numberOfComponents);
@@ -137,7 +139,9 @@ int main(int argc, char** argv)
     }
 
     // preform GP model to surface registration
-    for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
+    for (size_t count = 0; count < numberOfSurfaces; ++count) {
+      std::cout << "surface (" << count + 1 << " / " << numberOfSurfaces << ")" << std::endl;
+
       MeshType::Pointer surface = vectorOfSurfaces[count];
       MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, opt);
 
@@ -145,7 +149,7 @@ int main(int argc, char** argv)
       for (auto & iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
         MeshType::PointType point = output->GetPoint(iter.Index());
         for (size_t d = 0; d < MeshType::PointDimension; ++d) {
-          iter.Value()[d] += point[d] / vectorOfSurfaces.size();
+          iter.Value()[d] += point[d] / numberOfSurfaces;
         }
       }
 
@@ -224,7 +228,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
   size_t numberOfStages = opt.parameters.size();
 
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
-    std::cout << "---------- stage (" << stage + 1 << " / " << numberOfStages << ") ----------" << std::endl;
+    std::cout << "registration stage (" << stage + 1 << " / " << numberOfStages << ")" << std::endl;
 
     // if stage > 0 update GP model
     if (stage > 0) {
