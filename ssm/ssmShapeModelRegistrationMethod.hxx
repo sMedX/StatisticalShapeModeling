@@ -159,6 +159,7 @@ namespace ssm
 
     os << "metric info" << std::endl;
     os << "name of class              " << m_Metric->GetNameOfClass() << std::endl;
+    os << "number of threads          " << m_Metric->GetNumberOfThreads() << " / " << m_Metric->GetMaximalNumberOfThreads() << std::endl;
     os << "regularization parameter   " << m_RegularizationParameter << std::endl;
     os << "degree                     " << m_Degree << std::endl;
     os << std::endl;

@@ -97,7 +97,7 @@ public:
   itkGetModifiableObjectMacro(GradientImage, GradientImageType);
 
   /** Get the number of pixels considered in the computation. */
-  itkGetConstReferenceMacro(NumberOfPixelsCounted, itk::SizeValueType);
+  itkGetConstReferenceMacro(NumberOfSamplesCounted, itk::SizeValueType);
 
   /** Set the parameters defining the Transform. */
   void SetTransformParameters(const ParametersType & parameters) const;
@@ -107,6 +107,10 @@ public:
 
   itkSetMacro(Degree, unsigned int);
   itkGetMacro(Degree, unsigned int);
+
+  itkSetMacro(NumberOfThreads, unsigned int);
+  itkGetMacro(NumberOfThreads, unsigned int);
+  itkGetMacro(MaximalNumberOfThreads, unsigned int);
 
   /** Set/Get the flag for computing the image gradient.
    *  When ON the metric derivative is computed using the Jacobian of the
@@ -136,13 +140,14 @@ public:
   /**Compute penalty.  */
   void CalculateValuePenalty(const TransformParametersType& parameters, MeasureType & value) const;
   void CalculateDerivativePenalty(const TransformParametersType& parameters, DerivativeType & derivative) const;
+  void CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 protected:
   ShapeModelToImageMetric();
   virtual ~ShapeModelToImageMetric() {}
   virtual void PrintSelf(std::ostream & os, itk::Indent indent) const ITK_OVERRIDE;
 
-  mutable itk::SizeValueType m_NumberOfPixelsCounted = 0;
+  mutable itk::SizeValueType m_NumberOfSamplesCounted;
   typename PointsContainerType::Pointer m_PointsContainer;
   ImageConstPointer m_Image;
   mutable TransformPointer m_Transform;
@@ -154,6 +159,25 @@ protected:
   unsigned int m_NumberOfParameters;
   unsigned int m_NumberOfComponents;
   unsigned int m_Degree = 2;
+
+  // multi threading members and methods
+  struct PerThreadData
+  {
+    itk::SizeValueType    m_NumberOfSamplesCounted;
+    MeasureType           m_Value;
+    DerivativeType        m_Derivative;
+    TransformJacobianType m_Jacobian;
+    TransformJacobianType m_JacobianCache;
+    PointIteratorType     m_Begin;
+    PointIteratorType     m_End;
+  };
+  unsigned int m_MaximalNumberOfThreads;
+  unsigned int m_NumberOfThreads;
+  unsigned int NumberOfSamplesPerThread;
+  mutable std::vector<PerThreadData> m_Threads;
+
+  inline void GetValueAndDerivativeThreadProcessSample(PerThreadData & data, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
+  void MultiThreadingInitialize();
 
 private:
   ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;
