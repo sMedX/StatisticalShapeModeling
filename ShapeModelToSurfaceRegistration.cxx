@@ -154,6 +154,10 @@ int main(int argc, char** argv)
     }
   }
 
+  typedef std::pair<std::string, std::string> PairType;
+  std::vector<PairType> info;
+  info.push_back(PairType("Metric", std::to_string(shapeModelToSurfaceRegistration->GetOptimizer()->GetValue())));
+
   //----------------------------------------------------------------------------
   // compute metrics
   typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
@@ -165,6 +169,7 @@ int main(int argc, char** argv)
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
   metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
+  metrics->SetInfo(info);
   metrics->Compute();
   metrics->PrintReport(std::cout);
 
