@@ -110,7 +110,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::MultiThreadingInitialize()
     PerThreadData thread;
 
     thread.m_Derivative = DerivativeType(m_NumberOfParameters);
-    thread.m_Jacobian = TransformJacobianType(TImage::ImageDimension, m_Transform->GetNumberOfParameters());
+    thread.m_Jacobian = TransformJacobianType(TImage::ImageDimension, m_NumberOfParameters);
     thread.m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
 
     m_Threads.push_back(thread);
