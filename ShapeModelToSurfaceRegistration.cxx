@@ -111,8 +111,8 @@ int main(int argc, char** argv)
   // compute level set image
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(0.20);
-  levelset->SetSpacing(0.5);
+  levelset->SetMargin(0.10);
+  levelset->SetSpacing(1.0);
   levelset->SetInput(surface);
   try {
     levelset->Update();
@@ -162,12 +162,12 @@ int main(int argc, char** argv)
   // compute metrics
   typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
   typedef ShapeModelRegistrationMethod::PointSetType PointSetType;
-  PointSetType::Pointer pointSet = PointSetType::New();
-  pointSet->SetPoints(const_cast<PointSetType::PointsContainer*> (shapeModelToSurfaceRegistration->GetOutput()->GetPoints()));
+  PointSetType::Pointer points = PointSetType::New();
+  points->SetPoints(const_cast<PointSetType::PointsContainer*> (shapeModelToSurfaceRegistration->GetOutput()->GetPoints()));
 
   typedef ssm::PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
-  metrics->SetFixedPointSet(pointSet);
+  metrics->SetFixedPointSet(points);
   metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
   metrics->SetInfo(info);
   metrics->Compute();
