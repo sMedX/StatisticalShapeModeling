@@ -46,6 +46,9 @@ target_link_libraries(imageToSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VT
 add_executable(alignmentOfSurfaces AlignmentOfSurfaces.cxx)
 target_link_libraries(alignmentOfSurfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
+add_executable(ssm-establish-correspondences ssm-establish-correspondences.cxx)
+target_link_libraries(ssm-establish-correspondences ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+
 add_executable(computeMeanSurface ComputeMeanSurface.cxx)
 target_link_libraries(computeMeanSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
