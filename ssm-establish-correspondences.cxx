@@ -19,6 +19,9 @@ struct options
   double scale = 100;
   unsigned int iterations = 500;
   unsigned int degree;
+
+  double margin = 0.10;
+  double spacing = 1.0;
 };
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
@@ -119,14 +122,16 @@ int main(int argc, char** argv)
   }
 
   //----------------------------------------------------------------------------
-  //
+  // perform establishing of correspondences
+  itk::TimeProbe clock;
+
   for (unsigned int stage = 0; stage < numberOfStages; ++stage) {
     std::string strInfo = "---------- stage (" + std::to_string(stage + 1) + " / " + std::to_string(numberOfStages);
 
     // build GP model for the reference surface
     StatisticalModelType::Pointer model = BuildGPModel(reference, opt.parameters[0], opt.scale, numberOfComponents);
 
-    // initialize reference
+    // initialize reference to zero
     for (auto & iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
       iter.Value().Fill(0);
     }
@@ -136,7 +141,7 @@ int main(int argc, char** argv)
       MeshType::Pointer surface = vectorOfSurfaces[count];
       MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, opt);
 
-      // compute the new reference surface
+      // add output to reference
       for (auto & iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
         MeshType::PointType point = output->GetPoint(iter.Index());
         for (size_t d = 0; d < MeshType::PointDimension; ++d) {
@@ -146,11 +151,11 @@ int main(int argc, char** argv)
 
       // compute metrics and write surface to file
       if (stage == numberOfStages - 1) {
-        // compute level set image
+        // compute metrics
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
         SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-        levelset->SetMargin(0.10);
-        levelset->SetSpacing(1.0);
+        levelset->SetMargin(opt.margin);
+        levelset->SetSpacing(opt.spacing);
         levelset->SetInput(surface);
         try {
           levelset->Update();
@@ -160,7 +165,6 @@ int main(int argc, char** argv)
           return EXIT_FAILURE;
         }
 
-        // compute metrics
         typedef itk::PointSet<MeshType::PixelType, MeshType::PointDimension> PointSetType;
         PointSetType::Pointer points = PointSetType::New();
         points->SetPoints(surface->GetPoints());
@@ -180,7 +184,7 @@ int main(int argc, char** argv)
           metrics->PrintReportToFile(fileName, getBaseNameFromPath(vectorOfFiles[count]));
         }
 
-        // write output surface to the file
+        // write output surface to file
         typedef boost::filesystem::path fp;
         fp path = fp(outputFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(outputFile).filename().string());
         std::string fileName = path.string();
@@ -192,6 +196,9 @@ int main(int argc, char** argv)
     }
   }
 
+  clock.Stop();
+  std::cout << "elapsed time " << clock.GetTotal() << " sec" << std::endl;
+
   return EXIT_SUCCESS;
 }
 //==============================================================================
@@ -201,8 +208,8 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
   // compute level set image
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(0.10);
-  levelset->SetSpacing(1.0);
+  levelset->SetMargin(opt.margin);
+  levelset->SetSpacing(opt.spacing);
   levelset->SetInput(surface);
   try {
     levelset->Update();
@@ -292,5 +299,3 @@ StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double par
 
   return model;
 }
-
-
