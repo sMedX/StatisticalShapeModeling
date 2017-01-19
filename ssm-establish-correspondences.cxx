@@ -127,8 +127,7 @@ int main(int argc, char** argv)
   itk::TimeProbe clock;
 
   for (unsigned int stage = 0; stage < numberOfStages; ++stage) {
-//    std::string strInfo = "---------- stage (" + std::to_string(stage + 1) + " / " + std::to_string(numberOfStages);
-    std::cout << "establish correspondence stage (" << stage + 1 << " / " << numberOfStages << ")" << std::endl;
+    std::cout << "establish correspondence stage (" << stage << " / " << numberOfStages - 1 << ")" << std::endl;
 
     // build GP model for the reference surface
     StatisticalModelType::Pointer model = BuildGPModel(reference, opt.parameters[0], opt.scale, numberOfComponents);
@@ -140,7 +139,7 @@ int main(int argc, char** argv)
 
     // preform GP model to surface registration
     for (size_t count = 0; count < numberOfSurfaces; ++count) {
-      std::cout << "surface (" << count + 1 << " / " << numberOfSurfaces << ")" << std::endl;
+      std::cout << "surface (" << count << " / " << numberOfSurfaces - 1 << ")" << std::endl;
 
       MeshType::Pointer surface = vectorOfSurfaces[count];
       MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, opt);
@@ -154,7 +153,7 @@ int main(int argc, char** argv)
       }
 
       // compute metrics and write surface to file
-      if (stage == numberOfStages - 1) {
+      if (stage + 1 == numberOfStages) {
         // compute metrics
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
         SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
@@ -198,6 +197,16 @@ int main(int argc, char** argv)
         }
       }
     }
+
+    // write reference to file
+    if (parser->ArgumentExists("-output-reference")) {
+      std::string fileName;
+      parser->GetCommandLineArgument("-output-reference", fileName);
+      fileName = addFileNameSuffix(fileName, "-" + std::to_string(stage));
+      if (!writeMesh<MeshType>(reference, fileName)) {
+        EXIT_FAILURE;
+      }
+    }
   }
 
   clock.Stop();
@@ -228,7 +237,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
   size_t numberOfStages = opt.parameters.size();
 
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
-    std::cout << "registration stage (" << stage + 1 << " / " << numberOfStages << ")" << std::endl;
+    std::cout << "registration stage (" << stage << " / " << numberOfStages - 1 << ")" << std::endl;
 
     // if stage > 0 update GP model
     if (stage > 0) {
