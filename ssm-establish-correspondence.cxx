@@ -12,7 +12,7 @@
 #include "ssm/ssmShapeModelRegistrationMethod.h"
 #include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 
-struct options
+struct RegistrationOptions
 {
   std::vector<double> parameters;
   std::vector<double> regularization;
@@ -25,11 +25,11 @@ struct options
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
-MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, options & opt);
+MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, RegistrationOptions & options);
 
 int main(int argc, char** argv)
 {
-  options opt;
+  RegistrationOptions options;
 
   itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
   parser->SetCommandLineArguments(argc, argv);
@@ -43,11 +43,11 @@ int main(int argc, char** argv)
   std::string referenceFile;
   parser->GetCommandLineArgument("-reference", referenceFile);
 
-  parser->GetCommandLineArgument("-iterations", opt.iterations);
-  parser->GetCommandLineArgument("-regularization", opt.regularization);
-  parser->GetCommandLineArgument("-parameters", opt.parameters);
-  parser->GetCommandLineArgument("-scale", opt.scale);
-  parser->GetCommandLineArgument("-degree", opt.degree);
+  parser->GetCommandLineArgument("-iterations", options.iterations);
+  parser->GetCommandLineArgument("-regularization", options.regularization);
+  parser->GetCommandLineArgument("-parameters", options.parameters);
+  parser->GetCommandLineArgument("-scale", options.scale);
+  parser->GetCommandLineArgument("-degree", options.degree);
 
   unsigned int numberOfStages = 1;
   parser->GetCommandLineArgument("-stages", numberOfStages);
@@ -59,21 +59,21 @@ int main(int argc, char** argv)
   std::cout << " shape model to image registration" << std::endl;
   std::cout << "   output surface file " << outputFile << std::endl;
   std::cout << "      number of stages " << numberOfStages << std::endl;
-  std::cout << "  number of iterations " << opt.iterations << std::endl;
-  std::cout << "                degree " << opt.degree << std::endl;
+  std::cout << "  number of iterations " << options.iterations << std::endl;
+  std::cout << "                degree " << options.degree << std::endl;
 
-  for (int n = opt.regularization.size(); n < opt.parameters.size(); ++n) {
-    opt.regularization.push_back(opt.regularization.back());
+  for (int n = options.regularization.size(); n < options.parameters.size(); ++n) {
+    options.regularization.push_back(options.regularization.back());
   }
 
   std::cout << "        regularization ";
-  for (auto value : opt.regularization) {
+  for (auto value : options.regularization) {
     std::cout << value << " ";
   }
   std::cout << std::endl;
 
   std::cout << "            parameters ";
-  for (auto value : opt.parameters) {
+  for (auto value : options.parameters) {
     std::cout << value << " ";
   }
   std::cout << std::endl;
@@ -126,11 +126,11 @@ int main(int argc, char** argv)
   itk::TimeProbe clock;
   clock.Start();
 
-  for (unsigned int stage = 0; stage < numberOfStages; ++stage) {
+  for (size_t stage = 0; stage < numberOfStages; ++stage) {
     std::cout << "establish correspondence stage (" << stage+1 << " / " << numberOfStages << ")" << std::endl;
 
     // build GP model for the reference surface
-    StatisticalModelType::Pointer model = BuildGPModel(reference, opt.parameters[0], opt.scale, numberOfComponents);
+    StatisticalModelType::Pointer model = BuildGPModel(reference, options.parameters[0], options.scale, numberOfComponents);
 
     // initialize reference to zero
     for (auto & iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
       std::cout << "surface (" << count+1 << " / " << numberOfSurfaces << ")" << std::endl;
 
       MeshType::Pointer surface = vectorOfSurfaces[count];
-      MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, opt);
+      MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, options);
 
       // add output to reference
       for (auto & iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
@@ -157,8 +157,8 @@ int main(int argc, char** argv)
         // compute metrics
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
         SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-        levelset->SetMargin(opt.margin);
-        levelset->SetSpacing(opt.spacing);
+        levelset->SetMargin(options.margin);
+        levelset->SetSpacing(options.spacing);
         levelset->SetInput(surface);
         try {
           levelset->Update();
@@ -216,13 +216,13 @@ int main(int argc, char** argv)
 }
 //==============================================================================
 // Shape model to surface registration
-MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer initialModel, options & opt)
+MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer initialModel, RegistrationOptions & options)
 {
   // compute level set image
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(opt.margin);
-  levelset->SetSpacing(opt.spacing);
+  levelset->SetMargin(options.margin);
+  levelset->SetSpacing(options.spacing);
   levelset->SetInput(surface);
   try {
     levelset->Update();
@@ -234,20 +234,20 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 
   // shape model to image registration
   StatisticalModelType::Pointer model = initialModel;
-  size_t numberOfStages = opt.parameters.size();
+  size_t numberOfStages = options.parameters.size();
 
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
     std::cout << "registration stage (" << stage+1 << " / " << numberOfStages << ")" << std::endl;
 
     // if stage > 0 update GP model
     if (stage > 0) {
-      model = BuildGPModel(surface, opt.parameters[stage], opt.scale, model->GetNumberOfPrincipalComponents());
+      model = BuildGPModel(surface, options.parameters[stage], options.scale, model->GetNumberOfPrincipalComponents());
     }
 
     std::cout << "Gaussian process model" << std::endl;
     std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
     std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
-    std::cout << "parameters           " << "(" << opt.parameters[stage] << ", " << opt.scale << ")" << std::endl;
+    std::cout << "parameters           " << "(" << options.parameters[stage] << ", " << options.scale << ")" << std::endl;
     std::cout << std::endl;
 
     // perform registration
@@ -256,9 +256,9 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
     shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
     shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
-    shapeModelToSurfaceRegistration->SetNumberOfIterations(opt.iterations);
-    shapeModelToSurfaceRegistration->SetRegularizationParameter(opt.regularization[stage]);
-    shapeModelToSurfaceRegistration->SetDegree(opt.degree);
+    shapeModelToSurfaceRegistration->SetNumberOfIterations(options.iterations);
+    shapeModelToSurfaceRegistration->SetRegularizationParameter(options.regularization[stage]);
+    shapeModelToSurfaceRegistration->SetDegree(options.degree);
     try {
       shapeModelToSurfaceRegistration->Update();
     }
