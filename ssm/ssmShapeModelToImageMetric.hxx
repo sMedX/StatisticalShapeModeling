@@ -70,17 +70,11 @@ throw ( itk::ExceptionObject )
   m_NumberOfComponents = m_ShapeModel->GetNumberOfPrincipalComponents();
 
   if ( m_ComputeGradient ) {
+    double sigma = m_Image->GetSpacing().Get_vnl_vector().max_value();
+
     GradientImageFilterPointer gradient = GradientImageFilterType::New();
     gradient->SetInput(m_Image);
-
-    const typename ImageType::SpacingType & spacing = m_Image->GetSpacing();
-    double maximumSpacing = 0.0;
-    for ( unsigned int i = 0; i < ImageDimension; i++ ) {
-      if ( spacing[i] > maximumSpacing ) {
-        maximumSpacing = spacing[i];
-      }
-    }
-    gradient->SetSigma(maximumSpacing);
+    gradient->SetSigma(sigma);
     gradient->SetNormalizeAcrossScale(true);
     gradient->Update();
     m_GradientImage = gradient->GetOutput();
