@@ -202,7 +202,7 @@ int main(int argc, char** argv)
     if (parser->ArgumentExists("-output-reference")) {
       std::string fileName;
       parser->GetCommandLineArgument("-output-reference", fileName);
-      fileName = addFileNameSuffix(fileName, "-" + std::to_string(stage));
+      fileName = addFileNameSuffix(fileName, "-" + std::to_string(stage + 1));
       if (!writeMesh<MeshType>(reference, fileName)) {
         EXIT_FAILURE;
       }
