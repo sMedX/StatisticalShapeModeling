@@ -125,6 +125,7 @@ int main(int argc, char** argv)
   //----------------------------------------------------------------------------
   // perform establishing of correspondences
   itk::TimeProbe clock;
+  clock.Start();
 
   for (unsigned int stage = 0; stage < numberOfStages; ++stage) {
     std::cout << "establish correspondence stage (" << stage << " / " << numberOfStages - 1 << ")" << std::endl;
