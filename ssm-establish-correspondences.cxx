@@ -27,7 +27,6 @@ typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
 MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, options & opt);
 
-
 int main(int argc, char** argv)
 {
   options opt;
@@ -41,8 +40,8 @@ int main(int argc, char** argv)
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
-  std::string referenceFileName;
-  parser->GetCommandLineArgument("-reference", referenceFileName);
+  std::string referenceFile;
+  parser->GetCommandLineArgument("-reference", referenceFile);
 
   parser->GetCommandLineArgument("-iterations", opt.iterations);
   parser->GetCommandLineArgument("-regularization", opt.regularization);
@@ -83,10 +82,10 @@ int main(int argc, char** argv)
   //----------------------------------------------------------------------------
   // read the reference surface
   MeshType::Pointer reference = MeshType::New();
-  if (!readMesh<MeshType>(reference, referenceFileName)) {
+  if (!readMesh<MeshType>(reference, referenceFile)) {
     return EXIT_FAILURE;
   }
-  std::cout << "reference " << referenceFileName << std::endl;
+  std::cout << "reference " << referenceFile << std::endl;
   std::cout << "number of cells " << reference->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << reference->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
@@ -128,7 +127,7 @@ int main(int argc, char** argv)
   clock.Start();
 
   for (unsigned int stage = 0; stage < numberOfStages; ++stage) {
-    std::cout << "establish correspondence stage (" << stage << " / " << numberOfStages - 1 << ")" << std::endl;
+    std::cout << "establish correspondence stage (" << stage+1 << " / " << numberOfStages << ")" << std::endl;
 
     // build GP model for the reference surface
     StatisticalModelType::Pointer model = BuildGPModel(reference, opt.parameters[0], opt.scale, numberOfComponents);
@@ -140,7 +139,7 @@ int main(int argc, char** argv)
 
     // preform GP model to surface registration
     for (size_t count = 0; count < numberOfSurfaces; ++count) {
-      std::cout << "surface (" << count << " / " << numberOfSurfaces - 1 << ")" << std::endl;
+      std::cout << "surface (" << count+1 << " / " << numberOfSurfaces << ")" << std::endl;
 
       MeshType::Pointer surface = vectorOfSurfaces[count];
       MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, opt);
@@ -238,17 +237,17 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
   size_t numberOfStages = opt.parameters.size();
 
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
-    std::cout << "registration stage (" << stage << " / " << numberOfStages - 1 << ")" << std::endl;
+    std::cout << "registration stage (" << stage+1 << " / " << numberOfStages << ")" << std::endl;
 
     // if stage > 0 update GP model
     if (stage > 0) {
       model = BuildGPModel(surface, opt.parameters[stage], opt.scale, model->GetNumberOfPrincipalComponents());
     }
 
-    std::cout << "built Gaussian process model" << std::endl;
+    std::cout << "Gaussian process model" << std::endl;
     std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
     std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
-    std::cout << "parameters           " << opt.parameters[stage] << ", " << opt.scale << std::endl;
+    std::cout << "parameters           " << "(" << opt.parameters[stage] << ", " << opt.scale << ")" << std::endl;
     std::cout << std::endl;
 
     // perform registration
