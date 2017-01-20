@@ -58,19 +58,19 @@ int main(int argc, char** argv)
 
   unsigned int numberOfStages = parameters.size() + 1;
 
-  for (int n = regularization.size(); n < numberOfStages; ++n) {
+  for (int stage = regularization.size(); stage < numberOfStages; ++stage) {
     regularization.push_back(regularization.back());
   }
 
   std::cout << "        regularization ";
-  for (int n = 0; n < regularization.size(); ++n) {
-    std::cout << regularization[n] << " ";
+  for (int stage = 0; stage < regularization.size(); ++stage) {
+    std::cout << regularization[stage] << " ";
   }
   std::cout << std::endl;
 
   std::cout << "            parameters ";
-  for (int n = 0; n < parameters.size(); ++n) {
-    std::cout << parameters[n] << " ";
+  for (int stage = 0; stage < parameters.size(); ++stage) {
+    std::cout << parameters[stage] << " ";
   }
   std::cout << std::endl;
   std::cout << std::endl;
@@ -127,8 +127,8 @@ int main(int argc, char** argv)
   typedef ssm::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
   ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
 
-  for (int n = 0; n < numberOfStages; ++n) {
-    std::cout << "---------- stage (" << n + 1 << " / " << numberOfStages << ") ----------" << std::endl;
+  for (int stage = 0; stage < numberOfStages; ++stage) {
+    std::cout << "registration stage (" << stage + 1 << " / " << numberOfStages << ")" << std::endl;
 
     // perform registration
     shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
     shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
     shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
     shapeModelToSurfaceRegistration->SetModelScale(mscale);
-    shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[n]);
+    shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[stage]);
     shapeModelToSurfaceRegistration->SetDegree(degree);
     try {
       shapeModelToSurfaceRegistration->Update();
@@ -148,9 +148,9 @@ int main(int argc, char** argv)
     shapeModelToSurfaceRegistration->PrintReport(std::cout);
 
     // build new model
-    if (n + 1 < numberOfStages) {
+    if (stage + 1 < numberOfStages) {
       MeshType::Pointer reference = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
-      model = BuildGPModel(reference, parameters[n], scale, model->GetNumberOfPrincipalComponents());
+      model = BuildGPModel(reference, parameters[stage], scale, model->GetNumberOfPrincipalComponents());
     }
   }
 
