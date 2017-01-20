@@ -40,20 +40,20 @@ if (OPENMP_FOUND)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
-add_executable(imageToSurface ImageToSurface.cxx)
-target_link_libraries(imageToSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+add_executable(ssm-extract-surface ssm-extract-surface.cxx)
+target_link_libraries(ssm-extract-surface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
-add_executable(alignmentOfSurfaces AlignmentOfSurfaces.cxx)
-target_link_libraries(alignmentOfSurfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-align-surfaces ssm-align-surfaces.cxx)
+target_link_libraries(ssm-align-surfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(ssm-establish-correspondences ssm-establish-correspondences.cxx)
-target_link_libraries(ssm-establish-correspondences ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-establish-correspondence ssm-establish-correspondence.cxx)
+target_link_libraries(ssm-establish-correspondence ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(computeMeanSurface ComputeMeanSurface.cxx)
-target_link_libraries(computeMeanSurface ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-compute-average-surface ssm-compute-average-surface.cxx)
+target_link_libraries(ssm-compute-average-surface ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(shapeModelToSurfaceRegistration ShapeModelToSurfaceRegistration.cxx)
-target_link_libraries(shapeModelToSurfaceRegistration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-model-to-surface-registration ssm-model-to-surface-registration.cxx)
+target_link_libraries(ssm-model-to-surface-registration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(crossValidationTest CrossValidationTest.cxx)
-target_link_libraries(crossValidationTest ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-cross-validation-test ssm-cross-validation-test.cxx)
+target_link_libraries(ssm-cross-validation-test ${statismo_LIBRARIES} ${ITK_LIBRARIES})
