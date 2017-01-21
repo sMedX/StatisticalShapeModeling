@@ -221,13 +221,8 @@ int main(int argc, char** argv) {
   vectorOfTransforms.resize(vectorOfSurfaces.size());
 
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
-    typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
-    typedef SurfaceToImageRegistrationMethodType::EnumTransformType EnumTransformType;
-    EnumTransformType typeOfTransform = static_cast<EnumTransformType>(transform);
-
     std::cout << "perform registration" << std::endl;
     std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
-    std::cout << "type of transform " << static_cast<int>(typeOfTransform) << std::endl;
     std::cout << std::endl;
 
     // allocate image to update reference image
@@ -245,7 +240,7 @@ int main(int argc, char** argv) {
       SurfaceToImageRegistrationMethodType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationMethodType::New();
       surfaceToImageRegistration->SetInput(vectorOfSurfaces[count]);
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
-      surfaceToImageRegistration->SetTypeOfTransform(typeOfTransform);
+      surfaceToImageRegistration->SetTypeOfTransform(transform);
       surfaceToImageRegistration->SetLevelsetImage(levelSetImage);
       try {
         surfaceToImageRegistration->Update();

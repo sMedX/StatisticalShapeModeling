@@ -39,8 +39,10 @@ namespace ssm
       Affine
     };
 
+    // set type of transform
     itkSetMacro(TypeOfTransform, EnumTransformType);
     itkGetConstMacro(TypeOfTransform, EnumTransformType);
+    void SetTypeOfTransform(size_t transform) { m_TypeOfTransform = static_cast<EnumTransformType>(transform); }
 
     //Set/Get PotentialImage
     itkGetConstObjectMacro(LevelsetImage, LevelsetImageType);
