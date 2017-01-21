@@ -291,7 +291,6 @@ namespace ssm
     typename TransformFilterType::Pointer transform = TransformFilterType::New();
     transform->SetInput(m_Surface);
     transform->SetTransform(m_Transform);
-
     try {
       transform->Update();
     }
