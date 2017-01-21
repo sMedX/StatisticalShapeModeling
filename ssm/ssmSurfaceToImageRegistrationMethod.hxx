@@ -115,8 +115,7 @@ namespace ssm
     BinaryImageType::SizeType size;
 
     for (int n = 0; n < PointDimension; ++n) {
-      origin[n] -= m_Margin;
-      size[n] = (boundingBox->GetMaximum()[n] - boundingBox->GetMinimum()[n] + 2 * m_Margin) / spacing[n];
+      size[n] = (boundingBox->GetMaximum()[n] - boundingBox->GetMinimum()[n]) / spacing[n];
     }
 
     typedef itk::TriangleMeshToBinaryImageFilter<TOutputMesh, BinaryImageType> ShapeToBinaryImageFilterType;

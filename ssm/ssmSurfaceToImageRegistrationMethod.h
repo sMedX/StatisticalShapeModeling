@@ -106,7 +106,6 @@ namespace ssm
     double m_TranslationScale = 1;
     double m_ScalingScale = 1;
     double m_RotationScale = 0.1;
-    double m_Margin = 5;
   };
 }
 
