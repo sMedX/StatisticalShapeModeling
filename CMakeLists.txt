@@ -55,5 +55,5 @@ target_link_libraries(ssm-compute-average-surface ${statismo_LIBRARIES} ${ITK_LI
 add_executable(ssm-model-to-surface-registration ssm-model-to-surface-registration.cxx)
 target_link_libraries(ssm-model-to-surface-registration ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(ssm-cross-validation-test ssm-cross-validation-test.cxx)
-target_link_libraries(ssm-cross-validation-test ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-cross-validation ssm-cross-validation.cxx)
+target_link_libraries(ssm-cross-validation ${statismo_LIBRARIES} ${ITK_LIBRARIES})
