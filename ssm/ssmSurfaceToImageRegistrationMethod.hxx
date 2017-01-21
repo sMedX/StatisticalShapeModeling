@@ -151,78 +151,82 @@ namespace ssm
     typename TransformType::InputPointType center;
     typename TransformType::OutputVectorType translation;
 
-    for (unsigned int i = 0; i < PointDimension; i++) {
+    for (size_t i = 0; i < PointDimension; i++) {
       center[i] = movingCalculator->GetCenterOfGravity()[i];
       translation[i] = fixedCalculator->GetCenterOfGravity()[i] - movingCalculator->GetCenterOfGravity()[i];
     }
 
     // number of optimization parameters
-    int numberOfTranslationComponents = 3;
-    int numberOfRotationComponents = 3;
-    int numberOfScalingComponents = 3;
+    size_t numberOfTranslationComponents = 3;
+    size_t numberOfRotationComponents = 3;
+    size_t numberOfScalingComponents = 3;
 
-    if (m_TypeOfTransform == EnumTransformType::Translation) {
+    switch (m_TypeOfTransform) {
+    case EnumTransformType::Translation: {
       // Translation transform
-      typedef itk::TranslationTransform<double, TOutputMesh::PointDimension> TranslationTransformType;
+      typedef itk::TranslationTransform<double, PointDimension> TranslationTransformType;
       TranslationTransformType::Pointer translationTransform = TranslationTransformType::New();
       translationTransform->Translate(translation);
-
       m_Transform = translationTransform;
 
       //define scales
       m_Scales.set_size(m_Transform->GetNumberOfParameters());
 
-      for (int i = 0; i < numberOfTranslationComponents; ++i) {
+      for (size_t i = 0; i < numberOfTranslationComponents; ++i) {
         m_Scales[i] = 1.0 / m_TranslationScale;
       }
+
+      break;
     }
-    else if (m_TypeOfTransform == EnumTransformType::Euler3D) {
+    case EnumTransformType::Euler3D: {
       // Euler3DTransform
       typedef itk::Euler3DTransform<double> Euler3DTransformType;
-      Euler3DTransformType::Pointer rigid3DTransform = Euler3DTransformType::New();
-      rigid3DTransform->SetIdentity();
-      rigid3DTransform->SetCenter(center);
-      rigid3DTransform->SetTranslation(translation);
-
-      m_Transform = rigid3DTransform;
+      Euler3DTransformType::Pointer Euler3DTransform = Euler3DTransformType::New();
+      Euler3DTransform->SetIdentity();
+      Euler3DTransform->SetCenter(center);
+      Euler3DTransform->SetTranslation(translation);
+      m_Transform = Euler3DTransform;
 
       //define scales
       m_Scales.set_size(m_Transform->GetNumberOfParameters());
       size_t count = 0;
 
-      for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_RotationScale;
       }
 
-      for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_TranslationScale;
       }
+
+      break;
     }
-    else if (m_TypeOfTransform == EnumTransformType::Similarity) {
+    case EnumTransformType::Similarity: {
       // Similarity3DTransform
       typedef itk::Similarity3DTransform<double> Similarity3DTransformType;
-      Similarity3DTransformType::Pointer Similarity3DTransform = Similarity3DTransformType::New();
-      Similarity3DTransform->SetIdentity();
-      Similarity3DTransform->SetCenter(center);
-      Similarity3DTransform->SetTranslation(translation);
-
-      m_Transform = Similarity3DTransform;
+      Similarity3DTransformType::Pointer similarity3DTransform = Similarity3DTransformType::New();
+      similarity3DTransform->SetIdentity();
+      similarity3DTransform->SetCenter(center);
+      similarity3DTransform->SetTranslation(translation);
+      m_Transform = similarity3DTransform;
 
       //define scales
       m_Scales.set_size(m_Transform->GetNumberOfParameters());
       size_t count = 0;
 
-      for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_RotationScale;
       }
 
-      for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_TranslationScale;
       }
 
       m_Scales[count] = 1.0 / m_ScalingScale;
+
+      break;
     }
-    else {
+    case EnumTransformType::Affine: {
       //initialize transforms of the model
       int numberOfOptimizationParameters = 15;
       m_Scales.set_size(numberOfOptimizationParameters);
@@ -230,16 +234,16 @@ namespace ssm
 
       //second Euler 3D transform
       typedef itk::Euler3DTransform<double> Euler3DTransformType;
-      Euler3DTransformType::Pointer rigid3DTransform2 = Euler3DTransformType::New();
-      rigid3DTransform2->SetIdentity();
-      rigid3DTransform2->SetCenter(center);
-      rigid3DTransform2->SetTranslation(translation);
+      Euler3DTransformType::Pointer Euler3DTransform2 = Euler3DTransformType::New();
+      Euler3DTransform2->SetIdentity();
+      Euler3DTransform2->SetCenter(center);
+      Euler3DTransform2->SetTranslation(translation);
 
-      for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_RotationScale;
       }
 
-      for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_TranslationScale;
       }
 
@@ -249,33 +253,34 @@ namespace ssm
       scaleTransform->SetIdentity();
       scaleTransform->SetCenter(center);
 
-      for (int i = 0; i < numberOfScalingComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfScalingComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_ScalingScale;
       }
 
       //first Euler 3D transform
-      Euler3DTransformType::Pointer rigid3DTransform1 = Euler3DTransformType::New();
-      rigid3DTransform1->SetIdentity();
-      rigid3DTransform1->SetCenter(center);
+      Euler3DTransformType::Pointer Euler3DTransform1 = Euler3DTransformType::New();
+      Euler3DTransform1->SetIdentity();
+      Euler3DTransform1->SetCenter(center);
 
-      for (int i = 0; i < numberOfRotationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_RotationScale;
       }
 
-      for (int i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
         m_Scales[count] = 1.0 / m_TranslationScale;
       }
 
       // composite transform OutputPoint = rigid3DTransform2( scaleTransform ( rigid3DTransform1(InputPoint)))
       m_CompositeTransform = CompositeTransformType::New();
-      m_CompositeTransform->AddTransform(rigid3DTransform2);   //transform 0
+      m_CompositeTransform->AddTransform(Euler3DTransform2);   //transform 0
       m_CompositeTransform->AddTransform(scaleTransform);      //transform 1
-      m_CompositeTransform->AddTransform(rigid3DTransform1);   //transform 2
+      m_CompositeTransform->AddTransform(Euler3DTransform1);   //transform 2
       m_CompositeTransform->SetAllTransformsToOptimizeOn();
-
       m_Transform = m_CompositeTransform;
     }
-
+    default:
+      throw itk::ExceptionObject("Invalid transform type");
+    }
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>

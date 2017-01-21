@@ -62,8 +62,8 @@ int main(int argc, char** argv) {
     vectorOfSurfaces.push_back(surface);
     vectorOfFiles.push_back(fileName);
 
-    std::cout << "input surface polydata info " << fileName << std::endl;
-    std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
+    std::cout << "surface " << fileName << std::endl;
+    std::cout << "number of cells  " << surface->GetNumberOfCells() << std::endl;
     std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
     std::cout << std::endl;
   }
@@ -216,6 +216,10 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // perform alignment of the surfaces
+  typedef itk::Transform<double, MeshType::PointDimension> TransformType;
+  std::vector<TransformType::ConstPointer> vectorOfTransforms;
+  vectorOfTransforms.resize(vectorOfSurfaces.size());
+
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
     typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
     typedef SurfaceToImageRegistrationMethodType::EnumTransformType EnumTransformType;
@@ -223,7 +227,7 @@ int main(int argc, char** argv) {
 
     std::cout << "perform registration" << std::endl;
     std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
-    std::cout << "type of transform " << typeOfTransform << std::endl;
+    std::cout << "type of transform " << static_cast<int>(typeOfTransform) << std::endl;
     std::cout << std::endl;
 
     // allocate image to update reference image
@@ -250,8 +254,9 @@ int main(int argc, char** argv) {
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
       }
-      vectorOfSurfaces[count] = surfaceToImageRegistration->GetOutput();
       surfaceToImageRegistration->PrintReport(std::cout);
+      vectorOfTransforms[count] = surfaceToImageRegistration->GetTransform();
+      vectorOfSurfaces[count] = surfaceToImageRegistration->GetOutput();
 
       // compute level set image
       typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;

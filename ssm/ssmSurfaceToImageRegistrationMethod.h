@@ -31,7 +31,13 @@ namespace ssm
     itkTypeMacro(SurfaceToImageRegistrationMethod, itk::MeshToMeshFilter);
 
     //Set spatial transform type
-    typedef  enum { Translation, Euler3D, Similarity, Affine } EnumTransformType;
+    enum class EnumTransformType
+    {
+      Translation,
+      Euler3D,
+      Similarity,
+      Affine
+    };
 
     itkSetMacro(TypeOfTransform, EnumTransformType);
     itkGetConstMacro(TypeOfTransform, EnumTransformType);
@@ -76,7 +82,7 @@ namespace ssm
     void GenerateOutputData();
 
     itkStaticConstMacro(PointDimension, unsigned int, TInputMesh::PointDimension);
-    static_assert(PointDimension == 3U, "Invalid dimension of input image. Dimension 3 is supported.");
+    static_assert(PointDimension == 3U, "Invalid dimension of input mesh. Dimension 3 is supported.");
 
     OptimizerType::Pointer m_Optimizer;
     typename TInputMesh::Pointer m_Surface;
