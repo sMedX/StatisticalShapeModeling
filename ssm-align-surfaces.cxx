@@ -8,6 +8,12 @@
 #include "ssm/ssmPointSetToImageMetrics.h"
 #include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 #include "ssm/ssmSurfaceToImageRegistrationMethod.h"
+#include "ssm/ssmMeshPropertiesCalculator.h"
+
+typedef std::vector<MeshType::Pointer> MeshVectorType;
+typedef itk::Transform<double, MeshType::PointDimension> TransformType;
+typedef std::vector<TransformType::ConstPointer> TransformVectorType;
+FloatImageType::Pointer computeLevelSetImage(FloatImageType::Pointer levelSetImage, MeshVectorType & vectorOfSurfaces, TransformVectorType & vectorOfTransform, size_t typeOfransform);
 
 int main(int argc, char** argv) {
 
@@ -21,13 +27,13 @@ int main(int argc, char** argv) {
   std::string surfaceFile;
   parser->GetCommandLineArgument("-output", surfaceFile);
 
-  unsigned int numberOfStages = 1;
+  size_t numberOfStages = 1;
   parser->GetCommandLineArgument("-stages", numberOfStages);
 
-  unsigned int transform = 1;
-  parser->GetCommandLineArgument("-transform", transform);
+  size_t typeOfransform = 1;
+  parser->GetCommandLineArgument("-transform", typeOfransform);
 
-  unsigned int numberOfIterations = 500;
+  size_t numberOfIterations = 500;
   parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
   std::cout << std::endl;
@@ -35,7 +41,7 @@ int main(int argc, char** argv) {
   std::cout << "    list of files " << listFile << std::endl;
   std::cout << "   output surface " << surfaceFile << std::endl;
   std::cout << " number of stages " << numberOfStages << std::endl;
-  std::cout << "type of transform " << transform << std::endl;
+  std::cout << "type of transform " << typeOfransform << std::endl;
   std::cout << "       iterations " << numberOfIterations << std::endl;
   std::cout << std::endl;
 
@@ -50,7 +56,7 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  std::vector<MeshType::Pointer> vectorOfSurfaces;
+  MeshVectorType vectorOfSurfaces;
   std::vector<std::string> vectorOfFiles;
 
   for (const auto & fileName : listOfFiles) {
@@ -216,21 +222,13 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // perform alignment of the surfaces
-  typedef itk::Transform<double, MeshType::PointDimension> TransformType;
-  std::vector<TransformType::ConstPointer> vectorOfTransforms;
+  TransformVectorType vectorOfTransforms;
   vectorOfTransforms.resize(vectorOfSurfaces.size());
 
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
     std::cout << "perform registration" << std::endl;
     std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
     std::cout << std::endl;
-
-    // allocate image to update reference image
-    FloatImageType::Pointer updateLevelSetImage = FloatImageType::New();
-    updateLevelSetImage->SetRegions(levelSetImage->GetLargestPossibleRegion());
-    updateLevelSetImage->Allocate();
-    updateLevelSetImage->FillBuffer(0);
-    updateLevelSetImage->CopyInformation(levelSetImage);
 
     for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
       std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << count + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[count] << std::endl;
@@ -240,7 +238,7 @@ int main(int argc, char** argv) {
       SurfaceToImageRegistrationMethodType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationMethodType::New();
       surfaceToImageRegistration->SetInput(vectorOfSurfaces[count]);
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
-      surfaceToImageRegistration->SetTypeOfTransform(transform);
+      surfaceToImageRegistration->SetTypeOfTransform(typeOfransform);
       surfaceToImageRegistration->SetLevelsetImage(levelSetImage);
       try {
         surfaceToImageRegistration->Update();
@@ -249,48 +247,12 @@ int main(int argc, char** argv) {
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
       }
-      surfaceToImageRegistration->PrintReport(std::cout);
       vectorOfTransforms[count] = surfaceToImageRegistration->GetTransform();
-      vectorOfSurfaces[count] = surfaceToImageRegistration->GetOutput();
-
-      // compute level set image
-      typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
-      SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
-      surfaceToLevelSetImage->SetInput(vectorOfSurfaces[count]);
-      surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
-      surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
-      surfaceToLevelSetImage->SetSize(levelSetImage->GetLargestPossibleRegion().GetSize());
-      try {
-        surfaceToLevelSetImage->Update();
-      }
-      catch (itk::ExceptionObject& excep) {
-        std::cerr << excep << std::endl;
-        return EXIT_FAILURE;
-      }
-
-      // add current level set image to update reference image
-      typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
-      FilterType::Pointer multiply = FilterType::New();
-      multiply->SetInput(surfaceToLevelSetImage->GetOutput());
-      multiply->SetConstant(1 / (double) vectorOfSurfaces.size());
-
-      typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
-      AddImageFilterType::Pointer add = AddImageFilterType::New();
-      add->SetInput1(updateLevelSetImage);
-      add->SetInput2(multiply->GetOutput());
-      try {
-        add->Update();
-      }
-      catch (itk::ExceptionObject& excep) {
-        std::cerr << excep << std::endl;
-        return EXIT_FAILURE;
-      }
-
-      updateLevelSetImage = add->GetOutput();
+      surfaceToImageRegistration->PrintReport(std::cout);
     }
 
-    //update reference image
-    levelSetImage = updateLevelSetImage;
+    // update reference level-set image
+    levelSetImage = computeLevelSetImage(levelSetImage, vectorOfSurfaces, vectorOfTransforms, typeOfransform);
   }
 
   //----------------------------------------------------------------------------
@@ -350,6 +312,101 @@ int main(int argc, char** argv) {
   }
 
   return EXIT_SUCCESS;
+}
+//==============================================================================
+// Shape model to surface registration
+FloatImageType::Pointer computeLevelSetImage(FloatImageType::Pointer levelSetImage, MeshVectorType & vectorOfSurfaces, TransformVectorType & vectorOfTransform, size_t typeOfransform)
+{
+  double scale = 1;
+  size_t index = 6;
+
+  if (typeOfransform > 1) {
+    double initialRadius = 0;
+    double scaledRadius = 0;
+
+    for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
+      MeshType::Pointer surface = vectorOfSurfaces[count];
+      TransformType::ConstPointer transform = vectorOfTransform[count];
+
+      typedef ssm::MeshPropertiesCalculator<MeshType> MeshMomentsCalculatorType;
+      MeshMomentsCalculatorType::Pointer calculator = MeshMomentsCalculatorType::New();
+      calculator->SetMesh(surface);
+      calculator->Compute();
+
+      double radius = calculator->GetRadius();
+      double scale = transform->GetParameters()[index];
+
+      initialRadius += radius;
+      scaledRadius += scale * radius;
+    }
+
+    scale = initialRadius / scaledRadius;
+  }
+
+  // fill level-set image
+  levelSetImage->FillBuffer(0);
+
+  for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
+    // modify transform
+    TransformType::Pointer transform = const_cast<TransformType*>(vectorOfTransform[count].GetPointer());
+
+    if (typeOfransform > 1) {
+      TransformType::ParametersType parameters = transform->GetParameters();
+      parameters[index] *= scale;
+      transform->SetParameters(parameters);
+    }
+
+    // transform surface
+    typedef itk::TransformMeshFilter<MeshType, MeshType, TransformType> TransformFilterType;
+    TransformFilterType::Pointer transformMeshFilter = TransformFilterType::New();
+    transformMeshFilter->SetInput(vectorOfSurfaces[count]);
+    transformMeshFilter->SetTransform(transform);
+    try {
+      transformMeshFilter->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cout << excep << std::endl;
+      throw;
+    }
+    vectorOfSurfaces[count] = transformMeshFilter->GetOutput();
+
+    // compute level-set image
+    typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
+    SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
+    surfaceToLevelSetImage->SetInput(vectorOfSurfaces[count]);
+    surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
+    surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
+    surfaceToLevelSetImage->SetSize(levelSetImage->GetLargestPossibleRegion().GetSize());
+    try {
+      surfaceToLevelSetImage->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      throw;
+    }
+
+    // add current level set image to update reference image
+    typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
+    FilterType::Pointer multiply = FilterType::New();
+    multiply->SetInput(surfaceToLevelSetImage->GetOutput());
+    multiply->SetConstant(1 / (double)vectorOfSurfaces.size());
+
+    typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
+    AddImageFilterType::Pointer add = AddImageFilterType::New();
+    add->SetInput1(levelSetImage);
+    add->SetInput2(multiply->GetOutput());
+    try {
+      add->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      throw;
+    }
+
+    levelSetImage = add->GetOutput();
+  }
+
+  return levelSetImage;
 }
 
 
