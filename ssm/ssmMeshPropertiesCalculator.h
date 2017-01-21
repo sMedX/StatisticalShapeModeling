@@ -11,11 +11,11 @@
 namespace ssm
 {
 template< typename TMesh >
-class MeshMomentsCalculator:public itk::Object
+class MeshPropertiesCalculator:public itk::Object
 {
 public:
   /** Standard class typedefs. */
-  typedef MeshMomentsCalculator< TMesh >      Self;
+  typedef MeshPropertiesCalculator< TMesh >      Self;
   typedef itk::Object                         Superclass;
   typedef itk::SmartPointer< Self >           Pointer;
   typedef itk::SmartPointer< const Self >     ConstPointer;
@@ -24,7 +24,7 @@ public:
   itkNewMacro(Self);
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(MeshMomentsCalculator, itk::Object);
+  itkTypeMacro(MeshPropertiesCalculator, itk::Object);
 
   /** Extract the dimension of the image. */
   itkStaticConstMacro(Dimension, unsigned int, TMesh::PointDimension);
@@ -84,24 +84,24 @@ public:
   ScalarType GetRadius() const;
 
 protected:
-  MeshMomentsCalculator();
-  virtual ~MeshMomentsCalculator() {};
+  MeshPropertiesCalculator();
+  virtual ~MeshPropertiesCalculator() {};
   virtual void PrintSelf(std::ostream & os, itk::Indent indent) const ITK_OVERRIDE;
 
 private:
-  MeshMomentsCalculator(const Self &) ITK_DELETE_FUNCTION;
+  MeshPropertiesCalculator(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 
   bool       m_Valid;
   VectorType m_CenterOfMaskGravity;
   ScalarType m_Radius;
 
-  MeshConstPointer            m_Mesh;
-  SpatialObjectConstPointer   m_SpatialObjectMask;
+  MeshConstPointer                     m_Mesh;
+  SpatialObjectConstPointer            m_SpatialObjectMask;
   typename BinaryImageType::Pointer    m_Mask;
 };
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ssmMeshMomentsCalculator.hxx"
+#include "ssmMeshPropertiesCalculator.hxx"
 #endif

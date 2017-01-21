@@ -5,7 +5,7 @@
 #include <itkImageRegionConstIteratorWithIndex.h>
 #include <itkTriangleMeshToBinaryImageFilter.h>
 
-#include "ssmMeshMomentsCalculator.h"
+#include "ssmMeshPropertiesCalculator.h"
 
 namespace ssm
 {
@@ -34,7 +34,7 @@ public:
 //----------------------------------------------------------------------
 // Construct without computing moments
 template< typename TMesh >
-MeshMomentsCalculator< TMesh >::MeshMomentsCalculator(void)
+MeshPropertiesCalculator< TMesh >::MeshPropertiesCalculator(void)
 {
   m_Valid = false;
   m_Mesh = ITK_NULLPTR;
@@ -43,7 +43,7 @@ MeshMomentsCalculator< TMesh >::MeshMomentsCalculator(void)
 
 //----------------------------------------------------------------------
 template< typename TInputImage >
-void MeshMomentsCalculator< TInputImage >::PrintSelf(std::ostream & os, itk::Indent indent) const
+void MeshPropertiesCalculator< TInputImage >::PrintSelf(std::ostream & os, itk::Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
   os << indent << "Image: " << m_Mesh.GetPointer() << std::endl;
@@ -53,7 +53,7 @@ void MeshMomentsCalculator< TInputImage >::PrintSelf(std::ostream & os, itk::Ind
 //----------------------------------------------------------------------
 // Compute moments for a new or modified image
 template< typename TMesh >
-void MeshMomentsCalculator< TMesh >::Compute()
+void MeshPropertiesCalculator< TMesh >::Compute()
 {
   if ( m_Mesh==nullptr ) {
     return;
@@ -123,7 +123,7 @@ void MeshMomentsCalculator< TMesh >::Compute()
 //--------------------------------------------------------------------
 // Get center of mask gravity, in physical coordinates
 template< typename TMesh >
-typename MeshMomentsCalculator< TMesh >::VectorType MeshMomentsCalculator< TMesh >::GetCenterOfMaskGravity() const
+typename MeshPropertiesCalculator< TMesh >::VectorType MeshPropertiesCalculator< TMesh >::GetCenterOfMaskGravity() const
 {
   if (!m_Valid) {
     itkExceptionMacro(<< "GetCenterOfGravity() invoked, but the moments have not been computed. Call Compute() first.");
@@ -133,7 +133,7 @@ typename MeshMomentsCalculator< TMesh >::VectorType MeshMomentsCalculator< TMesh
 //--------------------------------------------------------------------
 // Get center of radius
 template< typename TMesh >
-typename MeshMomentsCalculator< TMesh >::ScalarType MeshMomentsCalculator< TMesh >::GetRadius() const
+typename MeshPropertiesCalculator< TMesh >::ScalarType MeshPropertiesCalculator< TMesh >::GetRadius() const
 {
   if (!m_Valid) {
     itkExceptionMacro(<< "GetCenterOfGravity() invoked, but the moments have not been computed. Call Compute() first.");
