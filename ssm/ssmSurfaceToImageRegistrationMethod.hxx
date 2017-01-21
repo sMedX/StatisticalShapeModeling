@@ -324,17 +324,16 @@ namespace ssm
 
     if (m_TypeOfTransform != EnumTransformType::Affine) {
       os << std::endl;
-      os << "1) " << m_Transform->GetTransformTypeAsString() << ", number of parameters ";
-      os << m_Transform->GetNumberOfParameters() << std::endl;
-      os << "transform category " << m_Transform->GetTransformCategory() << std::endl;
+      os << "transform" << std::endl;
+      os << "1) " << m_Transform->GetTransformTypeAsString() << ", category " << m_Transform->GetTransformCategory() << std::endl;
+      os << "number of parameters " << m_Transform->GetNumberOfParameters() << std::endl;
       os << m_Transform->GetParameters() << std::endl;
     }
     else {
-      for (int n = 0; n < m_CompositeTransform->GetNumberOfTransforms(); ++n) {
+      for (size_t n = 0; n < m_CompositeTransform->GetNumberOfTransforms(); ++n) {
         os << std::endl;
-        os << n + 1 << ") " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformTypeAsString() << ", number of parameters ";
-        os << m_CompositeTransform->GetNthTransformConstPointer(n)->GetNumberOfParameters() << std::endl;
-        os << "transform category " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformCategory() << std::endl;
+        os << n + 1 << ") " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformTypeAsString() << ", category " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformCategory() << std::endl;
+        os << "number of parameters " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetNumberOfParameters() << std::endl;
         os << m_CompositeTransform->GetNthTransformConstPointer(n)->GetParameters() << std::endl;
       }
     }
