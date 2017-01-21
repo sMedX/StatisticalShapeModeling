@@ -170,7 +170,7 @@ int main(int argc, char** argv)
 
         typedef itk::PointSet<MeshType::PixelType, MeshType::PointDimension> PointSetType;
         PointSetType::Pointer points = PointSetType::New();
-        points->SetPoints(surface->GetPoints());
+        points->SetPoints(output->GetPoints());
 
         typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
         PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
