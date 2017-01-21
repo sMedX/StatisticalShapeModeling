@@ -53,8 +53,7 @@ int main(int argc, char** argv) {
   std::vector<MeshType::Pointer> vectorOfSurfaces;
   std::vector<std::string> vectorOfFiles;
 
-  for (StringList::const_iterator it = listOfFiles.begin(); it != listOfFiles.end(); ++it) {
-    std::string fileName = it->c_str();
+  for (const auto & fileName : listOfFiles) {
     MeshType::Pointer surface = MeshType::New();
 
     if (!readMesh<MeshType>(surface, fileName)) {
@@ -79,7 +78,7 @@ int main(int argc, char** argv) {
   typedef itk::Vector<double, Dimension> VectorType;
   std::vector<VectorType> vectorOfCenters;
   itk::Matrix<double, Dimension, 2> maximalBoundingBox;
-  for (unsigned int i = 0; i < Dimension; ++i) {
+  for (size_t i = 0; i < Dimension; ++i) {
     maximalBoundingBox[i][0] = std::numeric_limits<double>::max();
     maximalBoundingBox[i][1] = std::numeric_limits<double>::min();
   }
@@ -87,8 +86,8 @@ int main(int argc, char** argv) {
   VectorType centerOfMaximalBoundingBox;
   centerOfMaximalBoundingBox.Fill(0);
 
-  for (int n = 0; n < vectorOfSurfaces.size(); ++n) {
-    MeshType::BoundingBoxType::ConstPointer boundingbox = vectorOfSurfaces[n]->GetBoundingBox();
+  for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
+    MeshType::BoundingBoxType::ConstPointer boundingbox = vectorOfSurfaces[count]->GetBoundingBox();
 
     // compute mask for surface
     BinaryImageType::SpacingType spacing(1);
@@ -101,11 +100,11 @@ int main(int argc, char** argv) {
 
     typedef itk::TriangleMeshToBinaryImageFilter<MeshType, BinaryImageType> TriangleMeshToBinaryImageFilterType;
     TriangleMeshToBinaryImageFilterType::Pointer surfaceToMask = TriangleMeshToBinaryImageFilterType::New();
-    surfaceToMask->SetInput(vectorOfSurfaces[n]);
+    surfaceToMask->SetInput(vectorOfSurfaces[count]);
     surfaceToMask->SetInsideValue(1);
     surfaceToMask->SetSize(size);
     surfaceToMask->SetSpacing(spacing);
-    surfaceToMask->SetOrigin(vectorOfSurfaces[n]->GetBoundingBox()->GetMinimum());
+    surfaceToMask->SetOrigin(vectorOfSurfaces[count]->GetBoundingBox()->GetMinimum());
     try {
       surfaceToMask->Update();
     }
@@ -138,7 +137,7 @@ int main(int argc, char** argv) {
   FloatImageType::PointType origin;
   itk::Size<Dimension> size;
 
-  for (unsigned int i = 0; i < Dimension; ++i) {
+  for (size_t i = 0; i < Dimension; ++i) {
     double offset = 0.25;
     double distance = maximalBoundingBox[i][1] - maximalBoundingBox[i][0];
 
@@ -161,15 +160,15 @@ int main(int argc, char** argv) {
   std::cout << " origin " << levelSetImage->GetOrigin() << std::endl;
 
   // compute initial level-set image
-  for (int n = 0; n < vectorOfSurfaces.size(); ++n) {
+  for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
     // transform the n-th surface
     typedef itk::TranslationTransform<double, Dimension> TransformType;
     TransformType::Pointer transform = TransformType::New();
-    transform->SetOffset(centerOfMaximalBoundingBox - vectorOfCenters[n]);
+    transform->SetOffset(centerOfMaximalBoundingBox - vectorOfCenters[count]);
 
     typedef itk::TransformMeshFilter<MeshType, MeshType, TransformType> TransformFilterType;
     TransformFilterType::Pointer transformSurface = TransformFilterType::New();
-    transformSurface->SetInput(vectorOfSurfaces[n]);
+    transformSurface->SetInput(vectorOfSurfaces[count]);
     transformSurface->SetTransform(transform);
     try {
       transformSurface->Update();
@@ -178,12 +177,12 @@ int main(int argc, char** argv) {
       std::cout << excep << std::endl;
       return EXIT_FAILURE;
     }
-    vectorOfSurfaces[n] = transformSurface->GetOutput();
+    vectorOfSurfaces[count] = transformSurface->GetOutput();
 
     // compute level-set image for the n-th surface
     typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
     SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
-    surfaceToLevelSetImage->SetInput(vectorOfSurfaces[n]);
+    surfaceToLevelSetImage->SetInput(vectorOfSurfaces[count]);
     surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
     surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
     surfaceToLevelSetImage->SetSize(levelSetImage->GetLargestPossibleRegion().GetSize());
@@ -217,7 +216,7 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // perform alignment of the surfaces
-  for (int stage = 0; stage < numberOfStages; ++stage) {
+  for (size_t stage = 0; stage < numberOfStages; ++stage) {
     typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
     typedef SurfaceToImageRegistrationMethodType::EnumTransformType EnumTransformType;
     EnumTransformType typeOfTransform = static_cast<EnumTransformType>(transform);
@@ -234,13 +233,13 @@ int main(int argc, char** argv) {
     updateLevelSetImage->FillBuffer(0);
     updateLevelSetImage->CopyInformation(levelSetImage);
 
-    for (int n = 0; n < vectorOfSurfaces.size(); ++n) {
-      std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << n + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[n] << std::endl;
+    for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
+      std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << count + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[count] << std::endl;
 
       // perform surface to image registration
       typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
       SurfaceToImageRegistrationMethodType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationMethodType::New();
-      surfaceToImageRegistration->SetInput(vectorOfSurfaces[n]);
+      surfaceToImageRegistration->SetInput(vectorOfSurfaces[count]);
       surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
       surfaceToImageRegistration->SetTypeOfTransform(typeOfTransform);
       surfaceToImageRegistration->SetLevelsetImage(levelSetImage);
@@ -251,13 +250,13 @@ int main(int argc, char** argv) {
         std::cerr << excep << std::endl;
         return EXIT_FAILURE;
       }
-      vectorOfSurfaces[n] = surfaceToImageRegistration->GetOutput();
+      vectorOfSurfaces[count] = surfaceToImageRegistration->GetOutput();
       surfaceToImageRegistration->PrintReport(std::cout);
 
       // compute level set image
       typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
       SurfaceToLevelSetImageFilterType::Pointer surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
-      surfaceToLevelSetImage->SetInput(vectorOfSurfaces[n]);
+      surfaceToLevelSetImage->SetInput(vectorOfSurfaces[count]);
       surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
       surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
       surfaceToLevelSetImage->SetSize(levelSetImage->GetLargestPossibleRegion().GetSize());
@@ -317,7 +316,7 @@ int main(int argc, char** argv) {
   }
 
   // write alignment surfaces
-  for (int count = 0; count < vectorOfSurfaces.size(); ++count) {
+  for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
 
     // define full file name for output surface
     typedef boost::filesystem::path fp;
