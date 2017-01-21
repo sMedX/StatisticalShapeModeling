@@ -225,6 +225,7 @@ namespace ssm
 
       break;
     }
+    /*
     case EnumTransformType::Affine: {
       //initialize transforms of the model
       int numberOfOptimizationParameters = 15;
@@ -277,6 +278,7 @@ namespace ssm
       m_CompositeTransform->SetAllTransformsToOptimizeOn();
       m_Transform = m_CompositeTransform;
     }
+    */
     default:
       throw itk::ExceptionObject("Invalid transform type");
     }
