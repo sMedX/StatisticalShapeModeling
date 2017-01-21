@@ -226,8 +226,7 @@ int main(int argc, char** argv) {
   vectorOfTransforms.resize(vectorOfSurfaces.size());
 
   for (size_t stage = 0; stage < numberOfStages; ++stage) {
-    std::cout << "perform registration" << std::endl;
-    std::cout << "stage " << stage + 1 << "/" << numberOfStages << std::endl;
+    std::cout << "alignment stage " << stage + 1 << "/" << numberOfStages << std::endl;
     std::cout << std::endl;
 
     for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {

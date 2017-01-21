@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
 
   // decimate surface
   if (numberOfPoints > 0) {
-    double reduction = 1 - numberOfPoints / (double)surface->GetNumberOfPoints();
+    double reduction = 1 - (numberOfPoints - 1) / (double)surface->GetNumberOfPoints();
     std::cout << "reduction to decimate surface " << reduction << std::endl;
     vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
     decimate->SetInputData(surface);
