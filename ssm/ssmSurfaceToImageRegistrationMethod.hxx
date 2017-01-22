@@ -147,141 +147,25 @@ namespace ssm
     fixedCalculator->SetImage(m_Mask);
     fixedCalculator->Compute();
 
-    typename TransformType::InputPointType center;
-    typename TransformType::OutputVectorType translation;
+    typename TransformType::InputPointType center = movingCalculator->GetCenterOfGravity();
+    typename TransformType::OutputVectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
-    for (size_t i = 0; i < PointDimension; i++) {
-      center[i] = movingCalculator->GetCenterOfGravity()[i];
-      translation[i] = fixedCalculator->GetCenterOfGravity()[i] - movingCalculator->GetCenterOfGravity()[i];
+    // initialize spatial transform
+    typedef ssm::InitializeTransform<double> InitializeTransformType;
+    InitializeTransformType::Pointer initializer = InitializeTransformType::New();
+    initializer->SetTypeOfTransform(m_TypeOfTransform);
+    initializer->SetCenter(center);
+    initializer->SetTranslation(translation);
+    initializer->SetInverseScales(true);
+    try {
+      initializer->Update();
     }
-
-    // number of optimization parameters
-    size_t numberOfTranslationComponents = 3;
-    size_t numberOfRotationComponents = 3;
-    size_t numberOfScalingComponents = 3;
-
-    switch (m_TypeOfTransform) {
-    case EnumTransformType::Translation: {
-      // Translation transform
-      typedef itk::TranslationTransform<double, PointDimension> TranslationTransformType;
-      TranslationTransformType::Pointer translationTransform = TranslationTransformType::New();
-      translationTransform->Translate(translation);
-      m_Transform = translationTransform;
-
-      //define scales
-      m_Scales.set_size(m_Transform->GetNumberOfParameters());
-
-      for (size_t i = 0; i < numberOfTranslationComponents; ++i) {
-        m_Scales[i] = 1.0 / m_TranslationScale;
-      }
-
-      break;
+    catch (itk::ExceptionObject& excep) {
+      std::cout << excep << std::endl;
+      itkExceptionMacro(<< excep);
     }
-    case EnumTransformType::Euler3D: {
-      // Euler3DTransform
-      typedef itk::Euler3DTransform<double> Euler3DTransformType;
-      Euler3DTransformType::Pointer Euler3DTransform = Euler3DTransformType::New();
-      Euler3DTransform->SetIdentity();
-      Euler3DTransform->SetCenter(center);
-      Euler3DTransform->SetTranslation(translation);
-      m_Transform = Euler3DTransform;
-
-      //define scales
-      m_Scales.set_size(m_Transform->GetNumberOfParameters());
-      size_t count = 0;
-
-      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_RotationScale;
-      }
-
-      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_TranslationScale;
-      }
-
-      break;
-    }
-    case EnumTransformType::Similarity: {
-      // Similarity3DTransform
-      typedef itk::Similarity3DTransform<double> Similarity3DTransformType;
-      Similarity3DTransformType::Pointer similarity3DTransform = Similarity3DTransformType::New();
-      similarity3DTransform->SetIdentity();
-      similarity3DTransform->SetCenter(center);
-      similarity3DTransform->SetTranslation(translation);
-      m_Transform = similarity3DTransform;
-
-      //define scales
-      m_Scales.set_size(m_Transform->GetNumberOfParameters());
-      size_t count = 0;
-
-      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_RotationScale;
-      }
-
-      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_TranslationScale;
-      }
-
-      m_Scales[count] = 1.0 / m_ScalingScale;
-
-      break;
-    }
-    /*
-    case EnumTransformType::Affine: {
-      //initialize transforms of the model
-      int numberOfOptimizationParameters = 15;
-      m_Scales.set_size(numberOfOptimizationParameters);
-      size_t count = 0;
-
-      //second Euler 3D transform
-      typedef itk::Euler3DTransform<double> Euler3DTransformType;
-      Euler3DTransformType::Pointer Euler3DTransform2 = Euler3DTransformType::New();
-      Euler3DTransform2->SetIdentity();
-      Euler3DTransform2->SetCenter(center);
-      Euler3DTransform2->SetTranslation(translation);
-
-      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_RotationScale;
-      }
-
-      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_TranslationScale;
-      }
-
-      //scale transform
-      typedef itk::ScaleTransform<double, PointDimension> ScaleTransformType;
-      typename ScaleTransformType::Pointer scaleTransform = ScaleTransformType::New();
-      scaleTransform->SetIdentity();
-      scaleTransform->SetCenter(center);
-
-      for (size_t i = 0; i < numberOfScalingComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_ScalingScale;
-      }
-
-      //first Euler 3D transform
-      Euler3DTransformType::Pointer Euler3DTransform1 = Euler3DTransformType::New();
-      Euler3DTransform1->SetIdentity();
-      Euler3DTransform1->SetCenter(center);
-
-      for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_RotationScale;
-      }
-
-      for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-        m_Scales[count] = 1.0 / m_TranslationScale;
-      }
-
-      // composite transform OutputPoint = rigid3DTransform2( scaleTransform ( rigid3DTransform1(InputPoint)))
-      m_CompositeTransform = CompositeTransformType::New();
-      m_CompositeTransform->AddTransform(Euler3DTransform2);   //transform 0
-      m_CompositeTransform->AddTransform(scaleTransform);      //transform 1
-      m_CompositeTransform->AddTransform(Euler3DTransform1);   //transform 2
-      m_CompositeTransform->SetAllTransformsToOptimizeOn();
-      m_Transform = m_CompositeTransform;
-    }
-    */
-    default:
-      throw itk::ExceptionObject("Invalid transform type");
-    }
+    m_Transform = initializer->GetTransform();
+    m_Scales = initializer->GetScales();
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
@@ -319,24 +203,10 @@ namespace ssm
       os << std::endl;
     }
 
-    os << m_Transform->GetTransformTypeAsString() << std::endl;
-    os << "scales " << m_Scales << std::endl;
-
-    if (m_TypeOfTransform != EnumTransformType::Affine) {
-      os << std::endl;
-      os << "transform" << std::endl;
-      os << "1) " << m_Transform->GetTransformTypeAsString() << ", category " << m_Transform->GetTransformCategory() << std::endl;
-      os << "number of parameters " << m_Transform->GetNumberOfParameters() << std::endl;
-      os << m_Transform->GetParameters() << std::endl;
-    }
-    else {
-      for (size_t n = 0; n < m_CompositeTransform->GetNumberOfTransforms(); ++n) {
-        os << std::endl;
-        os << n + 1 << ") " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformTypeAsString() << ", category " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetTransformCategory() << std::endl;
-        os << "number of parameters " << m_CompositeTransform->GetNthTransformConstPointer(n)->GetNumberOfParameters() << std::endl;
-        os << m_CompositeTransform->GetNthTransformConstPointer(n)->GetParameters() << std::endl;
-      }
-    }
+    os << "transform" << std::endl;
+    os << m_Transform->GetTransformTypeAsString() << ", category " << m_Transform->GetTransformCategory() << std::endl;
+    os << "scales     " << m_Scales << std::endl;
+    os << "parameters " << m_Transform->GetParameters() << ", " << m_Transform->GetNumberOfParameters() << std::endl;
     os << std::endl;
   }
 }

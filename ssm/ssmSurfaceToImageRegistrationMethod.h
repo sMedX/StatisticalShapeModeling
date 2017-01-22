@@ -6,6 +6,8 @@
 #include <itkCompositeTransform.h>
 #include <itkPointSet.h>
 
+#include "ssmInitializeTransform.h"
+
 namespace ssm
 {
   template <typename TInputMesh, typename TOutputMesh = TInputMesh>
@@ -30,19 +32,10 @@ namespace ssm
     itkNewMacro(Self);
     itkTypeMacro(SurfaceToImageRegistrationMethod, itk::MeshToMeshFilter);
 
-    //Set spatial transform type
-    enum class EnumTransformType
-    {
-      Translation,
-      Euler3D,
-      Similarity,
-      Affine
-    };
-
     // set type of transform
-    itkSetMacro(TypeOfTransform, EnumTransformType);
-    itkGetConstMacro(TypeOfTransform, EnumTransformType);
-    void SetTypeOfTransform(size_t transform) { m_TypeOfTransform = static_cast<EnumTransformType>(transform); }
+    itkSetEnumMacro(TypeOfTransform, EnumTransform);
+    itkGetEnumMacro(TypeOfTransform, EnumTransform);
+    void SetTypeOfTransform(size_t transform) { m_TypeOfTransform = static_cast<EnumTransform>(transform); }
 
     //Set/Get PotentialImage
     itkGetConstObjectMacro(LevelsetImage, LevelsetImageType);
@@ -62,15 +55,6 @@ namespace ssm
 
     itkSetMacro(DefaultStepLength, double);
     itkGetMacro(DefaultStepLength, double);
-
-    itkSetMacro(TranslationScale, double);
-    itkGetMacro(TranslationScale, double);
-
-    itkSetMacro(ScalingScale, double);
-    itkGetMacro(ScalingScale, double);
-
-    itkSetMacro(RotationScale, double);
-    itkGetMacro(RotationScale, double);
 
     void PrintReport(std::ostream& os) const;
 
@@ -96,16 +80,12 @@ namespace ssm
     typename CompositeTransformType::Pointer m_CompositeTransform;
     typename InterpolatorType::Pointer m_Interpolator;
 
-    EnumTransformType m_TypeOfTransform = EnumTransformType::Euler3D;
-    unsigned int m_NumberOfIterations = 500;
+    EnumTransform m_TypeOfTransform = EnumTransform::Euler3D;
+    size_t m_NumberOfIterations = 500;
     double m_LineSearchAccuracy = 0.1;
     double m_DefaultStepLength = 0.1;
     double m_GradientConvergenceTolerance = 1e-07;
-
     ScalesType m_Scales;
-    double m_TranslationScale = 1;
-    double m_ScalingScale = 1;
-    double m_RotationScale = 0.1;
   };
 }
 
