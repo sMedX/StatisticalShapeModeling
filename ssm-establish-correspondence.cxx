@@ -210,7 +210,7 @@ int main(int argc, char** argv)
   }
 
   clock.Stop();
-  std::cout << "elapsed time " << clock.GetTotal() << " sec" << std::endl;
+  std::cout << "elapsed time, sec " << clock.GetTotal() << std::endl;
 
   return EXIT_SUCCESS;
 }
@@ -244,12 +244,6 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
       model = BuildGPModel(surface, options.parameters[stage], options.scale, model->GetNumberOfPrincipalComponents());
     }
 
-    std::cout << "Gaussian process model" << std::endl;
-    std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
-    std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
-    std::cout << "parameters           " << "(" << options.parameters[stage] << ", " << options.scale << ")" << std::endl;
-    std::cout << std::endl;
-
     // perform registration
     typedef ssm::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
     ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
@@ -278,6 +272,9 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 // Build Gaussian process model
 StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions)
 {
+  itk::TimeProbe clock;
+  clock.Start();
+
   // create kernel
   typedef DataTypeShape::PointType PointType;
   auto gaussianKernel = new GaussianKernel<PointType>(parameters);
@@ -309,6 +306,14 @@ StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double par
     std::cerr << excep << std::endl;
     throw;
   }
+
+  clock.Stop();
+  std::cout << "Gaussian process model" << std::endl;
+  std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
+  std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
+  std::cout << "parameters           " << "(" << parameters << ", " << scale << ")" << std::endl;
+  std::cout << "elapsed time, sec    " << clock.GetTotal() << std::endl;
+  std::cout << std::endl;
 
   return model;
 }
