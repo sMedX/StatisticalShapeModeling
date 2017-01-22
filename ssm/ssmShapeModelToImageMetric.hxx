@@ -165,11 +165,11 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   derivative = DerivativeType(m_NumberOfParameters);
   derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
 
-  for (unsigned int t = 0; t < m_NumberOfThreads; ++t ) {
+  for (size_t t = 0; t < m_NumberOfThreads; ++t ) {
     value += m_Threads[t].m_Value;
     m_NumberOfSamplesCounted += m_Threads[t].m_NumberOfSamplesCounted;
 
-    for (unsigned int i = 0; i < m_NumberOfParameters; ++i) {
+    for (size_t i = 0; i < m_NumberOfParameters; ++i) {
       derivative[i] += m_Threads[t].m_Derivative[i];
     }
   }
@@ -179,7 +179,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   }
   else {
     value /= m_NumberOfSamplesCounted;
-    for (unsigned int i = 0; i < m_NumberOfParameters; i++) {
+    for (size_t i = 0; i < m_NumberOfParameters; i++) {
       derivative[i] /= m_NumberOfSamplesCounted;
     }
   }
@@ -218,10 +218,10 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
       const RealType value = m_Interpolator->Evaluate(transformedPoint);
       thread.m_Value += std::pow(value, m_Degree);
 
-      for (unsigned int i = 0; i < m_NumberOfParameters; ++i) {
+      for (size_t i = 0; i < m_NumberOfParameters; ++i) {
         RealType sum = itk::NumericTraits<RealType>::ZeroValue();
 
-        for (unsigned int d = 0; d < Self::PointDimension; ++d) {
+        for (size_t d = 0; d < Self::PointDimension; ++d) {
           sum += m_Degree * std::pow(value, m_Degree - 1) * thread.m_Jacobian[d][i] * gradient[d];
         }
 
@@ -238,7 +238,7 @@ template <typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValuePenalty(const TransformParametersType & parameters, MeasureType & value) const
 {
   MeasureType penaltyValue = 0;
-  for (unsigned int n = 0; n < m_NumberOfComponents; ++n) {
+  for (size_t n = 0; n < m_NumberOfComponents; ++n) {
     penaltyValue += parameters[n] * parameters[n];
   }
   value += penaltyValue * m_RegularizationParameter;
@@ -247,7 +247,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValuePenalty(const T
 template<typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateDerivativePenalty(const TransformParametersType & parameters, DerivativeType  & derivative) const
 {
-  for (unsigned int n = 0; n < m_NumberOfComponents; ++n) {
+  for (size_t n = 0; n < m_NumberOfComponents; ++n) {
     derivative[n] += 2 * parameters[n] * m_RegularizationParameter;
   }
 }
