@@ -1,5 +1,7 @@
 ﻿#include <boost/program_options.hpp>
 #include <itkImageMomentsCalculator.h>
+#include <itkTriangleMeshToBinaryImageFilter.h>
+#include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
@@ -10,7 +12,6 @@
 
 #include "ssm/ssmPointSetToImageMetrics.h"
 #include "ssm/ssmShapeModelRegistrationMethod.h"
-#include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 
 int main(int argc, char** argv)
 {
