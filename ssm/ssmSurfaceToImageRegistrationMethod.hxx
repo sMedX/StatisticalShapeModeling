@@ -156,7 +156,6 @@ namespace ssm
     initializer->SetTypeOfTransform(m_TypeOfTransform);
     initializer->SetCenter(center);
     initializer->SetTranslation(translation);
-    initializer->SetInverseScales(true);
     try {
       initializer->Update();
     }

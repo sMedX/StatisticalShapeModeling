@@ -52,8 +52,11 @@ target_link_libraries(ssm-establish-correspondence ${statismo_LIBRARIES} ${ITK_L
 add_executable(ssm-compute-average-surface ssm-compute-average-surface.cxx)
 target_link_libraries(ssm-compute-average-surface ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
+add_executable(ssm-cross-validation ssm-cross-validation.cxx)
+target_link_libraries(ssm-cross-validation ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+
 add_executable(ssm-fit-gpmodel-to-surface ssm-fit-gpmodel-to-surface.cxx)
 target_link_libraries(ssm-fit-gpmodel-to-surface ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(ssm-cross-validation ssm-cross-validation.cxx)
-target_link_libraries(ssm-cross-validation ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-fit-shapemodel-to-image ssm-fit-shapemodel-to-image.cxx)
+target_link_libraries(ssm-fit-shapemodel-to-image ${statismo_LIBRARIES} ${ITK_LIBRARIES})
