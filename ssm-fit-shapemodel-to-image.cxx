@@ -28,11 +28,11 @@ int main(int argc, char** argv)
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
-  size_t numberOfIterations = 500;
-  parser->GetCommandLineArgument("-iterations", numberOfIterations);
-
   size_t typeOfransform = 1;
   parser->GetCommandLineArgument("-transform", typeOfransform);
+
+  size_t numberOfIterations = 500;
+  parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
   double regularization = 0.1;
   parser->GetCommandLineArgument("-regularization", regularization);
@@ -84,7 +84,6 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // compute level set image
   // compute level set image
   typedef itk::SignedMaurerDistanceMapImageFilter<BinaryImageType, FloatImageType> DistanceFilterType;
   DistanceFilterType::Pointer distancemap = DistanceFilterType::New();
