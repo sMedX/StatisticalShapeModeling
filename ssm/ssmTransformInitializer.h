@@ -140,7 +140,7 @@ namespace ssm
         }
 
         for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-          m_Scales[count] = 0;
+          m_Scales[count] = m_TranslationScale;
         }
 
         for (size_t i = 0; i < numberOfScalingComponents; ++i, ++count) {
