@@ -45,10 +45,6 @@ namespace ssm
     // Get scales
     itkGetMacro(Scales, itk::Array<double>);
 
-    // Set/Get flag to inverse scales
-    itkSetMacro(InverseScales, bool);
-    itkGetMacro(InverseScales, bool);
-
     // Set/Get center and translation
     itkGetMacro(Center, InputPointType);
     itkSetMacro(Center, InputPointType);
@@ -124,19 +120,12 @@ namespace ssm
       default:
         itkExceptionMacro(<< "Invalid type of transform");
       }
-
-      if (m_InverseScales) {
-        for (size_t i = 0; i < m_Scales.Size(); ++i) {
-          m_Scales[i] = 1 / m_Scales[i];
-        }
-      }
     }
 
     void PrintReport(std::ostream& os) const
     {
       os << this->GetNameOfClass() << std::endl;
       os << m_Transform->GetTransformTypeAsString() << ", category " << m_Transform->GetTransformCategory() << std::endl;
-      os << "inverse scales " << m_InverseScales << std::endl;
       os << "translation    " << m_Translation << std::endl;
       os << "center         " << m_Center << std::endl;
       os << "scales         " << m_Scales << std::endl;
@@ -151,9 +140,8 @@ namespace ssm
     OutputVectorType m_Translation;
     itk::Array<double> m_Scales;
     double m_TranslationScale = 1;
-    double m_ScalingScale = 1;
     double m_RotationScale = 0.1;
-    bool m_InverseScales = true;
+    double m_ScalingScale = 1;
 
     size_t m_NumberOfTranslationComponents = PointDimension;
     size_t m_NumberOfRotationComponents = PointDimension;

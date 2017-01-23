@@ -17,8 +17,10 @@ namespace ssm
 
     m_ShapeModel = nullptr;
     m_LevelSetImage = nullptr;
-    m_ShapeTransform = nullptr;
     m_Metric = nullptr;
+    m_TransformInitializer = nullptr;
+    m_SpatialTransform = nullptr;
+    m_ShapeTransform = nullptr;
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
@@ -55,16 +57,51 @@ namespace ssm
   template <typename TShapeModel, typename TOutputMesh>
   void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::InitializeTransform()
   {
-    int numberOfOptimizationParameters = m_ShapeModel->GetNumberOfPrincipalComponents();
+    // initialize spatial transform
+    if (m_TransformInitializer != nullptr) {
+      try {
+        m_TransformInitializer->Update();
+      }
+      catch (itk::ExceptionObject& excep) {
+        itkExceptionMacro(<< excep);
+      }
+      m_SpatialTransform = m_TransformInitializer->GetTransform();
+      m_NumberOfSpatialParameters = m_SpatialTransform->GetNumberOfParameters();
+      m_SpatialScales = m_TransformInitializer->GetScales();
+    }
+    else {
+      m_NumberOfSpatialParameters = 0;
+      m_SpatialScales.SetSize(m_NumberOfSpatialParameters);
+    }
 
-    // initialize transforms of the model
-    m_Scales.set_size(numberOfOptimizationParameters);
-    m_Scales.Fill(1.0 / m_ModelScale);
-
-    // shape model transform
+    // initialize shape model transform
     m_ShapeTransform = ShapeTransformType::New();
     m_ShapeTransform->SetStatisticalModel(m_ShapeModel);
     m_ShapeTransform->SetIdentity();
+    m_NumberOfShapeModelParameters = m_ShapeTransform->GetNumberOfParameters();
+
+    // initialize composite transform
+    if (m_SpatialTransform != nullptr) {
+      CompositeTransformType::Pointer transform = CompositeTransformType::New();
+      transform->AddTransform(m_SpatialTransform);
+      transform->AddTransform(m_ShapeTransform);
+      m_Transform = transform;
+    }
+    else {
+      m_Transform = m_ShapeTransform;
+    }
+
+    // initialize scales
+    m_Scales.set_size(m_Transform->GetNumberOfParameters());
+    size_t count = 0;
+
+    for (size_t i = 0; i < m_NumberOfShapeModelParameters; ++i, ++count) {
+      m_Scales[count] = 1 / m_ModelScale;
+    }
+
+    for (size_t i = 0; i < m_NumberOfSpatialParameters; ++i, ++count) {
+      m_Scales[count] = 1 / m_SpatialScales[i];
+    }
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
@@ -73,7 +110,7 @@ namespace ssm
     m_Metric = MetricType::New();
     m_Metric->SetShapeModel(m_ShapeModel);
     m_Metric->SetImage(m_LevelSetImage);
-    m_Metric->SetTransform(m_ShapeTransform);
+    m_Metric->SetTransform(m_Transform);
     m_Metric->SetRegularizationParameter(m_RegularizationParameter);
     m_Metric->SetDegree(m_Degree);
     try {
@@ -115,7 +152,7 @@ namespace ssm
     this->InitializeOptimizer();
 
     // run optimization
-    m_Optimizer->SetInitialPosition(m_ShapeTransform->GetParameters());
+    m_Optimizer->SetInitialPosition(m_Transform->GetParameters());
     try {
       m_Optimizer->StartOptimization();
     }
@@ -133,10 +170,10 @@ namespace ssm
   void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::GenerateOutputData()
   {
     // compute transformed mesh
-    typedef itk::TransformMeshFilter<DatasetType, TOutputMesh, ShapeTransformType> TransformFilterType;
-    typename TransformFilterType::Pointer transform = TransformFilterType::New();
+    typedef typename itk::TransformMeshFilter<DatasetType, TOutputMesh, TransformType> TransformMeshFilterType;
+    typename TransformMeshFilterType::Pointer transform = TransformMeshFilterType::New();
     transform->SetInput(m_ShapeModel->GetRepresenter()->GetReference());
-    transform->SetTransform(m_ShapeTransform);
+    transform->SetTransform(m_Transform);
     try {
       transform->Update();
     }
@@ -172,8 +209,8 @@ namespace ssm
     os << "elapsed time, sec          " << m_Clock.GetTotal() << std::endl;
     os << std::endl;
 
-    os << m_ShapeTransform->GetTransformTypeAsString() << ", " << m_ShapeTransform->GetTransformCategory() << std::endl;
-    os << "number of parameters " << m_ShapeTransform->GetNumberOfParameters() << std::endl;
+    os << m_Transform->GetTransformTypeAsString() << ", " << m_Transform->GetTransformCategory() << std::endl;
+    os << "number of parameters " << m_Transform->GetNumberOfParameters() << std::endl;
     os << std::endl;
   }
 }

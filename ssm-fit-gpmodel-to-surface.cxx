@@ -1,4 +1,5 @@
 ﻿#include <boost/program_options.hpp>
+#include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
@@ -29,11 +30,11 @@ int main(int argc, char** argv)
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
-  unsigned int numberOfIterations = 500;
+  size_t numberOfIterations = 500;
   parser->GetCommandLineArgument("-iterations", numberOfIterations);
 
-  double mscale = 1;
-  parser->GetCommandLineArgument("-mscale", mscale);
+  size_t typeOfransform = 1;
+  parser->GetCommandLineArgument("-transform", typeOfransform);
 
   std::vector<double> regularization(0.1);
   parser->GetCommandLineArgument("-regularization", regularization);
@@ -44,7 +45,7 @@ int main(int argc, char** argv)
   double scale = 100;
   parser->GetCommandLineArgument("-scale", scale);
 
-  unsigned int degree = 2;
+  size_t degree = 2;
   parser->GetCommandLineArgument("-degree", degree);
 
   std::cout << std::endl;
@@ -52,8 +53,8 @@ int main(int argc, char** argv)
   std::cout << "            model file " << modelFile << std::endl;
   std::cout << "    input surface file " << surfaceFile << std::endl;
   std::cout << "   output surface file " << outputFile << std::endl;
-  std::cout << "           model scale " << mscale << std::endl;
   std::cout << "  number of iterations " << numberOfIterations << std::endl;
+  std::cout << "     type of transform " << typeOfransform << std::endl;
   std::cout << "                degree " << degree << std::endl;
 
   unsigned int numberOfStages = parameters.size() + 1;
@@ -82,8 +83,8 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  std::cout << "input surface polydata " << surfaceFile << std::endl;
-  std::cout << "number of cells " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "surface " << surfaceFile << std::endl;
+  std::cout << "number of cells  " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
@@ -102,18 +103,18 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  std::cout << "input model " << modelFile << std::endl;
+  std::cout << "model " << modelFile << std::endl;
   std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
-  std::cout << "    number of points " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
+  std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   // compute level set image
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
+  levelset->SetInput(surface);
   levelset->SetMargin(0.10);
   levelset->SetSpacing(1.0);
-  levelset->SetInput(surface);
   try {
     levelset->Update();
   }
@@ -121,6 +122,59 @@ int main(int argc, char** argv)
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
+
+  // initialize spatial transform
+  MeshType::BoundingBoxType::ConstPointer boundingBox = model->DrawMean()->GetBoundingBox();
+  BinaryImageType::SpacingType spacing(1);
+  BinaryImageType::PointType origin = boundingBox->GetMinimum();
+  BinaryImageType::SizeType size;
+  for (size_t n = 0; n < Dimension; ++n) {
+    size[n] = (boundingBox->GetMaximum()[n] - boundingBox->GetMinimum()[n]) / spacing[n];
+  }
+
+  typedef itk::TriangleMeshToBinaryImageFilter<MeshType, BinaryImageType> ShapeToBinaryImageFilterType;
+  ShapeToBinaryImageFilterType::Pointer shapeToImage = ShapeToBinaryImageFilterType::New();
+  shapeToImage->SetInput(model->DrawMean());
+  shapeToImage->SetSize(size);
+  shapeToImage->SetOrigin(origin);
+  shapeToImage->SetSpacing(spacing);
+  shapeToImage->SetOutsideValue(0);
+  shapeToImage->SetInsideValue(1);
+  try {
+    shapeToImage->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cout << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  // moment calculators
+  typedef itk::ImageMomentsCalculator<BinaryImageType>  ImageCalculatorType;
+  ImageCalculatorType::Pointer movingCalculator = ImageCalculatorType::New();
+  movingCalculator->SetImage(shapeToImage->GetOutput());
+  movingCalculator->Compute();
+
+  ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
+  fixedCalculator->SetImage(levelset->GetMask());
+  fixedCalculator->Compute();
+
+  typedef ImageCalculatorType::VectorType VectorType;
+  VectorType center = movingCalculator->GetCenterOfGravity();
+  VectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
+
+  typedef ssm::InitializeTransform<double> InitializeTransformType;
+  InitializeTransformType::Pointer initializer = InitializeTransformType::New();
+  initializer->SetTypeOfTransform(typeOfransform);
+  initializer->SetCenter(center);
+  initializer->SetTranslation(translation);
+  try {
+    initializer->Update();
+  }
+  catch (itk::ExceptionObject& excep) {
+    std::cout << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+  initializer->PrintReport(std::cout);
 
   //----------------------------------------------------------------------------
   // shape model to image registration
@@ -135,9 +189,9 @@ int main(int argc, char** argv)
     shapeModelToSurfaceRegistration->SetShapeModel(model);
     shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
     shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
-    shapeModelToSurfaceRegistration->SetModelScale(mscale);
     shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[stage]);
     shapeModelToSurfaceRegistration->SetDegree(degree);
+    //shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
     try {
       shapeModelToSurfaceRegistration->Update();
     }

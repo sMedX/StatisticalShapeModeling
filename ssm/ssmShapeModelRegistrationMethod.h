@@ -4,10 +4,12 @@
 #include <itkImage.h>
 #include <itkStatisticalModel.h>
 #include <itkTransform.h>
+#include <itkCompositeTransform.h>
 #include <itkStatisticalShapeModelTransform.h>
 #include <itkLBFGSOptimizer.h>
 
 #include "ssmShapeModelToImageMetric.h"
+#include "ssmInitializeTransform.h"
 
 namespace ssm
 {
@@ -43,6 +45,9 @@ namespace ssm
     typedef typename itk::Optimizer::ScalesType ScalesType;
     typedef typename itk::StatisticalShapeModelTransform<DatasetType, double, PointDimension> ShapeTransformType;
     typedef itk::ShapeModelToImageMetric<TShapeModel, LevelSetImageType> MetricType;
+    typedef ssm::InitializeTransform<CoordinateRepresentationType> InitializeTransformType;
+    typedef itk::Transform<CoordinateRepresentationType, PointDimension> TransformType;
+    typedef itk::CompositeTransform<CoordinateRepresentationType, PointDimension> CompositeTransformType;
 
     /** Smart Pointer type to a DataObject. */
     typedef typename itk::DataObject::Pointer DataObjectPointer;
@@ -88,6 +93,9 @@ namespace ssm
     itkSetMacro(Degree, unsigned int);
     itkGetMacro(Degree, unsigned int);
 
+    itkSetObjectMacro(TransformInitializer, InitializeTransformType);
+    itkGetObjectMacro(TransformInitializer, InitializeTransformType);
+
     void PrintReport(std::ostream& os);
 
   protected:
@@ -106,8 +114,14 @@ namespace ssm
     typename OutputMeshType::Pointer m_OutputMesh;
     typename MetricType::Pointer m_Metric;
     OptimizerType::ParametersType m_InitialParameters;
+    size_t m_NumberOfSpatialParameters;
+    size_t m_NumberOfShapeModelParameters;
 
+    typename TransformType::Pointer m_Transform;
+    typename TransformType::Pointer m_SpatialTransform;
     typename ShapeTransformType::Pointer m_ShapeTransform;
+    InitializeTransformType::Pointer m_TransformInitializer;
+    ScalesType m_SpatialScales;
     ScalesType m_Scales;
     double m_ModelScale = 3;
     unsigned int m_NumberOfIterations = 500;
@@ -117,6 +131,7 @@ namespace ssm
     double m_RegularizationParameter = 0.1;
     unsigned int m_Degree = 2;
     itk::TimeProbe m_Clock;
+
   };
 }
 
