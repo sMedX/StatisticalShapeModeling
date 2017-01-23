@@ -6,7 +6,7 @@
 #include <itkCompositeTransform.h>
 #include <itkPointSet.h>
 
-#include "ssmInitializeTransform.h"
+#include "ssmTransformInitializer.h"
 
 namespace ssm
 {

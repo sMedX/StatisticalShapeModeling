@@ -151,8 +151,8 @@ namespace ssm
     typename TransformType::OutputVectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
     // initialize spatial transform
-    typedef ssm::InitializeTransform<double> InitializeTransformType;
-    InitializeTransformType::Pointer initializer = InitializeTransformType::New();
+    typedef ssm::TransformInitializer<double> TransformInitializerType;
+    TransformInitializerType::Pointer initializer = TransformInitializerType::New();
     initializer->SetTypeOfTransform(m_TypeOfTransform);
     initializer->SetCenter(center);
     initializer->SetTranslation(translation);
@@ -164,7 +164,11 @@ namespace ssm
       itkExceptionMacro(<< excep);
     }
     m_Transform = initializer->GetTransform();
+
     m_Scales = initializer->GetScales();
+    for (size_t i = 0; i < m_Scales.size(); ++i) {
+      m_Scales[i] = 1 / m_Scales[i];
+    }
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>

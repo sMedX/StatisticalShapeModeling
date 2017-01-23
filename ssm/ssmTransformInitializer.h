@@ -15,18 +15,18 @@ namespace ssm
   };
 
   template<typename TParametersValueType = double>
-  class InitializeTransform : public itk::ProcessObject
+  class TransformInitializer : public itk::ProcessObject
   {
   public:
     /** Standard class typedefs. */
-    typedef InitializeTransform                     Self;
+    typedef TransformInitializer                     Self;
     typedef itk::ProcessObject                      Superclass;
     typedef itk::SmartPointer<Self>                 Pointer;
     typedef itk::SmartPointer<const Self>           ConstPointer;
 
     /** Method for creation through the object factory. */
     itkNewMacro(Self);
-    itkTypeMacro(InitializeTransform, itk::ProcessObject);
+    itkTypeMacro(TransformInitializer, itk::ProcessObject);
 
     /** typedefs */
     itkStaticConstMacro(PointDimension, size_t, 3);
@@ -147,13 +147,13 @@ namespace ssm
     size_t m_NumberOfRotationComponents = PointDimension;
     size_t m_NumberOfScalingComponents = PointDimension;
 
-    InitializeTransform()
+    TransformInitializer()
     {
       this->SetNumberOfRequiredInputs(0);
       this->SetNumberOfRequiredOutputs(0);
       m_TypeOfTransform = EnumTransform::Euler3D;
       m_Transform = nullptr;
     }
-    ~InitializeTransform() {}
+    ~TransformInitializer() {}
   };
 }

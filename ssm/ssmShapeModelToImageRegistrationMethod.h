@@ -9,16 +9,16 @@
 #include <itkLBFGSOptimizer.h>
 
 #include "ssmShapeModelToImageMetric.h"
-#include "ssmInitializeTransform.h"
+#include "ssmTransformInitializer.h"
 
 namespace ssm
 {
   template <typename TShapeModel, typename TOutputMesh>
-  class ShapeModelRegistrationMethod : public itk::ProcessObject
+  class ShapeModelToImageRegistrationMethod : public itk::ProcessObject
   {
   public:
     /** Standard class typedefs. */
-    typedef ShapeModelRegistrationMethod              Self;
+    typedef ShapeModelToImageRegistrationMethod       Self;
     typedef itk::ProcessObject                        Superclass;
     typedef itk::SmartPointer< Self >                 Pointer;
     typedef itk::SmartPointer< const Self >           ConstPointer;
@@ -45,7 +45,7 @@ namespace ssm
     typedef typename itk::Optimizer::ScalesType ScalesType;
     typedef typename itk::StatisticalShapeModelTransform<DatasetType, double, PointDimension> ShapeTransformType;
     typedef itk::ShapeModelToImageMetric<TShapeModel, LevelSetImageType> MetricType;
-    typedef ssm::InitializeTransform<CoordinateRepresentationType> InitializeTransformType;
+    typedef ssm::TransformInitializer<CoordinateRepresentationType> TransformInitializerType;
     typedef itk::Transform<CoordinateRepresentationType, PointDimension> TransformType;
     typedef itk::CompositeTransform<CoordinateRepresentationType, PointDimension> CompositeTransformType;
 
@@ -54,7 +54,7 @@ namespace ssm
 
     /** Method for creation through the object factory. */
     itkNewMacro(Self);
-    itkTypeMacro(ShapeModelRegistrationMethod, itk::ProcessObject);
+    itkTypeMacro(ShapeModelToImageRegistrationMethod, itk::ProcessObject);
 
     /** Returns the transform resulting from the registration process  */
     const OutputMeshType* GetOutput() const;
@@ -93,14 +93,14 @@ namespace ssm
     itkSetMacro(Degree, unsigned int);
     itkGetMacro(Degree, unsigned int);
 
-    itkSetObjectMacro(TransformInitializer, InitializeTransformType);
-    itkGetObjectMacro(TransformInitializer, InitializeTransformType);
+    itkSetObjectMacro(TransformInitializer, TransformInitializerType);
+    itkGetObjectMacro(TransformInitializer, TransformInitializerType);
 
     void PrintReport(std::ostream& os);
 
   protected:
-    ShapeModelRegistrationMethod();
-    ~ShapeModelRegistrationMethod() {}
+    ShapeModelToImageRegistrationMethod();
+    ~ShapeModelToImageRegistrationMethod() {}
 
     void GenerateData();
     void InitializeTransform();
@@ -120,7 +120,7 @@ namespace ssm
     typename TransformType::Pointer m_Transform;
     typename TransformType::Pointer m_SpatialTransform;
     typename ShapeTransformType::Pointer m_ShapeTransform;
-    InitializeTransformType::Pointer m_TransformInitializer;
+    TransformInitializerType::Pointer m_TransformInitializer;
     ScalesType m_SpatialScales;
     ScalesType m_Scales;
     double m_ModelScale = 3;
@@ -136,5 +136,5 @@ namespace ssm
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ssmShapeModelRegistrationMethod.hxx"
+#include "ssmShapeModelToImageRegistrationMethod.hxx"
 #endif

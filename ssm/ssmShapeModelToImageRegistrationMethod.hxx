@@ -3,13 +3,13 @@
 #include <itkTransformMeshFilter.h>
 #include <itkLinearInterpolateImageFunction.h>
 
-#include "ssmShapeModelRegistrationMethod.h"
+#include "ssmShapeModelToImageRegistrationMethod.h"
 
 namespace ssm
 {
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::ShapeModelRegistrationMethod()
+  ShapeModelToImageRegistrationMethod<TShapeModel, TOutputMesh>::ShapeModelToImageRegistrationMethod()
   {
     this->SetNumberOfRequiredInputs(0);
     this->SetNumberOfRequiredOutputs(1);
@@ -24,14 +24,14 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  const typename ShapeModelRegistrationMethod< TShapeModel, TOutputMesh>::OutputMeshType *
-  ShapeModelRegistrationMethod< TShapeModel, TOutputMesh>::GetOutput() const
+  const typename ShapeModelToImageRegistrationMethod< TShapeModel, TOutputMesh>::OutputMeshType *
+  ShapeModelToImageRegistrationMethod< TShapeModel, TOutputMesh>::GetOutput() const
   {
     return static_cast< const TOutputMesh*>(this->ProcessObject::GetOutput(0));
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  itk::ModifiedTimeType ShapeModelRegistrationMethod< TShapeModel, TOutputMesh>::GetMTime() const
+  itk::ModifiedTimeType ShapeModelToImageRegistrationMethod< TShapeModel, TOutputMesh>::GetMTime() const
   {
     itk::ModifiedTimeType mtime = Superclass::GetMTime();
     itk::ModifiedTimeType m;
@@ -55,7 +55,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::InitializeTransform()
+  void ShapeModelToImageRegistrationMethod<TShapeModel, TOutputMesh>::InitializeTransform()
   {
     // initialize spatial transform
     if (m_TransformInitializer != nullptr) {
@@ -105,7 +105,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::InitializeMetric()
+  void ShapeModelToImageRegistrationMethod<TShapeModel, TOutputMesh>::InitializeMetric()
   {
     m_Metric = MetricType::New();
     m_Metric->SetShapeModel(m_ShapeModel);
@@ -123,7 +123,7 @@ namespace ssm
   //----------------------------------------------------------------------------
   // initialize optimizer
   template <typename TShapeModel, typename TOutputMesh>
-  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::InitializeOptimizer()
+  void ShapeModelToImageRegistrationMethod<TShapeModel, TOutputMesh>::InitializeOptimizer()
   {
     if (m_NumberOfIterations < 1) {
       itkExceptionMacro(<< "number of iterations is zero");
@@ -142,7 +142,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::GenerateData()
+  void ShapeModelToImageRegistrationMethod<TShapeModel, TOutputMesh>::GenerateData()
   {
     m_Clock.Start();
 
@@ -167,7 +167,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::GenerateOutputData()
+  void ShapeModelToImageRegistrationMethod<TShapeModel, TOutputMesh>::GenerateOutputData()
   {
     // compute transformed mesh
     typedef typename itk::TransformMeshFilter<DatasetType, TOutputMesh, TransformType> TransformMeshFilterType;
@@ -186,7 +186,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TShapeModel, typename TOutputMesh>
-  void ShapeModelRegistrationMethod<TShapeModel, TOutputMesh>::PrintReport(std::ostream& os)
+  void ShapeModelToImageRegistrationMethod<TShapeModel, TOutputMesh>::PrintReport(std::ostream& os)
   {
     os << "shape model info" << std::endl;
     os << "number of components       " << m_ShapeModel->GetNumberOfPrincipalComponents() << std::endl;

@@ -9,7 +9,7 @@
 #include "utils/itkCommandLineArgumentParser.h"
 
 #include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmShapeModelRegistrationMethod.h"
+#include "ssm/ssmShapeModelToImageRegistrationMethod.h"
 #include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 
 struct RegistrationOptions
@@ -245,7 +245,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
     }
 
     // perform registration
-    typedef ssm::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
+    typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
     ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
     shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);

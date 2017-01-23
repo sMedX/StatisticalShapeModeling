@@ -9,7 +9,7 @@
 #include "utils/itkCommandLineArgumentParser.h"
 
 #include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmShapeModelRegistrationMethod.h"
+#include "ssm/ssmShapeModelToImageRegistrationMethod.h"
 #include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
@@ -162,8 +162,8 @@ int main(int argc, char** argv)
   VectorType center = movingCalculator->GetCenterOfGravity();
   VectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
-  typedef ssm::InitializeTransform<double> InitializeTransformType;
-  InitializeTransformType::Pointer initializer = InitializeTransformType::New();
+  typedef ssm::TransformInitializer<double> TransformInitializerType;
+  TransformInitializerType::Pointer initializer = TransformInitializerType::New();
   initializer->SetTypeOfTransform(typeOfransform);
   initializer->SetCenter(center);
   initializer->SetTranslation(translation);
@@ -178,7 +178,7 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // shape model to image registration
-  typedef ssm::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
+  typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
   ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
 
   for (int stage = 0; stage < numberOfStages; ++stage) {
@@ -191,7 +191,7 @@ int main(int argc, char** argv)
     shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
     shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[stage]);
     shapeModelToSurfaceRegistration->SetDegree(degree);
-    //shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
+    shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
     try {
       shapeModelToSurfaceRegistration->Update();
     }

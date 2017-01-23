@@ -11,7 +11,7 @@
 #include "utils/itkCommandLineArgumentParser.h"
 
 #include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmShapeModelRegistrationMethod.h"
+#include "ssm/ssmShapeModelToImageRegistrationMethod.h"
 
 int main(int argc, char** argv)
 {
@@ -137,8 +137,8 @@ int main(int argc, char** argv)
   VectorType center = movingCalculator->GetCenterOfGravity();
   VectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
-  typedef ssm::InitializeTransform<double> InitializeTransformType;
-  InitializeTransformType::Pointer initializer = InitializeTransformType::New();
+  typedef ssm::TransformInitializer<double> TransformInitializerType;
+  TransformInitializerType::Pointer initializer = TransformInitializerType::New();
   initializer->SetTypeOfTransform(typeOfransform);
   initializer->SetCenter(center);
   initializer->SetTranslation(translation);
@@ -153,7 +153,7 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // shape model to image registration
-  typedef ssm::ShapeModelRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
+  typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
   ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
 
   // perform registration
