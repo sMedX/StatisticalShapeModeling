@@ -3,6 +3,7 @@
 #include <itkTranslationTransform.h>
 #include <itkEuler3DTransform.h>
 #include <itkSimilarity3DTransform.h>
+#include <itkScaleSkewVersor3DTransform.h>
 
 namespace ssm
 {
@@ -11,7 +12,7 @@ namespace ssm
     Translation,
     Euler3D,
     Similarity,
-    Affine
+    ScaleSkewVersor3D
   };
 
   template<typename TParametersValueType = double>
@@ -117,6 +118,42 @@ namespace ssm
         break;
       }
 
+      case EnumTransform::ScaleSkewVersor3D:{
+        typedef itk::ScaleSkewVersor3DTransform<TParametersValueType> ScaleSkewVersor3DTransformType;
+        ScaleSkewVersor3DTransformType::Pointer scaleskewversor3D = ScaleSkewVersor3DTransformType::New();
+        scaleskewversor3D->SetIdentity();
+        scaleskewversor3D->SetCenter(m_Center);
+        scaleskewversor3D->SetTranslation(m_Translation);
+        m_Transform = scaleskewversor3D;
+
+        //define scales
+        const size_t numberOfRotationComponents = 3;
+        const size_t numberOfTranslationComponents = 3;
+        const size_t numberOfScalingComponents = 3;
+        const size_t numberOfSkewComponents = 6;
+
+        m_Scales.set_size(m_Transform->GetNumberOfParameters());
+        size_t count = 0;
+
+        for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
+          m_Scales[count] = m_RotationScale;
+        }
+
+        for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
+          m_Scales[count] = 0;
+        }
+
+        for (size_t i = 0; i < numberOfScalingComponents; ++i, ++count) {
+          m_Scales[count] = m_ScalingScale;
+        }
+
+        for (size_t i = 0; i < numberOfSkewComponents; ++i, ++count) {
+          m_Scales[count] = m_ScalingSkew;
+        }
+
+        break;
+      }
+
       default:
         itkExceptionMacro(<< "Invalid type of transform");
       }
@@ -141,7 +178,8 @@ namespace ssm
     itk::Array<double> m_Scales;
     double m_TranslationScale = 1;
     double m_RotationScale = 0.1;
-    double m_ScalingScale = 1;
+    double m_ScalingScale = 0.1;
+    double m_ScalingSkew = 0.1;
 
     size_t m_NumberOfTranslationComponents = PointDimension;
     size_t m_NumberOfRotationComponents = PointDimension;
