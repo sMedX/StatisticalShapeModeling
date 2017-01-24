@@ -61,13 +61,14 @@ namespace ssm
         TranslationTransformType::Pointer translation = TranslationTransformType::New();
         translation->Translate(m_Translation);
         m_Transform = translation;
-
-        //define scales
         m_Scales.set_size(m_Transform->GetNumberOfParameters());
 
-        for (size_t i = 0; i < m_NumberOfTranslationComponents; ++i) {
-          m_Scales[i] = m_TranslationScale;
-        }
+        // define scales
+        m_NumberOfTranslationComponents = 3;
+
+        size_t count = 0;
+        this->SetScales(count, m_NumberOfTranslationComponents, m_TranslationScale);
+
         break;
       }
       case EnumTransform::Euler3D:{
@@ -78,18 +79,16 @@ namespace ssm
         Euler3D->SetCenter(m_Center);
         Euler3D->SetTranslation(m_Translation);
         m_Transform = Euler3D;
-
-        //define scales
         m_Scales.set_size(m_Transform->GetNumberOfParameters());
+
+        // define scales
+        m_NumberOfRotationComponents = 3;
+        m_NumberOfTranslationComponents = 3;
+
         size_t count = 0;
+        this->SetScales(count, m_NumberOfRotationComponents, m_RotationScale);
+        this->SetScales(count, m_NumberOfTranslationComponents, m_TranslationScale);
 
-        for (size_t i = 0; i < m_NumberOfRotationComponents; ++i, ++count) {
-          m_Scales[count] = m_RotationScale;
-        }
-
-        for (size_t i = 0; i < m_NumberOfTranslationComponents; ++i, ++count) {
-          m_Scales[count] = m_TranslationScale;
-        }
         break;
       }
 
@@ -101,20 +100,18 @@ namespace ssm
         similarity3D->SetCenter(m_Center);
         similarity3D->SetTranslation(m_Translation);
         m_Transform = similarity3D;
-
-        //define scales
         m_Scales.set_size(m_Transform->GetNumberOfParameters());
+
+        // define scales
+        m_NumberOfRotationComponents = 3;
+        m_NumberOfTranslationComponents = 3;
+        m_NumberOfScalingComponents = 1;
+
         size_t count = 0;
+        this->SetScales(count, m_NumberOfRotationComponents, m_RotationScale);
+        this->SetScales(count, m_NumberOfTranslationComponents, m_TranslationScale);
+        this->SetScales(count, m_NumberOfScalingComponents, m_ScalingScale);
 
-        for (size_t i = 0; i < m_NumberOfRotationComponents; ++i, ++count) {
-          m_Scales[count] = m_RotationScale;
-        }
-
-        for (size_t i = 0; i < m_NumberOfTranslationComponents; ++i, ++count) {
-          m_Scales[count] = m_TranslationScale;
-        }
-
-        m_Scales[count] = m_ScalingScale;
         break;
       }
 
@@ -125,31 +122,19 @@ namespace ssm
         scaleskewversor3D->SetCenter(m_Center);
         scaleskewversor3D->SetTranslation(m_Translation);
         m_Transform = scaleskewversor3D;
-
-        //define scales
-        const size_t numberOfRotationComponents = 3;
-        const size_t numberOfTranslationComponents = 3;
-        const size_t numberOfScalingComponents = 3;
-        const size_t numberOfSkewComponents = 6;
-
         m_Scales.set_size(m_Transform->GetNumberOfParameters());
+
+        // define scales
+        m_NumberOfRotationComponents = 3;
+        m_NumberOfTranslationComponents = 3;
+        m_NumberOfScalingComponents = 3;
+        m_NumberOfSkewComponents = 6;
+
         size_t count = 0;
-
-        for (size_t i = 0; i < numberOfRotationComponents; ++i, ++count) {
-          m_Scales[count] = m_RotationScale;
-        }
-
-        for (size_t i = 0; i < numberOfTranslationComponents; ++i, ++count) {
-          m_Scales[count] = m_TranslationScale;
-        }
-
-        for (size_t i = 0; i < numberOfScalingComponents; ++i, ++count) {
-          m_Scales[count] = m_ScalingScale;
-        }
-
-        for (size_t i = 0; i < numberOfSkewComponents; ++i, ++count) {
-          m_Scales[count] = m_ScalingSkew;
-        }
+        this->SetScales(count, m_NumberOfRotationComponents, m_RotationScale);
+        this->SetScales(count, m_NumberOfTranslationComponents, m_TranslationScale);
+        this->SetScales(count, m_NumberOfScalingComponents, m_ScalingScale);
+        this->SetScales(count, m_NumberOfSkewComponents, m_SkewScale);
 
         break;
       }
@@ -163,15 +148,16 @@ namespace ssm
     {
       os << this->GetNameOfClass() << std::endl;
       os << m_Transform->GetTransformTypeAsString() << ", category " << m_Transform->GetTransformCategory() << std::endl;
-      os << "translation    " << m_Translation << std::endl;
-      os << "center         " << m_Center << std::endl;
-      os << "scales         " << m_Scales << std::endl;
-      os << "parameters     " << m_Transform->GetParameters() << ", " << m_Transform->GetNumberOfParameters() << std::endl;
+      os << "center               " << m_Center << std::endl;
+      os << "translation          " << m_Translation << std::endl;
+      os << "scales               " << m_Scales << std::endl;
+      os << "fixed parameters     " << m_Transform->GetFixedParameters() << ", " << m_Transform->GetNumberOfFixedParameters() << std::endl;
+      os << "transform parameters " << m_Transform->GetParameters() << ", " << m_Transform->GetNumberOfParameters() << std::endl;
       os << std::endl;
     }
 
   protected:
-    EnumTransform m_TypeOfTransform;
+    EnumTransform m_TypeOfTransform = EnumTransform::Euler3D;
     typename TransformType::Pointer m_Transform;
     InputPointType m_Center;
     OutputVectorType m_Translation;
@@ -179,17 +165,24 @@ namespace ssm
     double m_TranslationScale = 1;
     double m_RotationScale = 0.1;
     double m_ScalingScale = 0.1;
-    double m_ScalingSkew = 0.1;
+    double m_SkewScale = 0.1;
 
-    size_t m_NumberOfTranslationComponents = PointDimension;
-    size_t m_NumberOfRotationComponents = PointDimension;
-    size_t m_NumberOfScalingComponents = PointDimension;
+    size_t m_NumberOfTranslationComponents = 0;
+    size_t m_NumberOfRotationComponents = 0;
+    size_t m_NumberOfScalingComponents = 0;
+    size_t m_NumberOfSkewComponents = 0;
+
+    void SetScales(size_t & count, size_t numberOfComponents, double scale)
+    {
+      for (size_t i = 0; i < numberOfComponents; ++i, ++count) {
+        m_Scales[count] = scale;
+      }
+    }
 
     TransformInitializer()
     {
       this->SetNumberOfRequiredInputs(0);
       this->SetNumberOfRequiredOutputs(0);
-      m_TypeOfTransform = EnumTransform::Euler3D;
       m_Transform = nullptr;
     }
     ~TransformInitializer() {}
