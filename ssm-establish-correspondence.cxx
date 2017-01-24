@@ -1,4 +1,5 @@
 ﻿#include <boost/program_options.hpp>
+#include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
@@ -14,6 +15,7 @@
 
 struct RegistrationOptions
 {
+  size_t transform = 1;
   std::vector<double> parameters;
   std::vector<double> regularization;
   double scale = 100;
@@ -43,6 +45,7 @@ int main(int argc, char** argv)
   std::string referenceFile;
   parser->GetCommandLineArgument("-reference", referenceFile);
 
+  parser->GetCommandLineArgument("-transform", options.transform);
   parser->GetCommandLineArgument("-iterations", options.iterations);
   parser->GetCommandLineArgument("-regularization", options.regularization);
   parser->GetCommandLineArgument("-parameters", options.parameters);
@@ -152,7 +155,7 @@ int main(int argc, char** argv)
         }
       }
 
-      // compute metrics and write surface to file
+      // compute metrics and write output surface to file
       if (stage + 1 == numberOfStages) {
         // compute metrics
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
@@ -244,6 +247,59 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
       model = BuildGPModel(surface, options.parameters[stage], options.scale, model->GetNumberOfPrincipalComponents());
     }
 
+    // initialize spatial transform
+    MeshType::BoundingBoxType::ConstPointer boundingBox = model->DrawMean()->GetBoundingBox();
+    BinaryImageType::SpacingType spacing(1);
+    BinaryImageType::PointType origin = boundingBox->GetMinimum();
+    BinaryImageType::SizeType size;
+    for (size_t i = 0; i < Dimension; ++i) {
+      size[i] = (boundingBox->GetMaximum()[i] - boundingBox->GetMinimum()[i]) / spacing[i];
+    }
+
+    typedef itk::TriangleMeshToBinaryImageFilter<MeshType, BinaryImageType> ShapeToBinaryImageFilterType;
+    ShapeToBinaryImageFilterType::Pointer shapeToImage = ShapeToBinaryImageFilterType::New();
+    shapeToImage->SetInput(model->DrawMean());
+    shapeToImage->SetSize(size);
+    shapeToImage->SetOrigin(origin);
+    shapeToImage->SetSpacing(spacing);
+    shapeToImage->SetOutsideValue(0);
+    shapeToImage->SetInsideValue(1);
+    try {
+      shapeToImage->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cout << excep << std::endl;
+      throw;
+    }
+
+    // moment calculators
+    typedef itk::ImageMomentsCalculator<BinaryImageType>  ImageCalculatorType;
+    ImageCalculatorType::Pointer movingCalculator = ImageCalculatorType::New();
+    movingCalculator->SetImage(shapeToImage->GetOutput());
+    movingCalculator->Compute();
+
+    ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
+    fixedCalculator->SetImage(levelset->GetMask());
+    fixedCalculator->Compute();
+
+    typedef ImageCalculatorType::VectorType VectorType;
+    VectorType center = movingCalculator->GetCenterOfGravity();
+    VectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
+
+    typedef ssm::TransformInitializer<double> TransformInitializerType;
+    TransformInitializerType::Pointer initializer = TransformInitializerType::New();
+    initializer->SetTypeOfTransform(options.transform);
+    initializer->SetCenter(center);
+    initializer->SetTranslation(translation);
+    try {
+      initializer->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cout << excep << std::endl;
+      throw;
+    }
+    initializer->PrintReport(std::cout);
+
     // perform registration
     typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
     ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
@@ -253,6 +309,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
     shapeModelToSurfaceRegistration->SetNumberOfIterations(options.iterations);
     shapeModelToSurfaceRegistration->SetRegularizationParameter(options.regularization[stage]);
     shapeModelToSurfaceRegistration->SetDegree(options.degree);
+    shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
     try {
       shapeModelToSurfaceRegistration->Update();
     }
