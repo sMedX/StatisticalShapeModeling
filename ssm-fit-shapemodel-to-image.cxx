@@ -43,7 +43,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
   std::cout << " shape model to image registration" << std::endl;
   std::cout << "            model file " << modelFile << std::endl;
-  std::cout << "    input surface file " << imageFile << std::endl;
+  std::cout << "      input image file " << imageFile << std::endl;
   std::cout << "   output surface file " << outputFile << std::endl;
   std::cout << "  number of iterations " << numberOfIterations << std::endl;
   std::cout << "     type of transform " << typeOfransform << std::endl;
@@ -57,7 +57,6 @@ int main(int argc, char** argv)
   if (!readImage<BinaryImageType>(image, imageFile)) {
     return EXIT_FAILURE;
   }
-
   std::cout << "image " << imageFile << std::endl;
   std::cout << "size    " << image->GetLargestPossibleRegion().GetSize() << std::endl;
   std::cout << "spacing " << image->GetSpacing() << std::endl;

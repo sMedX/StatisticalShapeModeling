@@ -1,5 +1,7 @@
 ﻿#include <boost/program_options.hpp>
 #include <itkImageMomentsCalculator.h>
+#include <itkTriangleMeshToBinaryImageFilter.h>
+#include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
@@ -11,9 +13,6 @@
 #include "ssm/ssmPointSetToImageMetrics.h"
 #include "ssm/ssmShapeModelToImageRegistrationMethod.h"
 #include "ssm/ssmSurfaceToLevelSetImageFilter.h"
-
-typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
 
 int main(int argc, char** argv)
 {
@@ -30,20 +29,14 @@ int main(int argc, char** argv)
   std::string outputFile;
   parser->GetCommandLineArgument("-output", outputFile);
 
-  size_t numberOfIterations = 500;
-  parser->GetCommandLineArgument("-iterations", numberOfIterations);
-
   size_t typeOfransform = 1;
   parser->GetCommandLineArgument("-transform", typeOfransform);
 
-  std::vector<double> regularization(0.1);
+  size_t numberOfIterations = 500;
+  parser->GetCommandLineArgument("-iterations", numberOfIterations);
+
+  double regularization = 0.1;
   parser->GetCommandLineArgument("-regularization", regularization);
-
-  std::vector<double> parameters;
-  parser->GetCommandLineArgument("-parameters", parameters);
-
-  double scale = 100;
-  parser->GetCommandLineArgument("-scale", scale);
 
   size_t degree = 2;
   parser->GetCommandLineArgument("-degree", degree);
@@ -56,24 +49,7 @@ int main(int argc, char** argv)
   std::cout << "  number of iterations " << numberOfIterations << std::endl;
   std::cout << "     type of transform " << typeOfransform << std::endl;
   std::cout << "                degree " << degree << std::endl;
-
-  unsigned int numberOfStages = parameters.size() + 1;
-
-  for (int stage = regularization.size(); stage < numberOfStages; ++stage) {
-    regularization.push_back(regularization.back());
-  }
-
-  std::cout << "        regularization ";
-  for (int stage = 0; stage < regularization.size(); ++stage) {
-    std::cout << regularization[stage] << " ";
-  }
-  std::cout << std::endl;
-
-  std::cout << "            parameters ";
-  for (int stage = 0; stage < parameters.size(); ++stage) {
-    std::cout << parameters[stage] << " ";
-  }
-  std::cout << std::endl;
+  std::cout << "        regularization " << regularization << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -82,10 +58,9 @@ int main(int argc, char** argv)
   if (!readMesh<MeshType>(surface, surfaceFile)) {
     return EXIT_FAILURE;
   }
-
-  std::cout << "surface " << surfaceFile << std::endl;
-  std::cout << "number of cells  " << surface->GetNumberOfCells() << std::endl;
-  std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
+  std::cout << "surface " << surface << std::endl;
+  std::cout << "number of cells   " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "number of points  " << surface->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -110,11 +85,14 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // compute level set image
+  double margin = 0.20;
+  BinaryImageType::SpacingType spacing(1);
+
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
+  levelset->SetMargin(margin);
+  levelset->SetSpacing(spacing);
   levelset->SetInput(surface);
-  levelset->SetMargin(0.10);
-  levelset->SetSpacing(1.0);
   try {
     levelset->Update();
   }
@@ -125,7 +103,6 @@ int main(int argc, char** argv)
 
   // initialize spatial transform
   MeshType::BoundingBoxType::ConstPointer boundingBox = model->DrawMean()->GetBoundingBox();
-  BinaryImageType::SpacingType spacing(1);
   BinaryImageType::PointType origin = boundingBox->GetMinimum();
   BinaryImageType::SizeType size;
   for (size_t n = 0; n < Dimension; ++n) {
@@ -181,32 +158,22 @@ int main(int argc, char** argv)
   typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
   ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
 
-  for (int stage = 0; stage < numberOfStages; ++stage) {
-    std::cout << "registration stage (" << stage + 1 << " / " << numberOfStages << ")" << std::endl;
-
-    // perform registration
-    shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
-    shapeModelToSurfaceRegistration->SetShapeModel(model);
-    shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
-    shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
-    shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization[stage]);
-    shapeModelToSurfaceRegistration->SetDegree(degree);
-    shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
-    try {
-      shapeModelToSurfaceRegistration->Update();
-    }
-    catch (itk::ExceptionObject& excep) {
-      std::cerr << excep << std::endl;
-      return EXIT_FAILURE;
-    }
-    shapeModelToSurfaceRegistration->PrintReport(std::cout);
-
-    // build new model
-    if (stage + 1 < numberOfStages) {
-      MeshType::Pointer reference = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
-      model = BuildGPModel(reference, parameters[stage], scale, model->GetNumberOfPrincipalComponents());
-    }
+  // perform registration
+  shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
+  shapeModelToSurfaceRegistration->SetShapeModel(model);
+  shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
+  shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
+  shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization);
+  shapeModelToSurfaceRegistration->SetDegree(degree);
+  shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
+  try {
+    shapeModelToSurfaceRegistration->Update();
   }
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+  shapeModelToSurfaceRegistration->PrintReport(std::cout);
 
   typedef std::pair<std::string, std::string> PairType;
   std::vector<PairType> info;
@@ -251,42 +218,3 @@ int main(int argc, char** argv)
 
   return EXIT_SUCCESS;
 }
-
-StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions)
-{
-  // create kernel
-  typedef DataTypeShape::PointType PointType;
-  auto gaussianKernel = new GaussianKernel<PointType>(parameters);
-
-  typedef std::shared_ptr<const statismo::ScalarValuedKernel<PointType>> MatrixPointerType;
-  MatrixPointerType kernel(gaussianKernel);
-
-  typedef std::shared_ptr<statismo::MatrixValuedKernel<PointType>> KernelPointerType;
-  KernelPointerType unscaledKernel(new statismo::UncorrelatedMatrixValuedKernel<PointType>(kernel.get(), Dimension));
-  KernelPointerType modelBuildingKernel(new statismo::ScaledKernel<PointType>(unscaledKernel.get(), scale));
-
-  typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
-  typedef RepresenterType::DatasetPointerType DatasetPointerType;
-  RepresenterType::Pointer representer = RepresenterType::New();
-  representer->SetReference(surface);
-
-  // build model
-  typedef itk::LowRankGPModelBuilder<MeshType> ModelBuilderType;
-  ModelBuilderType::Pointer modelBuilder = ModelBuilderType::New();
-  modelBuilder->SetRepresenter(representer);
-
-  // build and save model to file
-  typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-  StatisticalModelType::Pointer model;
-  try {
-    model = modelBuilder->BuildNewModel(representer->IdentitySample(), *modelBuildingKernel.get(), numberOfBasisFunctions);
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    throw;
-  }
-
-  return model;
-}
-
-
