@@ -12,6 +12,7 @@
 
 #include "ssm/ssmPointSetToImageMetrics.h"
 #include "ssm/ssmShapeModelToImageRegistrationMethod.h"
+#include "ssm/ssmBinaryImageToLevelSetImageFilter.h"
 
 int main(int argc, char** argv)
 {
@@ -84,12 +85,11 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // compute level set image
-  typedef itk::SignedMaurerDistanceMapImageFilter<BinaryImageType, FloatImageType> DistanceFilterType;
-  DistanceFilterType::Pointer distancemap = DistanceFilterType::New();
-  distancemap->SetInput(image);
-  distancemap->SetUseImageSpacing(true);
+  typedef ssm::BinaryImageToLevelSetImageFilter<BinaryImageType, FloatImageType> BinaryImageToLevelSetImageType;
+  BinaryImageToLevelSetImageType::Pointer levelset = BinaryImageToLevelSetImageType::New();
+  levelset->SetInput(image);
   try {
-    distancemap->Update();
+    levelset->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
   // perform registration
   shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
   shapeModelToSurfaceRegistration->SetShapeModel(model);
-  shapeModelToSurfaceRegistration->SetLevelSetImage(distancemap->GetOutput());
+  shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
   shapeModelToSurfaceRegistration->SetNumberOfIterations(numberOfIterations);
   shapeModelToSurfaceRegistration->SetRegularizationParameter(regularization);
   shapeModelToSurfaceRegistration->SetDegree(degree);
