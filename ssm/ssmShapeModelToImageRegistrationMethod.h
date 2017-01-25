@@ -97,6 +97,7 @@ namespace ssm
     itkGetObjectMacro(TransformInitializer, TransformInitializerType);
 
     void PrintReport(std::ostream& os);
+    itk::TimeProbe::CountType GetElapsedTime() { return m_Clock.GetTotal(); }
 
   protected:
     ShapeModelToImageRegistrationMethod();

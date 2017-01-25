@@ -174,6 +174,7 @@ int main(int argc, char** argv)
   typedef std::pair<std::string, std::string> PairType;
   std::vector<PairType> info;
   info.push_back(PairType("Metric", std::to_string(shapeModelToSurfaceRegistration->GetOptimizer()->GetValue())));
+  info.push_back(PairType("Elapsed time", std::to_string(shapeModelToSurfaceRegistration->GetElapsedTime())));
 
   //----------------------------------------------------------------------------
   // compute metrics
