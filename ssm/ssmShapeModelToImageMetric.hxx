@@ -16,7 +16,7 @@ ShapeModelToImageMetric<TShapeModel, TImage>::ShapeModelToImageMetric()
   m_ShapeModel = nullptr;
   m_PointsContainer = nullptr;
   m_Image = nullptr;
-  m_Transform = nullptr;
+  m_SpatialTransform = nullptr;
   m_Interpolator = nullptr;
   m_ComputeGradient = true;
   m_GradientImage = nullptr;
@@ -44,11 +44,10 @@ template<typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::Initialize(void)
 throw ( itk::ExceptionObject )
 {
-  if( !m_Transform ) {
-    itkExceptionMacro(<< "Transform is not present");
+  if( !m_SpatialTransform ) {
+    itkExceptionMacro(<< "Spatial transform is not present");
   }
-
-  m_NumberOfParameters = this->GetNumberOfParameters();
+  m_NumberOfSpatialParameters = m_SpatialTransform->GetNumberOfParameters();
 
   if( !m_Image ) {
     itkExceptionMacro(<< "Image is not present");
@@ -67,7 +66,12 @@ throw ( itk::ExceptionObject )
   if (!m_ShapeModel) {
     itkExceptionMacro(<< "ShapeModel is not present");
   }
+
   m_NumberOfComponents = m_ShapeModel->GetNumberOfPrincipalComponents();
+  m_ShapeTransform.set_size(m_NumberOfComponents);
+
+  m_NumberOfParameters = m_NumberOfComponents + m_NumberOfSpatialParameters;
+  m_SpatialParameters.set_size(m_NumberOfParameters - m_NumberOfComponents);
 
   if ( m_ComputeGradient ) {
     double sigma = m_Image->GetSpacing().Get_vnl_vector().max_value();
@@ -100,22 +104,24 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::MultiThreadingInitialize()
 
   m_Threads.clear();
 
-  for (unsigned int t = 0; t < m_NumberOfThreads; ++t) {
+  for (size_t t = 0; t < m_NumberOfThreads; ++t) {
     PerThreadData thread;
 
     thread.m_Derivative = DerivativeType(m_NumberOfParameters);
-    thread.m_Jacobian = TransformJacobianType(TImage::ImageDimension, m_NumberOfParameters);
-    thread.m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
+    thread.m_Jacobian = TransformJacobianType(PointDimension, m_NumberOfParameters);
+    thread.m_JacobianCache = TransformJacobianType(PointDimension, PointDimension);
+    thread.m_ModelJacobian = TransformJacobianType(PointDimension, m_NumberOfComponents);
+    thread.m_SpatialJacobian = TransformJacobianType(PointDimension, m_NumberOfSpatialParameters);
 
     m_Threads.push_back(thread);
   }
 
-  NumberOfSamplesPerThread = itk::Math::Ceil<unsigned int, double>(m_PointsContainer->Size() / (double)m_NumberOfThreads);
+  size_t numberOfSamplesPerThread = itk::Math::Ceil<size_t, double>(m_PointsContainer->Size() / (double)m_NumberOfThreads);
   PointIteratorType iter = m_PointsContainer->Begin();
 
-  for (unsigned int t = 0; t < m_NumberOfThreads; ++t) {
+  for (size_t t = 0; t < m_NumberOfThreads; ++t) {
     m_Threads[t].m_Begin = iter;
-    m_Threads[t].m_End = (iter += NumberOfSamplesPerThread);
+    m_Threads[t].m_End = (iter += numberOfSamplesPerThread);
   }
 
   m_Threads[m_NumberOfThreads - 1].m_End = m_PointsContainer->End();
@@ -150,7 +156,15 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetDerivative(const Transform
 template <typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
 {
-  m_Transform->SetParameters(parameters);
+  for (size_t i = 0; i < m_NumberOfComponents; ++i) {
+    m_ShapeTransform[i] = parameters[i];
+  }
+
+  for (size_t i = 0; i < m_NumberOfSpatialParameters; ++i) {
+    m_SpatialParameters[i] = parameters[m_NumberOfComponents + i];
+  }
+
+  m_SpatialTransform->SetParameters(m_SpatialParameters);
 
   #pragma omp parallel num_threads(m_NumberOfThreads)
   {
@@ -196,19 +210,32 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
 
   for (PointIteratorType iter = thread.m_Begin; iter != thread.m_End; ++iter) {
     InputPointType point = iter.Value();
-    OutputPointType transformedPoint = m_Transform->TransformPoint(point);
+
+    const OutputPointType modelTransformedPoint = m_ShapeModel->DrawSampleAtPoint(m_ShapeTransform, iter.Index());
+    const OutputPointType transformedPoint = m_SpatialTransform->TransformPoint(modelTransformedPoint);
 
     if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
       thread.m_NumberOfSamplesCounted++;
 
       // compute the derivatives
-      m_Transform->ComputeJacobianWithRespectToParametersCachedTemporaries(point, thread.m_Jacobian, thread.m_JacobianCache);
+      const typename TShapeModel::MatrixType & jacobian = m_ShapeModel->GetJacobian(iter.Index());
+      for (size_t i = 0; i < PointDimension; ++i) {
+        for (size_t k = 0; k < m_NumberOfComponents; ++k) {
+          thread.m_ModelJacobian[i][k] = jacobian[i][k];
+        }
+      }
+
+      m_SpatialTransform->ComputeJacobianWithRespectToParameters(modelTransformedPoint, thread.m_SpatialJacobian);
+      thread.m_Jacobian.update(thread.m_SpatialJacobian, 0, m_NumberOfComponents);
+
+      m_SpatialTransform->ComputeJacobianWithRespectToPosition(modelTransformedPoint, thread.m_JacobianCache);
+      thread.m_Jacobian.update(thread.m_JacobianCache * thread.m_ModelJacobian, 0, 0);
 
       // get the gradient by NearestNeighboorInterpolation, which is equivalent to round up the point components.
       typedef typename OutputPointType::CoordRepType CoordRepType;
-      typedef itk::ContinuousIndex<CoordRepType, ImageType::ImageDimension> MovingImageContinuousIndexType;
-
+      typedef typename itk::ContinuousIndex<CoordRepType, ImageDimension> MovingImageContinuousIndexType;
       MovingImageContinuousIndexType index;
+
       m_Image->TransformPhysicalPointToContinuousIndex(transformedPoint, index);
       typename ImageType::IndexType mappedIndex;
       mappedIndex.CopyWithRound(index);
@@ -278,7 +305,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::PrintSelf(std::ostream & os, 
   Superclass::PrintSelf(os, indent);
   os << indent << "Moving image      " << m_Image.GetPointer()  << std::endl;
   os << indent << "Gradient image    " << m_GradientImage.GetPointer()   << std::endl;
-  os << indent << "Transform         " << m_Transform.GetPointer()    << std::endl;
+  os << indent << "Spatial transform " << m_SpatialTransform.GetPointer()    << std::endl;
   os << indent << "Interpolator      " << m_Interpolator.GetPointer() << std::endl;
   os << indent << "Number of samples " << m_NumberOfSamplesCounted << std::endl;
   os << indent << "Compute gradient  " << m_ComputeGradient << std::endl;
