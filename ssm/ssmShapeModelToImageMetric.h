@@ -176,7 +176,7 @@ protected:
   unsigned int NumberOfSamplesPerThread;
   mutable std::vector<PerThreadData> m_Threads;
 
-  inline void GetValueAndDerivativeThreadProcessSample(PerThreadData & data, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
+  inline void GetValueAndDerivativeThreadProcessSample(PerThreadData & data) const;
   void MultiThreadingInitialize();
 
 private:

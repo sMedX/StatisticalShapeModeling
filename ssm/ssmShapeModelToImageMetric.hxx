@@ -156,7 +156,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   {
     #pragma omp for
     for (int t = 0; t < m_NumberOfThreads; ++t) {
-      GetValueAndDerivativeThreadProcessSample(m_Threads[t], parameters, value, derivative);
+      GetValueAndDerivativeThreadProcessSample(m_Threads[t]);
     }
   }
 
@@ -188,7 +188,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 }
 
 template <typename TShapeModel, typename TImage>
-inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeThreadProcessSample(PerThreadData & thread, const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
+inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeThreadProcessSample(PerThreadData & thread) const
 {
   thread.m_NumberOfSamplesCounted = 0;
   thread.m_Value = itk::NumericTraits<MeasureType>::ZeroValue();
