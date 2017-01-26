@@ -294,9 +294,9 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValueAndDerivativePe
   #pragma omp parallel reduction (+: penaltyValue) num_threads(m_NumberOfThreads)
   {
     # pragma omp for
-    for (int n = 0; n < m_NumberOfComponents; ++n) {
-      penaltyValue += parameters[n] * parameters[n];
-      derivative[n] += 2 * parameters[n] * m_RegularizationParameter;
+    for (int i = 0; i < m_NumberOfComponents; ++i) {
+      penaltyValue += parameters[i] * parameters[i];
+      derivative[i] += 2 * parameters[i] * m_RegularizationParameter;
     }
   }
 
