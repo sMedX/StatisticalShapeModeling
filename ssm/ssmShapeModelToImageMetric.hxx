@@ -187,7 +187,10 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   }
   else {
     value /= m_NumberOfSamplesCounted;
-    derivative = DerivativeType(m_NumberOfParameters);
+
+    if (derivative.size() != m_NumberOfParameters) {
+      derivative.set_size(m_NumberOfParameters);
+    }
 
     #pragma omp parallel num_threads(m_NumberOfThreads)
     {
