@@ -176,16 +176,10 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 
   m_NumberOfSamplesCounted = 0;
   value = itk::NumericTraits<MeasureType>::ZeroValue();
-  derivative = DerivativeType(m_NumberOfParameters);
-  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
 
   for (size_t t = 0; t < m_NumberOfThreads; ++t ) {
     value += m_Threads[t].m_Value;
     m_NumberOfSamplesCounted += m_Threads[t].m_NumberOfSamplesCounted;
-
-    for (size_t i = 0; i < m_NumberOfParameters; ++i) {
-      derivative[i] += m_Threads[t].m_Derivative[i];
-    }
   }
 
   if (!m_NumberOfSamplesCounted) {
@@ -193,8 +187,18 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   }
   else {
     value /= m_NumberOfSamplesCounted;
-    for (size_t i = 0; i < m_NumberOfParameters; i++) {
-      derivative[i] /= m_NumberOfSamplesCounted;
+    derivative = DerivativeType(m_NumberOfParameters);
+
+    #pragma omp parallel num_threads(m_NumberOfThreads)
+    {
+      #pragma omp for
+      for (int i = 0; i < m_NumberOfParameters; ++i) {
+        typename DerivativeType::ValueType sum = itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue();
+        for (size_t t = 0; t < m_NumberOfThreads; ++t) {
+          sum += m_Threads[t].m_Derivative[i];
+        }
+        derivative[i] = sum / m_NumberOfSamplesCounted;
+      }
     }
   }
 
