@@ -138,8 +138,6 @@ public:
   void GetValueAndDerivative(const TransformParametersType & parameters, MeasureType & Value, DerivativeType & Derivative) const ITK_OVERRIDE;
 
   /**Compute penalty.  */
-  void CalculateValuePenalty(const TransformParametersType& parameters, MeasureType & value) const;
-  void CalculateDerivativePenalty(const TransformParametersType& parameters, DerivativeType & derivative) const;
   void CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 protected:
@@ -160,6 +158,7 @@ protected:
   size_t m_NumberOfComponents;
   size_t m_NumberOfSpatialParameters;
   size_t m_NumberOfParameters;
+  mutable size_t m_NumberOfEvaluations;
 
   mutable typename TShapeModel::VectorType m_ShapeTransform;
   mutable TransformParametersType m_SpatialParameters;

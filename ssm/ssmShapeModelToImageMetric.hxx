@@ -23,6 +23,7 @@ ShapeModelToImageMetric<TShapeModel, TImage>::ShapeModelToImageMetric()
   m_NumberOfSamplesCounted = 0;
   m_NumberOfThreads = 0;
   m_MaximalNumberOfThreads = 0;
+  m_NumberOfEvaluations = 0;
 }
 
 /**
@@ -91,6 +92,7 @@ throw ( itk::ExceptionObject )
   }
 
   this->MultiThreadingInitialize();
+  m_NumberOfEvaluations = 0;
 }
 
 template<typename TShapeModel, typename TImage>
@@ -188,7 +190,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   else {
     value /= m_NumberOfSamplesCounted;
 
-    if (derivative.size() != m_NumberOfParameters) {
+    if (m_NumberOfEvaluations == 0) {
       derivative.set_size(m_NumberOfParameters);
     }
 
@@ -206,6 +208,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   }
 
   this->CalculateValueAndDerivativePenalty(parameters, value, derivative);
+  m_NumberOfEvaluations++;
 }
 
 template <typename TShapeModel, typename TImage>
@@ -268,24 +271,6 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
 /**
 * Compute penalty
 */
-template <typename TShapeModel, typename TImage>
-void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValuePenalty(const TransformParametersType & parameters, MeasureType & value) const
-{
-  MeasureType penaltyValue = 0;
-  for (size_t n = 0; n < m_NumberOfComponents; ++n) {
-    penaltyValue += parameters[n] * parameters[n];
-  }
-  value += penaltyValue * m_RegularizationParameter;
-}
-
-template<typename TShapeModel, typename TImage>
-void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateDerivativePenalty(const TransformParametersType & parameters, DerivativeType  & derivative) const
-{
-  for (size_t n = 0; n < m_NumberOfComponents; ++n) {
-    derivative[n] += 2 * parameters[n] * m_RegularizationParameter;
-  }
-}
-
 template<typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
 {
