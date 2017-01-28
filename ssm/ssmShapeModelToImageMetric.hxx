@@ -137,8 +137,7 @@ typename ShapeModelToImageMetric<TShapeModel, TImage>::MeasureType
 ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParametersType & parameters ) const
 {
   MeasureType value = itk::NumericTraits<MeasureType>::ZeroValue();
-  DerivativeType derivative = DerivativeType(m_NumberOfParameters);
-  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
+  DerivativeType derivative;
   this->GetValueAndDerivative(parameters, value, derivative);
   return value;
 }
@@ -149,7 +148,8 @@ ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParameters
 template <typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::GetDerivative(const TransformParametersType & parameters, DerivativeType & derivative) const
 {
-  itkExceptionMacro(<< "not implemented");
+  MeasureType value = itk::NumericTraits<MeasureType>::ZeroValue();
+  this->GetValueAndDerivative(parameters, value, derivative);
 }
 
 /*
@@ -190,7 +190,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   else {
     value /= m_NumberOfSamplesCounted;
 
-    if (m_NumberOfEvaluations == 0) {
+    if (derivative.size() != m_NumberOfParameters) {
       derivative.set_size(m_NumberOfParameters);
     }
 
