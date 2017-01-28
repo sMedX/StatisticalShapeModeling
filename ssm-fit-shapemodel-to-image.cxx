@@ -54,7 +54,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // read surface
+  // read image
   BinaryImageType::Pointer image = BinaryImageType::New();
   if (!readImage<BinaryImageType>(image, imageFile)) {
     return EXIT_FAILURE;
