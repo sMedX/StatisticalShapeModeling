@@ -137,7 +137,7 @@ typename ShapeModelToImageMetric<TShapeModel, TImage>::MeasureType
 ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParametersType & parameters ) const
 {
   MeasureType value = itk::NumericTraits<MeasureType>::ZeroValue();
-  DerivativeType derivative;
+  DerivativeType derivative = DerivativeType(m_NumberOfParameters);
   this->GetValueAndDerivative(parameters, value, derivative);
   return value;
 }
