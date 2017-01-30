@@ -76,7 +76,8 @@ throw ( itk::ExceptionObject )
   m_SpatialParameters.set_size(m_NumberOfParameters - m_NumberOfComponents);
 
   if ( m_ComputeGradient ) {
-    double sigma = m_Image->GetSpacing().Get_vnl_vector().max_value();
+    typename ImageType::SpacingType sp=m_Image->GetSpacing();
+    double sigma = sp.GetVnlVector().max_value();
 
     GradientImageFilterPointer gradient = GradientImageFilterType::New();
     gradient->SetInput(m_Image);
