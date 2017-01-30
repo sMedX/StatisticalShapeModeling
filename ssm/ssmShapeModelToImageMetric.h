@@ -82,10 +82,10 @@ public:
   itkGetConstObjectMacro(Image, ImageType);
 
   /** Connect the Transform. */
-  itkSetObjectMacro(SpatialTransform, TransformType);
+  itkSetObjectMacro(Transform, TransformType);
 
   /** Get a pointer to the Transform.  */
-  itkGetModifiableObjectMacro(SpatialTransform, TransformType);
+  itkGetModifiableObjectMacro(Transform, TransformType);
 
   /** Connect the Interpolator. */
   itkSetObjectMacro(Interpolator, InterpolatorType);
@@ -105,12 +105,12 @@ public:
   itkSetMacro(RegularizationParameter, MeasureType);
   itkGetMacro(RegularizationParameter, MeasureType);
 
-  itkSetMacro(Degree, size_t);
-  itkGetMacro(Degree, size_t);
+  itkSetMacro(Degree, unsigned int);
+  itkGetMacro(Degree, unsigned int);
 
-  itkSetMacro(NumberOfThreads, size_t);
-  itkGetMacro(NumberOfThreads, size_t);
-  itkGetMacro(MaximalNumberOfThreads, size_t);
+  itkSetMacro(NumberOfThreads, unsigned int);
+  itkGetMacro(NumberOfThreads, unsigned int);
+  itkGetMacro(MaximalNumberOfThreads, unsigned int);
 
   /** Set/Get the flag for computing the image gradient.
    *  When ON the metric derivative is computed using the Jacobian of the
@@ -122,7 +122,7 @@ public:
   itkGetConstReferenceMacro(ComputeGradient, bool);
 
   /** Return the number of parameters required by the Transform */
-  virtual unsigned int GetNumberOfParameters(void) const ITK_OVERRIDE {return m_NumberOfParameters;}
+  virtual unsigned int GetNumberOfParameters(void) const ITK_OVERRIDE { return m_Transform->GetNumberOfParameters(); }
 
   /** Initialize the Metric by making sure that all the components are present and plugged together correctly     */
   virtual void Initialize(void)
@@ -138,6 +138,8 @@ public:
   void GetValueAndDerivative(const TransformParametersType & parameters, MeasureType & Value, DerivativeType & Derivative) const ITK_OVERRIDE;
 
   /**Compute penalty.  */
+  void CalculateValuePenalty(const TransformParametersType& parameters, MeasureType & value) const;
+  void CalculateDerivativePenalty(const TransformParametersType& parameters, DerivativeType & derivative) const;
   void CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
 protected:
@@ -148,20 +150,15 @@ protected:
   mutable itk::SizeValueType m_NumberOfSamplesCounted;
   typename PointsContainerType::Pointer m_PointsContainer;
   ImageConstPointer m_Image;
-  mutable TransformPointer m_SpatialTransform;
+  mutable TransformPointer m_Transform;
   InterpolatorPointer m_Interpolator;
   bool m_ComputeGradient;
   GradientImagePointer m_GradientImage;
   typename TShapeModel::ConstPointer m_ShapeModel;
   MeasureType m_RegularizationParameter = 0.1;
-  size_t m_Degree = 2;
-  size_t m_NumberOfComponents;
-  size_t m_NumberOfSpatialParameters;
-  size_t m_NumberOfParameters;
-  mutable size_t m_NumberOfEvaluations;
-
-  mutable typename TShapeModel::VectorType m_ShapeTransform;
-  mutable TransformParametersType m_SpatialParameters;
+  unsigned int m_NumberOfParameters;
+  unsigned int m_NumberOfComponents;
+  unsigned int m_Degree = 2;
 
   // multi threading members and methods
   struct PerThreadData
@@ -169,15 +166,14 @@ protected:
     itk::SizeValueType    m_NumberOfSamplesCounted;
     MeasureType           m_Value;
     DerivativeType        m_Derivative;
-    TransformJacobianType m_ModelJacobian;
-    TransformJacobianType m_SpatialJacobian;
     TransformJacobianType m_Jacobian;
     TransformJacobianType m_JacobianCache;
     PointIteratorType     m_Begin;
     PointIteratorType     m_End;
   };
-  size_t m_MaximalNumberOfThreads;
-  size_t m_NumberOfThreads;
+  unsigned int m_MaximalNumberOfThreads;
+  unsigned int m_NumberOfThreads;
+  unsigned int NumberOfSamplesPerThread;
   mutable std::vector<PerThreadData> m_Threads;
 
   inline void GetValueAndDerivativeThreadProcessSample(PerThreadData & data) const;

@@ -2,7 +2,8 @@
 
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
-
+#include <itkVector.h>
+#include <vnl/vnl_vector.h>
 #include "ssmShapeModelToImageMetric.h"
 
 namespace itk
@@ -16,14 +17,13 @@ ShapeModelToImageMetric<TShapeModel, TImage>::ShapeModelToImageMetric()
   m_ShapeModel = nullptr;
   m_PointsContainer = nullptr;
   m_Image = nullptr;
-  m_SpatialTransform = nullptr;
+  m_Transform = nullptr;
   m_Interpolator = nullptr;
   m_ComputeGradient = true;
   m_GradientImage = nullptr;
   m_NumberOfSamplesCounted = 0;
   m_NumberOfThreads = 0;
   m_MaximalNumberOfThreads = 0;
-  m_NumberOfEvaluations = 0;
 }
 
 /**
@@ -45,10 +45,11 @@ template<typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::Initialize(void)
 throw ( itk::ExceptionObject )
 {
-  if( !m_SpatialTransform ) {
-    itkExceptionMacro(<< "Spatial transform is not present");
+  if( !m_Transform ) {
+    itkExceptionMacro(<< "Transform is not present");
   }
-  m_NumberOfSpatialParameters = m_SpatialTransform->GetNumberOfParameters();
+
+  m_NumberOfParameters = this->GetNumberOfParameters();
 
   if( !m_Image ) {
     itkExceptionMacro(<< "Image is not present");
@@ -67,15 +68,11 @@ throw ( itk::ExceptionObject )
   if (!m_ShapeModel) {
     itkExceptionMacro(<< "ShapeModel is not present");
   }
-
   m_NumberOfComponents = m_ShapeModel->GetNumberOfPrincipalComponents();
-  m_ShapeTransform.set_size(m_NumberOfComponents);
-
-  m_NumberOfParameters = m_NumberOfComponents + m_NumberOfSpatialParameters;
-  m_SpatialParameters.set_size(m_NumberOfParameters - m_NumberOfComponents);
 
   if ( m_ComputeGradient ) {
-    double sigma = m_Image->GetSpacing().Get_vnl_vector().max_value();
+    typename ImageType::SpacingType sp=m_Image->GetSpacing();
+    double sigma = sp.GetVnlVector().max_value();
 
     GradientImageFilterPointer gradient = GradientImageFilterType::New();
     gradient->SetInput(m_Image);
@@ -92,7 +89,6 @@ throw ( itk::ExceptionObject )
   }
 
   this->MultiThreadingInitialize();
-  m_NumberOfEvaluations = 0;
 }
 
 template<typename TShapeModel, typename TImage>
@@ -106,24 +102,22 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::MultiThreadingInitialize()
 
   m_Threads.clear();
 
-  for (size_t t = 0; t < m_NumberOfThreads; ++t) {
+  for (unsigned int t = 0; t < m_NumberOfThreads; ++t) {
     PerThreadData thread;
 
     thread.m_Derivative = DerivativeType(m_NumberOfParameters);
-    thread.m_Jacobian = TransformJacobianType(PointDimension, m_NumberOfParameters);
-    thread.m_JacobianCache = TransformJacobianType(PointDimension, PointDimension);
-    thread.m_ModelJacobian = TransformJacobianType(PointDimension, m_NumberOfComponents);
-    thread.m_SpatialJacobian = TransformJacobianType(PointDimension, m_NumberOfSpatialParameters);
+    thread.m_Jacobian = TransformJacobianType(TImage::ImageDimension, m_NumberOfParameters);
+    thread.m_JacobianCache = TransformJacobianType(TImage::ImageDimension, TImage::ImageDimension);
 
     m_Threads.push_back(thread);
   }
 
-  size_t numberOfSamplesPerThread = itk::Math::Ceil<size_t, double>(m_PointsContainer->Size() / (double)m_NumberOfThreads);
+  NumberOfSamplesPerThread = itk::Math::Ceil<unsigned int, double>(m_PointsContainer->Size() / (double)m_NumberOfThreads);
   PointIteratorType iter = m_PointsContainer->Begin();
 
-  for (size_t t = 0; t < m_NumberOfThreads; ++t) {
+  for (unsigned int t = 0; t < m_NumberOfThreads; ++t) {
     m_Threads[t].m_Begin = iter;
-    m_Threads[t].m_End = (iter += numberOfSamplesPerThread);
+    m_Threads[t].m_End = (iter += NumberOfSamplesPerThread);
   }
 
   m_Threads[m_NumberOfThreads - 1].m_End = m_PointsContainer->End();
@@ -138,6 +132,7 @@ ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParameters
 {
   MeasureType value = itk::NumericTraits<MeasureType>::ZeroValue();
   DerivativeType derivative = DerivativeType(m_NumberOfParameters);
+  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
   this->GetValueAndDerivative(parameters, value, derivative);
   return value;
 }
@@ -148,8 +143,7 @@ ShapeModelToImageMetric<TShapeModel, TImage>::GetValue(const TransformParameters
 template <typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::GetDerivative(const TransformParametersType & parameters, DerivativeType & derivative) const
 {
-  MeasureType value = itk::NumericTraits<MeasureType>::ZeroValue();
-  this->GetValueAndDerivative(parameters, value, derivative);
+  itkExceptionMacro(<< "not implemented");
 }
 
 /*
@@ -158,15 +152,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetDerivative(const Transform
 template <typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
 {
-  for (size_t i = 0; i < m_NumberOfComponents; ++i) {
-    m_ShapeTransform[i] = parameters[i];
-  }
-
-  for (size_t i = 0; i < m_NumberOfSpatialParameters; ++i) {
-    m_SpatialParameters[i] = parameters[m_NumberOfComponents + i];
-  }
-
-  m_SpatialTransform->SetParameters(m_SpatialParameters);
+  m_Transform->SetParameters(parameters);
 
   #pragma omp parallel num_threads(m_NumberOfThreads)
   {
@@ -178,10 +164,16 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
 
   m_NumberOfSamplesCounted = 0;
   value = itk::NumericTraits<MeasureType>::ZeroValue();
+  derivative = DerivativeType(m_NumberOfParameters);
+  derivative.Fill(itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue());
 
   for (size_t t = 0; t < m_NumberOfThreads; ++t ) {
     value += m_Threads[t].m_Value;
     m_NumberOfSamplesCounted += m_Threads[t].m_NumberOfSamplesCounted;
+
+    for (size_t i = 0; i < m_NumberOfParameters; ++i) {
+      derivative[i] += m_Threads[t].m_Derivative[i];
+    }
   }
 
   if (!m_NumberOfSamplesCounted) {
@@ -189,26 +181,12 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const T
   }
   else {
     value /= m_NumberOfSamplesCounted;
-
-    if (derivative.size() != m_NumberOfParameters) {
-      derivative.set_size(m_NumberOfParameters);
-    }
-
-    #pragma omp parallel num_threads(m_NumberOfThreads)
-    {
-      #pragma omp for
-      for (int i = 0; i < m_NumberOfParameters; ++i) {
-        typename DerivativeType::ValueType sum = itk::NumericTraits<typename DerivativeType::ValueType>::ZeroValue();
-        for (size_t t = 0; t < m_NumberOfThreads; ++t) {
-          sum += m_Threads[t].m_Derivative[i];
-        }
-        derivative[i] = sum / m_NumberOfSamplesCounted;
-      }
+    for (size_t i = 0; i < m_NumberOfParameters; i++) {
+      derivative[i] /= m_NumberOfSamplesCounted;
     }
   }
 
   this->CalculateValueAndDerivativePenalty(parameters, value, derivative);
-  m_NumberOfEvaluations++;
 }
 
 template <typename TShapeModel, typename TImage>
@@ -220,32 +198,19 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
 
   for (PointIteratorType iter = thread.m_Begin; iter != thread.m_End; ++iter) {
     InputPointType point = iter.Value();
-
-    const OutputPointType modelTransformedPoint = m_ShapeModel->DrawSampleAtPoint(m_ShapeTransform, iter.Index());
-    const OutputPointType transformedPoint = m_SpatialTransform->TransformPoint(modelTransformedPoint);
+    OutputPointType transformedPoint = m_Transform->TransformPoint(point);
 
     if (this->m_Interpolator->IsInsideBuffer(transformedPoint)) {
       thread.m_NumberOfSamplesCounted++;
 
       // compute the derivatives
-      const typename TShapeModel::MatrixType & jacobian = m_ShapeModel->GetJacobian(iter.Index());
-      for (size_t i = 0; i < PointDimension; ++i) {
-        for (size_t k = 0; k < m_NumberOfComponents; ++k) {
-          thread.m_ModelJacobian[i][k] = jacobian[i][k];
-        }
-      }
-
-      m_SpatialTransform->ComputeJacobianWithRespectToParameters(modelTransformedPoint, thread.m_SpatialJacobian);
-      thread.m_Jacobian.update(thread.m_SpatialJacobian, 0, m_NumberOfComponents);
-
-      m_SpatialTransform->ComputeJacobianWithRespectToPosition(modelTransformedPoint, thread.m_JacobianCache);
-      thread.m_Jacobian.update(thread.m_JacobianCache * thread.m_ModelJacobian, 0, 0);
+      m_Transform->ComputeJacobianWithRespectToParametersCachedTemporaries(point, thread.m_Jacobian, thread.m_JacobianCache);
 
       // get the gradient by NearestNeighboorInterpolation, which is equivalent to round up the point components.
       typedef typename OutputPointType::CoordRepType CoordRepType;
-      typedef typename itk::ContinuousIndex<CoordRepType, ImageDimension> MovingImageContinuousIndexType;
-      MovingImageContinuousIndexType index;
+      typedef itk::ContinuousIndex<CoordRepType, ImageType::ImageDimension> MovingImageContinuousIndexType;
 
+      MovingImageContinuousIndexType index;
       m_Image->TransformPhysicalPointToContinuousIndex(transformedPoint, index);
       typename ImageType::IndexType mappedIndex;
       mappedIndex.CopyWithRound(index);
@@ -271,6 +236,24 @@ inline void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivativeT
 /**
 * Compute penalty
 */
+template <typename TShapeModel, typename TImage>
+void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValuePenalty(const TransformParametersType & parameters, MeasureType & value) const
+{
+  MeasureType penaltyValue = 0;
+  for (size_t n = 0; n < m_NumberOfComponents; ++n) {
+    penaltyValue += parameters[n] * parameters[n];
+  }
+  value += penaltyValue * m_RegularizationParameter;
+}
+
+template<typename TShapeModel, typename TImage>
+void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateDerivativePenalty(const TransformParametersType & parameters, DerivativeType  & derivative) const
+{
+  for (size_t n = 0; n < m_NumberOfComponents; ++n) {
+    derivative[n] += 2 * parameters[n] * m_RegularizationParameter;
+  }
+}
+
 template<typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
 {
@@ -279,9 +262,9 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::CalculateValueAndDerivativePe
   #pragma omp parallel reduction (+: penaltyValue) num_threads(m_NumberOfThreads)
   {
     # pragma omp for
-    for (int i = 0; i < m_NumberOfComponents; ++i) {
-      penaltyValue += parameters[i] * parameters[i];
-      derivative[i] += 2 * parameters[i] * m_RegularizationParameter;
+    for (int n = 0; n < m_NumberOfComponents; ++n) {
+      penaltyValue += parameters[n] * parameters[n];
+      derivative[n] += 2 * parameters[n] * m_RegularizationParameter;
     }
   }
 
@@ -297,7 +280,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::PrintSelf(std::ostream & os, 
   Superclass::PrintSelf(os, indent);
   os << indent << "Moving image      " << m_Image.GetPointer()  << std::endl;
   os << indent << "Gradient image    " << m_GradientImage.GetPointer()   << std::endl;
-  os << indent << "Spatial transform " << m_SpatialTransform.GetPointer()    << std::endl;
+  os << indent << "Transform         " << m_Transform.GetPointer()    << std::endl;
   os << indent << "Interpolator      " << m_Interpolator.GetPointer() << std::endl;
   os << indent << "Number of samples " << m_NumberOfSamplesCounted << std::endl;
   os << indent << "Compute gradient  " << m_ComputeGradient << std::endl;

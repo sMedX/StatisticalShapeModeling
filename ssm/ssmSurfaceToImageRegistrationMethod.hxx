@@ -13,6 +13,10 @@
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkMeanSquaresPointSetToImageMetric.h>
 #include <itkBinaryThresholdImageFilter.h>
+#include <limits>
+#include <type_traits>
+#include <algorithm>
+
 
 #include "ssmSurfaceToImageRegistrationMethod.h"
 
@@ -89,9 +93,9 @@ namespace ssm
   void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::ComputeLabelImage()
   {
     typedef itk::BinaryThresholdImageFilter <LevelsetImageType, BinaryImageType> BinaryThresholdImageFilterType;
-    BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
+    typename BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
     threshold->SetInput(m_LevelsetImage);
-    threshold->SetLowerThreshold(std::numeric_limits<LevelsetImageType::PixelType>::lowest());
+    threshold->SetLowerThreshold(double(std::numeric_limits<typename LevelsetImageType::PixelType>::lowest()));
     threshold->SetUpperThreshold(0);
     threshold->SetInsideValue(1);
     threshold->SetOutsideValue(0);
@@ -110,9 +114,9 @@ namespace ssm
     // Compute a bounding box of the input mesh
     typename TOutputMesh::BoundingBoxType::ConstPointer boundingBox = m_Surface->GetBoundingBox();
 
-    BinaryImageType::SpacingType spacing = m_Mask->GetSpacing();
-    BinaryImageType::PointType origin = boundingBox->GetMinimum();
-    BinaryImageType::SizeType size;
+    typename BinaryImageType::SpacingType spacing = m_Mask->GetSpacing();
+    typename BinaryImageType::PointType origin = boundingBox->GetMinimum();
+    typename BinaryImageType::SizeType size;
 
     for (int n = 0; n < PointDimension; ++n) {
       size[n] = (boundingBox->GetMaximum()[n] - boundingBox->GetMinimum()[n]) / spacing[n];
@@ -139,11 +143,11 @@ namespace ssm
     typedef itk::ImageMomentsCalculator<BinaryImageType>  ImageCalculatorType;
     typedef typename ImageCalculatorType::VectorType VectorType;
 
-    ImageCalculatorType::Pointer movingCalculator = ImageCalculatorType::New();
+    typename ImageCalculatorType::Pointer movingCalculator = ImageCalculatorType::New();
     movingCalculator->SetImage(shapeToImage->GetOutput());
     movingCalculator->Compute();
 
-    ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
+    typename ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
     fixedCalculator->SetImage(m_Mask);
     fixedCalculator->Compute();
 
