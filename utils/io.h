@@ -77,7 +77,7 @@ bool readMesh(typename TMesh::Pointer mesh, const std::string& fileName)
     reader->Update();
   }
   catch (itk::ExceptionObject& err) {
-    std::cerr << "Unable to write mesh to file '" << fileName << "'" << std::endl;
+    std::cerr << "Unable to read mesh to file '" << fileName << "'" << std::endl;
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
@@ -144,9 +144,9 @@ bool writeVTKPolydata(vtkPolyData* surface, const std::string& fileName)
 template <typename TransformType>
 bool writeTransform(const TransformType* transform, const std::string& fileName)
 {
-  typedef TransformType::ScalarType ScalarType;
+  typedef typename TransformType::ScalarType ScalarType;
 
-  itk::TransformFileWriterTemplate<ScalarType>::Pointer writer = itk::TransformFileWriterTemplate<ScalarType>::New();
+  typename itk::TransformFileWriterTemplate<ScalarType>::Pointer writer = itk::TransformFileWriterTemplate<ScalarType>::New();
   writer->SetInput(transform);
   writer->SetFileName(fileName);
 
