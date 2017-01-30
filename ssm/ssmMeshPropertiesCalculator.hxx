@@ -62,9 +62,9 @@ void MeshPropertiesCalculator< TMesh >::Compute()
   // compute binary mask
   // Compute a bounding box of the input mesh
   typename MeshType::BoundingBoxType::ConstPointer boundingBox = m_Mesh->GetBoundingBox();
-  typename BinaryImageType::SpacingType spacing(1);
-  typename BinaryImageType::PointType origin = boundingBox->GetMinimum();
-  typename BinaryImageType::SizeType size;
+  BinaryImageType::SpacingType spacing(1);
+  BinaryImageType::PointType origin = boundingBox->GetMinimum();
+  BinaryImageType::SizeType size;
 
   for (size_t n = 0; n < Dimension; ++n) {
     size[n] = (boundingBox->GetMaximum()[n] - boundingBox->GetMinimum()[n]) / spacing[n];
@@ -89,7 +89,7 @@ void MeshPropertiesCalculator< TMesh >::Compute()
 
   // moment image calculator
   typedef itk::ImageMomentsCalculator<BinaryImageType>  ImageCalculatorType;
-  typename ImageCalculatorType::Pointer m_ImageCalculator = ImageCalculatorType::New();
+  ImageCalculatorType::Pointer m_ImageCalculator = ImageCalculatorType::New();
   m_ImageCalculator->SetImage(m_Mask);
   try {
     m_ImageCalculator->Compute();

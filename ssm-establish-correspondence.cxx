@@ -136,9 +136,7 @@ int main(int argc, char** argv)
     StatisticalModelType::Pointer model = BuildGPModel(reference, options.parameters[0], options.scale, numberOfComponents);
 
     // initialize reference to zero
-    typedef itk::VectorContainer<long unsigned int,MeshType::PointType> VContainer;
-    
-    for (VContainer::Iterator iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
+    for (auto & iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
       iter.Value().Fill(0);
     }
 
@@ -150,7 +148,7 @@ int main(int argc, char** argv)
       MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, options);
 
       // add output to reference
-      for (VContainer::Iterator iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
+      for (auto & iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
         MeshType::PointType point = output->GetPoint(iter.Index());
         for (size_t d = 0; d < MeshType::PointDimension; ++d) {
           iter.Value()[d] += point[d] / numberOfSurfaces;

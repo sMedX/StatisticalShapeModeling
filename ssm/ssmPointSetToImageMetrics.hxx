@@ -5,9 +5,6 @@
 #include <itkSampleToHistogramFilter.h>
 #include <itkListSample.h>
 #include <itkHistogram.h>
-#include <string>
-#include <sstream>
-#include <iostream>
 
 #include "ssmPointSetToImageMetrics.h"
 

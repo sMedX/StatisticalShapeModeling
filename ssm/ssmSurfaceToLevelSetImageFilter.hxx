@@ -36,7 +36,7 @@ namespace ssm
   void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::GenerateData()
   {
     m_BoundingBox = m_Input->GetBoundingBox();
-    typename MaskImageType::SpacingType diff = m_BoundingBox->GetMaximum() - m_BoundingBox->GetMinimum();
+    MaskImageType::SpacingType diff = m_BoundingBox->GetMaximum() - m_BoundingBox->GetMinimum();
 
     for (unsigned i = 0; i < Dimension; ++i) {
       //compute origin
@@ -53,7 +53,7 @@ namespace ssm
     }
 
     typedef itk::TriangleMeshToBinaryImageFilter<TInputMesh, MaskImageType> TriangleMeshToBinaryImageFilterType;
-    typename TriangleMeshToBinaryImageFilterType::Pointer surfaceToImage = TriangleMeshToBinaryImageFilterType::New();
+    TriangleMeshToBinaryImageFilterType::Pointer surfaceToImage = TriangleMeshToBinaryImageFilterType::New();
     surfaceToImage->SetInput(m_Input);
     surfaceToImage->SetInsideValue(1);
     surfaceToImage->SetSize(m_Size);
@@ -70,7 +70,7 @@ namespace ssm
 
     // compute minimum and maximum values
     typedef itk::MinimumMaximumImageCalculator <MaskImageType> MinimumMaximumImageCalculatorType;
-    typename MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
+    MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
     labelValues->SetImage(surfaceToImage->GetOutput());
     labelValues->Compute();
     if (labelValues->GetMaximum() < surfaceToImage->GetInsideValue()) {
@@ -82,25 +82,25 @@ namespace ssm
 
     // compute level set image
     typedef itk::SignedMaurerDistanceMapImageFilter<MaskImageType, TOutputImage> DistanceFilterType;
-    typename DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
+    DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
     distanceToForeground->SetInput(m_Mask);
     distanceToForeground->SetUseImageSpacing(true);
     distanceToForeground->SetBackgroundValue(m_BackgroundValue);
     distanceToForeground->SetInsideIsPositive(false);
 
-    typename DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
+    DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
     distanceToBackground->SetInput(m_Mask);
     distanceToBackground->SetUseImageSpacing(true);
     distanceToBackground->SetBackgroundValue(m_ForegroundValue);
     distanceToBackground->SetInsideIsPositive(true);
 
     typedef itk::AddImageFilter <TOutputImage> AddImageFilterType;
-    typename AddImageFilterType::Pointer add = AddImageFilterType::New();
+    AddImageFilterType::Pointer add = AddImageFilterType::New();
     add->SetInput1(distanceToForeground->GetOutput());
     add->SetInput2(distanceToBackground->GetOutput());
 
     typedef itk::MultiplyImageFilter <TOutputImage> FilterType;
-    typename FilterType::Pointer multiply = FilterType::New();
+    FilterType::Pointer multiply = FilterType::New();
     multiply->SetInput(add->GetOutput());
     multiply->SetConstant(0.5);
     try {
