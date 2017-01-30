@@ -33,10 +33,10 @@ ShapeModelToImageMetric<TShapeModel, TImage>::ShapeModelToImageMetric()
 template< typename TShapeModel, typename TImage >
 void ShapeModelToImageMetric<TShapeModel, TImage>::SetTransformParameters(const ParametersType & parameters) const
 {
-  if( !m_Transform ) {
+  if( !m_SpatialTransform ) {
     itkExceptionMacro(<< "Transform has not been assigned");
   }
-  m_Transform->SetParameters(parameters);
+  m_SpatialTransform->SetParameters(parameters);
 }
 
 /**
