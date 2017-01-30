@@ -2,7 +2,6 @@
 #include <itkImageMomentsCalculator.h>
 #include <itkTriangleMeshToBinaryImageFilter.h>
 #include <itkSignedMaurerDistanceMapImageFilter.h>
-#include <itkTransformFileWriter.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
@@ -54,7 +53,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // read image
+  // read surface
   BinaryImageType::Pointer image = BinaryImageType::New();
   if (!readImage<BinaryImageType>(image, imageFile)) {
     return EXIT_FAILURE;
@@ -178,41 +177,6 @@ int main(int argc, char** argv)
   info.push_back(PairType("Elapsed time", std::to_string(shapeModelToSurfaceRegistration->GetElapsedTime())));
 
   //----------------------------------------------------------------------------
-  // write surface
-  std::cout << "write output surface to the file: " << outputFile << std::endl;
-  if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
-    return EXIT_FAILURE;
-  }
-
-  // write levelset image
-  if (parser->ArgumentExists("-levelset")) {
-    std::string fileName;
-    parser->GetCommandLineArgument("-levelset", fileName);
-    std::cout << "write level set image to the file: " << fileName << std::endl;
-
-    if (!writeImage(shapeModelToSurfaceRegistration->GetLevelSetImage(), fileName)) {
-      return EXIT_FAILURE;
-    }
-  }
-
-  // write transform
-  if (parser->ArgumentExists("-output-transform")) {
-    std::string fileName;
-    parser->GetCommandLineArgument("-output-transform", fileName);
-    std::cout << "write transform to the file: " << fileName << std::endl;
-
-    itk::TransformFileWriter::Pointer writer = itk::TransformFileWriter::New();
-    writer->SetInput(initializer->GetTransform());
-    writer->SetFileName(fileName);
-    try {
-      writer->Update();
-    }
-    catch (itk::ExceptionObject& excep) {
-      std::cout << excep << std::endl;
-      return EXIT_FAILURE;
-    }
-  }
-
   // compute metrics
   typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
   typedef ShapeModelRegistrationMethod::PointSetType PointSetType;
@@ -225,6 +189,7 @@ int main(int argc, char** argv)
   metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
   metrics->SetInfo(info);
   metrics->Compute();
+  metrics->PrintReport(std::cout);
 
   // write report to *.csv file
   if (parser->ArgumentExists("-report")) {
@@ -234,7 +199,19 @@ int main(int argc, char** argv)
     metrics->PrintReportToFile(fileName, getBaseNameFromPath(imageFile));
   }
 
-  metrics->PrintReport(std::cout);
+  // write surface
+  if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), outputFile)) {
+    return EXIT_FAILURE;
+  }
+
+  // write levelset image
+  if (parser->ArgumentExists("-levelset")) {
+    std::string fileName;
+    parser->GetCommandLineArgument("-levelset", fileName);
+    if (!writeImage(shapeModelToSurfaceRegistration->GetLevelSetImage(), fileName)) {
+      return EXIT_FAILURE;
+    }
+  }
 
   return EXIT_SUCCESS;
 }

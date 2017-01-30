@@ -144,9 +144,9 @@ bool writeVTKPolydata(vtkPolyData* surface, const std::string& fileName)
 template <typename TransformType>
 bool writeTransform(const TransformType* transform, const std::string& fileName)
 {
-  typedef TransformType::ScalarType ScalarType;
+  typedef typename TransformType::ScalarType ScalarType;
 
-  itk::TransformFileWriterTemplate<ScalarType>::Pointer writer = itk::TransformFileWriterTemplate<ScalarType>::New();
+  typename itk::TransformFileWriterTemplate<ScalarType>::Pointer writer = itk::TransformFileWriterTemplate<ScalarType>::New();
   writer->SetInput(transform);
   writer->SetFileName(fileName);
 
