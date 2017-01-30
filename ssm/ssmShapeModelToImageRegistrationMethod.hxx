@@ -82,7 +82,7 @@ namespace ssm
 
     // initialize composite transform
     if (m_SpatialTransform != nullptr) {
-      typename CompositeTransformType::Pointer transform = CompositeTransformType::New();
+      CompositeTransformType::Pointer transform = CompositeTransformType::New();
       transform->AddTransform(m_SpatialTransform);
       transform->AddTransform(m_ShapeTransform);
       m_Transform = transform;
@@ -110,7 +110,7 @@ namespace ssm
     m_Metric = MetricType::New();
     m_Metric->SetShapeModel(m_ShapeModel);
     m_Metric->SetImage(m_LevelSetImage);
-    m_Metric->SetTransform(m_Transform);
+    m_Metric->SetSpatialTransform(m_SpatialTransform);
     m_Metric->SetRegularizationParameter(m_RegularizationParameter);
     m_Metric->SetDegree(m_Degree);
     try {
@@ -159,6 +159,9 @@ namespace ssm
     catch (itk::ExceptionObject& excep) {
       std::cout << excep << std::endl;
     }
+
+    // set results to transform
+    m_Transform->SetParameters(m_Optimizer->GetCurrentPosition());
 
     // generate output data
     this->GenerateOutputData();

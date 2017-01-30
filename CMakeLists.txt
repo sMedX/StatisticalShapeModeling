@@ -6,9 +6,6 @@ project(StatisticalShapeModeling)
 find_package(statismo REQUIRED)
 
 set(statismo_SOURCE_DIR CACHE PATH "")
-set(CMAKE_CXX_STANDARD 11) # C++11...
-set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
-set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
 
 if(NOT statismo_SOURCE_DIR)
   message(FATAL_ERROR "'statismo_SOURCE_DIR' is required but not specified")
@@ -44,7 +41,6 @@ if (OPENMP_FOUND)
 endif()
 
 add_executable(ssm-extract-surface ssm-extract-surface.cxx)
-
 target_link_libraries(ssm-extract-surface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
 add_executable(ssm-align-surfaces ssm-align-surfaces.cxx)

@@ -16,18 +16,18 @@ namespace ssm
   public:
     // Standard typedefs
     typedef SurfaceToImageRegistrationMethod Self;
-    typedef typename itk::MeshToMeshFilter<TInputMesh, TOutputMesh> Superclass;
-    typedef typename itk::SmartPointer<Self> Pointer;
-    typedef typename itk::SmartPointer<const Self> ConstPointer;
+    typedef itk::MeshToMeshFilter<TInputMesh, TOutputMesh> Superclass;
+    typedef itk::SmartPointer<Self> Pointer;
+    typedef itk::SmartPointer<const Self> ConstPointer;
     typedef itk::LBFGSOptimizer OptimizerType;
     typedef typename itk::Optimizer::ScalesType ScalesType;
-    typedef typename itk::Transform<double, TInputMesh::PointDimension> TransformType;
-    typedef typename itk::CompositeTransform<double, TInputMesh::PointDimension> CompositeTransformType;
-    typedef typename itk::PointSet<float, TInputMesh::PointDimension> PointSetType;
-    typedef typename itk::Image<unsigned char, TInputMesh::PointDimension> BinaryImageType;
-    typedef typename itk::Image<float, TInputMesh::PointDimension> LevelsetImageType;
-    typedef typename itk::PointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
-    typedef typename itk::LinearInterpolateImageFunction<LevelsetImageType, double> InterpolatorType;
+    typedef itk::Transform<double, TInputMesh::PointDimension> TransformType;
+    typedef itk::CompositeTransform<double, TInputMesh::PointDimension> CompositeTransformType;
+    typedef itk::PointSet<float, TInputMesh::PointDimension> PointSetType;
+    typedef itk::Image<unsigned char, TInputMesh::PointDimension> BinaryImageType;
+    typedef itk::Image<float, TInputMesh::PointDimension> LevelsetImageType;
+    typedef itk::PointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
+    typedef itk::LinearInterpolateImageFunction<LevelsetImageType, double> InterpolatorType;
 
     itkNewMacro(Self);
     itkTypeMacro(SurfaceToImageRegistrationMethod, itk::MeshToMeshFilter);

@@ -35,7 +35,7 @@ namespace ssm
 
       // compute minimum and maximum values
       typedef itk::MinimumMaximumImageCalculator <TInputImage> MinimumMaximumImageCalculatorType;
-      typename MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
+      MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
       labelValues->SetImage(input);
       labelValues->Compute();
 
@@ -48,25 +48,25 @@ namespace ssm
 
       // compute level set image
       typedef typename itk::SignedMaurerDistanceMapImageFilter<TInputImage, TOutputImage> DistanceFilterType;
-      typename DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
+      DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
       distanceToForeground->SetInput(input);
       distanceToForeground->SetUseImageSpacing(true);
       distanceToForeground->SetBackgroundValue(m_BackgroundValue);
       distanceToForeground->SetInsideIsPositive(false);
 
-      typename DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
+      DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
       distanceToBackground->SetInput(input);
       distanceToBackground->SetUseImageSpacing(true);
       distanceToBackground->SetBackgroundValue(m_ForegroundValue);
       distanceToBackground->SetInsideIsPositive(true);
 
       typedef typename itk::AddImageFilter <TOutputImage> AddImageFilterType;
-      typename AddImageFilterType::Pointer add = AddImageFilterType::New();
+      AddImageFilterType::Pointer add = AddImageFilterType::New();
       add->SetInput1(distanceToForeground->GetOutput());
       add->SetInput2(distanceToBackground->GetOutput());
 
       typedef typename itk::MultiplyImageFilter <TOutputImage> MultiplyImageFilterType;
-      typename MultiplyImageFilterType::Pointer multiply = MultiplyImageFilterType::New();
+      MultiplyImageFilterType::Pointer multiply = MultiplyImageFilterType::New();
       multiply->SetInput(add->GetOutput());
       multiply->SetConstant(0.5);
       multiply->Update();

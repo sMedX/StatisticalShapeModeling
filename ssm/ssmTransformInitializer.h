@@ -57,8 +57,8 @@ namespace ssm
       switch (m_TypeOfTransform) {
       case EnumTransform::Translation: {
         // Translation transform
-        typedef typename itk::TranslationTransform<TParametersValueType, PointDimension> TranslationTransformType;
-        typename TranslationTransformType::Pointer translation = TranslationTransformType::New();
+        typedef itk::TranslationTransform<TParametersValueType, PointDimension> TranslationTransformType;
+        TranslationTransformType::Pointer translation = TranslationTransformType::New();
         translation->Translate(m_Translation);
         m_Transform = translation;
         m_Scales.set_size(m_Transform->GetNumberOfParameters());
@@ -74,7 +74,7 @@ namespace ssm
       case EnumTransform::Euler3D:{
         // Euler3DTransform
         typedef itk::Euler3DTransform<TParametersValueType> Euler3DTransformType;
-        typename Euler3DTransformType::Pointer Euler3D = Euler3DTransformType::New();
+        Euler3DTransformType::Pointer Euler3D = Euler3DTransformType::New();
         Euler3D->SetIdentity();
         Euler3D->SetCenter(m_Center);
         Euler3D->SetTranslation(m_Translation);
@@ -95,7 +95,7 @@ namespace ssm
       case EnumTransform::Similarity:{
         // Similarity3DTransform
         typedef itk::Similarity3DTransform<TParametersValueType> Similarity3DTransformType;
-        typename Similarity3DTransformType::Pointer similarity3D = Similarity3DTransformType::New();
+        Similarity3DTransformType::Pointer similarity3D = Similarity3DTransformType::New();
         similarity3D->SetIdentity();
         similarity3D->SetCenter(m_Center);
         similarity3D->SetTranslation(m_Translation);
@@ -117,7 +117,7 @@ namespace ssm
 
       case EnumTransform::ScaleSkewVersor3D:{
         typedef itk::ScaleSkewVersor3DTransform<TParametersValueType> ScaleSkewVersor3DTransformType;
-        typename ScaleSkewVersor3DTransformType::Pointer scaleskewversor3D = ScaleSkewVersor3DTransformType::New();
+        ScaleSkewVersor3DTransformType::Pointer scaleskewversor3D = ScaleSkewVersor3DTransformType::New();
         scaleskewversor3D->SetIdentity();
         scaleskewversor3D->SetCenter(m_Center);
         scaleskewversor3D->SetTranslation(m_Translation);
