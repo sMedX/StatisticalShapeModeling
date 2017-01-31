@@ -82,7 +82,7 @@ namespace ssm
 
     // initialize composite transform
     if (m_SpatialTransform != nullptr) {
-      CompositeTransformType::Pointer transform = CompositeTransformType::New();
+      typename CompositeTransformType::Pointer transform = CompositeTransformType::New();
       transform->AddTransform(m_SpatialTransform);
       transform->AddTransform(m_ShapeTransform);
       m_Transform = transform;

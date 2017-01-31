@@ -2,7 +2,8 @@
 
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
-
+#include <itkVector.h>
+#include <vnl/vnl_vector.h>
 #include "ssmShapeModelToImageMetric.h"
 
 namespace itk
@@ -32,10 +33,10 @@ ShapeModelToImageMetric<TShapeModel, TImage>::ShapeModelToImageMetric()
 template< typename TShapeModel, typename TImage >
 void ShapeModelToImageMetric<TShapeModel, TImage>::SetTransformParameters(const ParametersType & parameters) const
 {
-  if( !m_Transform ) {
+  if( !m_SpatialTransform ) {
     itkExceptionMacro(<< "Transform has not been assigned");
   }
-  m_Transform->SetParameters(parameters);
+  m_SpatialTransform->SetParameters(parameters);
 }
 
 /**
@@ -75,7 +76,8 @@ throw ( itk::ExceptionObject )
   m_SpatialParameters.set_size(m_NumberOfParameters - m_NumberOfComponents);
 
   if ( m_ComputeGradient ) {
-    double sigma = m_Image->GetSpacing().Get_vnl_vector().max_value();
+    typename ImageType::SpacingType sp=m_Image->GetSpacing();
+    double sigma = sp.GetVnlVector().max_value();
 
     GradientImageFilterPointer gradient = GradientImageFilterType::New();
     gradient->SetInput(m_Image);
