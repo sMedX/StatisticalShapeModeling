@@ -49,7 +49,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::SetTransformParameters(const 
 }
 
 /**
- * PrintSelf
+ * Initialize
  */
 template<typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::Initialize(void)
