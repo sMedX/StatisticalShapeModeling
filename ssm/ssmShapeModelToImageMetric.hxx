@@ -34,9 +34,18 @@ template< typename TShapeModel, typename TImage >
 void ShapeModelToImageMetric<TShapeModel, TImage>::SetTransformParameters(const ParametersType & parameters) const
 {
   if( !m_SpatialTransform ) {
-    itkExceptionMacro(<< "Transform has not been assigned");
+    itkExceptionMacro(<< "Spatial transform has not been assigned");
   }
-  m_SpatialTransform->SetParameters(parameters);
+
+  for (size_t i = 0; i < m_NumberOfComponents; ++i) {
+    m_ShapeTransform[i] = parameters[i];
+  }
+
+  for (size_t i = 0; i < m_NumberOfSpatialParameters; ++i) {
+    m_SpatialParameters[i] = parameters[m_NumberOfComponents + i];
+  }
+
+  m_SpatialTransform->SetParameters(m_SpatialParameters);
 }
 
 /**
@@ -160,15 +169,7 @@ void ShapeModelToImageMetric<TShapeModel, TImage>::GetDerivative(const Transform
 template <typename TShapeModel, typename TImage>
 void ShapeModelToImageMetric<TShapeModel, TImage>::GetValueAndDerivative(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const
 {
-  for (size_t i = 0; i < m_NumberOfComponents; ++i) {
-    m_ShapeTransform[i] = parameters[i];
-  }
-
-  for (size_t i = 0; i < m_NumberOfSpatialParameters; ++i) {
-    m_SpatialParameters[i] = parameters[m_NumberOfComponents + i];
-  }
-
-  m_SpatialTransform->SetParameters(m_SpatialParameters);
+  this->SetTransformParameters(parameters);
 
   #pragma omp parallel num_threads(m_NumberOfThreads)
   {
