@@ -2,27 +2,32 @@ cmake_minimum_required(VERSION 3.2)
 
 project(StatisticalShapeModeling)
 
-# Find Statismo
-find_package(statismo REQUIRED)
-
-set(statismo_SOURCE_DIR CACHE PATH "")
 set(CMAKE_CXX_STANDARD 11) # C++11...
 set(CMAKE_CXX_STANDARD_REQUIRED ON) #...is required...
 set(CMAKE_CXX_EXTENSIONS OFF) #...without compiler extensions like gnu++11
+
+# Find Boost
+set(Boost_LIBRARY_DIR "" CACHE PATH "")
+find_package(Boost 1.60 REQUIRED COMPONENTS filesystem program_options)
+include_directories(${Boost_INCLUDE_DIRS})
+
+# Boost setup
+if(WIN32)
+   # Disable autolinking in boost
+   add_definitions(-DBOOST_ALL_NO_LIB)
+   add_definitions(-DBOOST_ALL_DYN_LINK)
+endif()
+
+# Find Statismo
+set(statismo_SOURCE_DIR CACHE PATH "")
+find_package(statismo REQUIRED)
 
 if(NOT statismo_SOURCE_DIR)
   message(FATAL_ERROR "'statismo_SOURCE_DIR' is required but not specified")
 endif()
 
 list(APPEND statismo_INCLUDE_DIRS ${statismo_SOURCE_DIR}/modules/ITK/cli)
-
 include_directories(${statismo_INCLUDE_DIRS})
-
-# Boost setup
-if(WIN32)
-  # Disable autolinking in boost
-  add_definitions(-DBOOST_ALL_NO_LIB)
-endif()
 
 # Find ITK
 find_package(ITK REQUIRED)
@@ -44,8 +49,7 @@ if (OPENMP_FOUND)
 endif()
 
 add_executable(ssm-extract-surface ssm-extract-surface.cxx)
-
-target_link_libraries(ssm-extract-surface ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+target_link_libraries(ssm-extract-surface ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
 add_executable(ssm-align-surfaces ssm-align-surfaces.cxx)
 target_link_libraries(ssm-align-surfaces ${statismo_LIBRARIES} ${ITK_LIBRARIES})
