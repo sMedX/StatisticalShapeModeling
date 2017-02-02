@@ -41,7 +41,6 @@ namespace po = boost::program_options;
 po::options_description initializeProgramOptions(ProgramOptions& poParameters);
 
 int main(int argc, char** argv) {
-
   ProgramOptions options;
   po::options_description description = initializeProgramOptions(options);
   po::variables_map vm;
