@@ -17,12 +17,11 @@
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
-#include "utils/itkCommandLineArgumentParser.h"
 #include "ssm/ssmPointSetToImageMetrics.h"
+#include "ssm/ssmBinaryImageToLevelSetImageFilter.h"
 
-double AverageLengthOfEdges(vtkPolyData*poly);
-double AverageAreaOfCells(vtkPolyData*poly);
-FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground);
+double averageLengthOfEdges(vtkPolyData* poly);
+double averageAreaOfCells(vtkPolyData* poly);
 
 struct ProgramOptions
 {
@@ -61,41 +60,6 @@ int main(int argc, char** argv) {
     cout << description << endl;
     return EXIT_SUCCESS;
   }
-
-  /*
-  itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
-  parser->SetCommandLineArguments(argc, argv);
-
-  std::string imageFile;
-  parser->GetCommandLineArgument("-image", imageFile);
-
-  std::string surfaceFile;
-  parser->GetCommandLineArgument("-output", surfaceFile);
-
-  double sigma = 1;
-  parser->GetCommandLineArgument("-sigma", sigma);
-
-  double relaxation = 0.2;
-  parser->GetCommandLineArgument("-relaxation", relaxation);
-
-  unsigned int numberOfIterations = 100;
-  parser->GetCommandLineArgument("-iterations", numberOfIterations);
-
-  unsigned int numberOfPoints = 0;
-  parser->GetCommandLineArgument("-points", numberOfPoints);
-
-  bool isbinary = true;
-  parser->GetCommandLineArgument("-binary", isbinary);
-  */
-
-  std::cout << std::endl;
-  std::cout << " input options" << std::endl;
-  std::cout << "           sigma " << options.sigma << std::endl;
-  std::cout << "      relaxation " << options.relaxation << std::endl;
-  std::cout << "      iterations " << options.numberOfIterations << std::endl;
-  std::cout << "number of points " << options.numberOfPoints << std::endl;
-  std::cout << " image is binary " << options.isbinary << std::endl;
-  std::cout << std::endl;
 
   //----------------------------------------------------------------------------
   // read image
@@ -221,14 +185,14 @@ int main(int argc, char** argv) {
   std::vector<PairType> surfaceInfo;
   surfaceInfo.push_back(PairType("number of points", std::to_string(surface->GetNumberOfPoints())));
   surfaceInfo.push_back(PairType("number of cells", std::to_string(surface->GetNumberOfCells())));
-  surfaceInfo.push_back(PairType("length of edges", std::to_string(AverageLengthOfEdges(surface))));
-  surfaceInfo.push_back(PairType("area of cells", std::to_string(AverageAreaOfCells(surface))));
+  surfaceInfo.push_back(PairType("length of edges", std::to_string(averageLengthOfEdges(surface))));
+  surfaceInfo.push_back(PairType("area of cells", std::to_string(averageAreaOfCells(surface))));
 
   std::cout << "output surface polydata " << options.surfaceFile << std::endl;
   std::cout << "       number of cells  " << surface->GetNumberOfCells() << std::endl;
   std::cout << "       number of points " << surface->GetNumberOfPoints() << std::endl;
-  std::cout << "average length of edges " << AverageLengthOfEdges(surface) << endl;
-  std::cout << "  average area of cells " << AverageAreaOfCells(surface) << endl;
+  std::cout << "average length of edges " << averageLengthOfEdges(surface) << endl;
+  std::cout << "  average area of cells " << averageAreaOfCells(surface) << endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -247,7 +211,18 @@ int main(int argc, char** argv) {
   metrics->SetFixedPointSet(pointSet);
   metrics->SetInfo(surfaceInfo);
   if (options.isbinary) {
-    metrics->SetMovingImage(ComputeDistanceMapImage(image, labelValues->GetMinimum(), labelValues->GetMaximum()));
+    // compute level set image
+    typedef ssm::BinaryImageToLevelSetImageFilter<FloatImageType, FloatImageType> BinaryImageToLevelSetImageType;
+    BinaryImageToLevelSetImageType::Pointer levelset = BinaryImageToLevelSetImageType::New();
+    levelset->SetInput(image);
+    try {
+      levelset->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      return EXIT_FAILURE;
+    }
+    metrics->SetMovingImage(levelset->GetOutput());
   }
   else {
     metrics->SetMovingImage(image);
@@ -265,7 +240,7 @@ int main(int argc, char** argv) {
 }
 
 
-double AverageLengthOfEdges(vtkPolyData*poly)
+double averageLengthOfEdges(vtkPolyData*poly)
 {
   const unsigned int numberOfCells = poly->GetNumberOfCells();
   double sum = 0;
@@ -288,13 +263,12 @@ double AverageLengthOfEdges(vtkPolyData*poly)
   return sum / (3*numberOfCells);
 }
 
-
-double AverageAreaOfCells(vtkPolyData*poly)
+double averageAreaOfCells(vtkPolyData*poly)
 {
-  const unsigned int numberOfCells = poly->GetNumberOfCells();
+  const size_t numberOfCells = poly->GetNumberOfCells();
   double sum = 0;
 
-  for (int n = 0; n < numberOfCells; ++n) {
+  for (size_t n = 0; n < numberOfCells; ++n) {
     double a[3], b[3], c[3];
     double p1[3], p2[3], p3[3];
 
@@ -313,41 +287,6 @@ double AverageAreaOfCells(vtkPolyData*poly)
   }
 
   return sum / numberOfCells;
-}
-
-FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground)
-{
-  typedef itk::SignedMaurerDistanceMapImageFilter<FloatImageType, FloatImageType> DistanceFilterType;
-  DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
-  distanceToForeground->SetUseImageSpacing(true);
-  distanceToForeground->SetInput(image);
-  distanceToForeground->SetBackgroundValue(background);
-  distanceToForeground->SetInsideIsPositive(false);
-
-  DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
-  distanceToBackground->SetUseImageSpacing(true);
-  distanceToBackground->SetInput(image);
-  distanceToBackground->SetBackgroundValue(foreground);
-  distanceToBackground->SetInsideIsPositive(true);
-
-  typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
-  AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
-  addfilter->SetInput1(distanceToForeground->GetOutput());
-  addfilter->SetInput2(distanceToBackground->GetOutput());
-
-  typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
-  FilterType::Pointer multiply = FilterType::New();
-  multiply->SetInput(addfilter->GetOutput());
-  multiply->SetConstant(0.5);
-  try {
-    multiply->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    throw;
-  }
-
-  return multiply->GetOutput();
 }
 
 po::options_description initializeProgramOptions(ProgramOptions& options)
