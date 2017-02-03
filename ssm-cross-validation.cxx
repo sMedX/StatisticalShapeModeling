@@ -1,4 +1,4 @@
-#include <boost/program_options.hpp>
+﻿#include <boost/program_options.hpp>
 #include <boost/scoped_ptr.hpp>
 
 #include <utils/statismo-build-models-utils.h>
@@ -72,7 +72,6 @@ int main(int argc, char** argv)
   try {
     std::string fileName = fileNames.begin()->c_str();
     MeshType::Pointer surface = MeshType::New();
-
     if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
@@ -93,31 +92,29 @@ int main(int argc, char** argv)
     }
 
     CVFoldListType cvFoldList = dataManager->GetCrossValidationFolds(dataManager->GetNumberOfSamples(), true);
+    std::cout << "number of surfaces " << dataManager->GetNumberOfSamples() << std::endl;
+    std::cout << "number of folds    " << cvFoldList.size() << std::endl;
+    std::cout << std::endl;
 
     if (options.components.size() == 0) {
       options.components.push_back(dataManager->GetNumberOfSamples());
     }
 
-    std::cout << "number of surfaces " << dataManager->GetNumberOfSamples() << std::endl;
-    std::cout << "number of folds    " << cvFoldList.size() << std::endl;
-    std::cout << std::endl;
-
     // iterate over cvFoldList to get all the folds
-    for (const auto & numberOfComponents : options.components) {
+    for (const auto & components : options.components) {
       for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
-
         // create the model
         ModelBuilderType::Pointer pcaModelBuilder = ModelBuilderType::New();
         StatisticalModelType::Pointer model = pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0);
 
-        //reduce the number of components
+        // reduce the number of components
         ReducedVarianceModelBuilderType::Pointer reducedVarModelBuilder = ReducedVarianceModelBuilderType::New();
-        if (numberOfComponents < model->GetNumberOfPrincipalComponents()) {
-          model = reducedVarModelBuilder->BuildNewModelWithLeadingComponents(model, numberOfComponents);
+        if (components < model->GetNumberOfPrincipalComponents()) {
+          model = reducedVarModelBuilder->BuildNewModelWithLeadingComponents(model, components);
         }
 
-        std::cout << "built model from " << it->GetTrainingData().size() << " samples" << std::endl;
-        std::cout << "number of principal components " << model->GetNumberOfPrincipalComponents() << std::endl;
+        std::cout << "built model from     " << it->GetTrainingData().size() << " samples" << std::endl;
+        std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
         std::cout << std::endl;
 
         // Now we can iterate over the test data and do whatever validation we would like to do.
