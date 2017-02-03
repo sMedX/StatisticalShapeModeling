@@ -410,7 +410,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 {
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
-    ("list,l", po::value<std::string>(&options.listFile), "The path to the file for list of surfaces to align.")
+    ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to align.")
     ("output,o", po::value<std::string>(&options.surfaceFile), "The path to the output surface file.")
     ;
 

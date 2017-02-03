@@ -31,8 +31,8 @@ struct ProgramOptions
   std::string reportFile;
   double sigma = 1.0;
   double relaxation = 0.2;
-  size_t numberOfIterations = 100;
-  size_t numberOfPoints = 0;
+  size_t iterations = 100;
+  size_t points = 0;
   bool isbinary = true;
   double levelValue = std::numeric_limits<double>::lowest();
 };
@@ -127,8 +127,8 @@ int main(int argc, char** argv) {
   vtkSmartPointer<vtkPolyData> surface = mcubes->GetOutput();
 
   // decimate surface
-  if (options.numberOfPoints > 0) {
-    double reduction = 1 - (options.numberOfPoints - 1) / (double)surface->GetNumberOfPoints();
+  if (options.points > 0) {
+    double reduction = 1 - (options.points - 1) / (double)surface->GetNumberOfPoints();
     std::cout << "reduction to decimate surface " << reduction << std::endl;
     vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
     decimate->SetInputData(surface);
@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
   SmoothPolyData smoother = SmoothPolyData::New();
   smoother->SetInputData(surface);
-  smoother->SetNumberOfIterations(options.numberOfIterations);
+  smoother->SetNumberOfIterations(options.iterations);
   smoother->SetRelaxationFactor(options.relaxation);
   try {
     smoother->Update();
@@ -293,14 +293,17 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
     ("image,i", po::value<std::string>(&options.imageFile), "The path to the input image file.")
-    ("output,o", po::value<std::string>(&options.surfaceFile), "The path to the output surface file.")
+    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path to the output surface file.")
     ;
 
   po::options_description output("Optional input options");
   output.add_options()
-    ("sigma,s", po::value<double>(&options.sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
-    ("factor,f", po::value<double>(&options.relaxation), "The relaxation factor for Laplacian smoothing.")
-    ("iterations,t", po::value<size_t>(&options.numberOfIterations), "The number of iterations.")
+    ("sigma", po::value<double>(&options.sigma)->default_value(options.sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
+    ("factor", po::value<double>(&options.relaxation)->default_value(options.relaxation), "The relaxation factor for Laplacian smoothing.")
+    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
+    ("points", po::value<size_t>(&options.points)->default_value(options.points), "The number of points in output surface.")
+    ("level", po::value<double>(&options.levelValue), "The level value to extract surface.")
+    ("isbinary", po::value<bool>(&options.isbinary)->default_value(options.isbinary), "The type of input image.")
     ;
 
   po::options_description report("Optional report options");
