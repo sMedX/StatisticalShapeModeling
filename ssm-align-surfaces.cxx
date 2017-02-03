@@ -1,10 +1,11 @@
+#include <boost/program_options.hpp>
+
 #include <itkMultiplyImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <utils/statismo-build-models-utils.h>
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
-#include "utils/itkCommandLineArgumentParser.h"
 #include "ssm/ssmPointSetToImageMetrics.h"
 #include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 #include "ssm/ssmSurfaceToImageRegistrationMethod.h"
@@ -15,40 +16,46 @@ typedef itk::Transform<double, MeshType::PointDimension> TransformType;
 typedef std::vector<TransformType::ConstPointer> TransformVectorType;
 FloatImageType::Pointer computeLevelSetImage(FloatImageType::Pointer levelSetImage, MeshVectorType & vectorOfSurfaces, TransformVectorType & vectorOfTransform, size_t typeOfransform);
 
-int main(int argc, char** argv) {
-
-  itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
-
-  parser->SetCommandLineArguments(argc, argv);
-
+struct ProgramOptions
+{
+  bool help;
   std::string listFile;
-  parser->GetCommandLineArgument("-list", listFile);
-
   std::string surfaceFile;
-  parser->GetCommandLineArgument("-output", surfaceFile);
+  std::string levelsetFile;
+  std::string reportFile;
+  size_t transform = 1;
+  size_t stages = 1;
+  size_t iterations = 500;
+};
 
-  size_t numberOfStages = 1;
-  parser->GetCommandLineArgument("-stages", numberOfStages);
+typedef boost::filesystem::path fp;
+namespace po = boost::program_options;
+po::options_description initializeProgramOptions(ProgramOptions& poParameters);
 
-  size_t typeOfransform = 1;
-  parser->GetCommandLineArgument("-transform", typeOfransform);
-
-  size_t numberOfIterations = 500;
-  parser->GetCommandLineArgument("-iterations", numberOfIterations);
-
-  std::cout << std::endl;
-  std::cout << "parameters" << std::endl;
-  std::cout << "    list of files " << listFile << std::endl;
-  std::cout << "   output surface " << surfaceFile << std::endl;
-  std::cout << " number of stages " << numberOfStages << std::endl;
-  std::cout << "type of transform " << typeOfransform << std::endl;
-  std::cout << "       iterations " << numberOfIterations << std::endl;
-  std::cout << std::endl;
+int main(int argc, char** argv) {
+  ProgramOptions options;
+  po::options_description description = initializeProgramOptions(options);
+  po::variables_map vm;
+  try {
+    po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
+    po::store(parsedOptions, vm);
+    po::notify(vm);
+  }
+  catch (po::error& e) {
+    cerr << "An exception occurred while parsing the command line:" << endl;
+    cerr << e.what() << endl << endl;
+    cout << description << endl;
+    return EXIT_FAILURE;
+  }
+  if (options.help == true) {
+    cout << description << endl;
+    return EXIT_SUCCESS;
+  }
 
   // read list of files
   StringList listOfFiles;
   try {
-    listOfFiles = getFileList(listFile);
+    listOfFiles = getFileList(options.listFile);
   }
   catch (ifstream::failure & e) {
     cerr << "Could not read the data-list:" << endl;
@@ -225,16 +232,16 @@ int main(int argc, char** argv) {
   TransformVectorType vectorOfTransforms;
   vectorOfTransforms.resize(vectorOfSurfaces.size());
 
-  for (size_t stage = 0; stage < numberOfStages; ++stage) {
+  for (size_t stage = 0; stage < options.stages; ++stage) {
     for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
-      std::cout << "stage " << stage + 1 << "/" << numberOfStages << ", surface " << count + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[count] << std::endl;
+      std::cout << "stage " << stage + 1 << "/" << options.stages << ", surface " << count + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[count] << std::endl;
 
       // perform surface to image registration
       typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
       SurfaceToImageRegistrationMethodType::Pointer surfaceToImageRegistration = SurfaceToImageRegistrationMethodType::New();
       surfaceToImageRegistration->SetInput(vectorOfSurfaces[count]);
-      surfaceToImageRegistration->SetNumberOfIterations(numberOfIterations);
-      surfaceToImageRegistration->SetTypeOfTransform(typeOfransform);
+      surfaceToImageRegistration->SetNumberOfIterations(options.iterations);
+      surfaceToImageRegistration->SetTypeOfTransform(options.transform);
       surfaceToImageRegistration->SetLevelsetImage(levelSetImage);
       try {
         surfaceToImageRegistration->Update();
@@ -248,16 +255,13 @@ int main(int argc, char** argv) {
     }
 
     // update reference level-set image
-    levelSetImage = computeLevelSetImage(levelSetImage, vectorOfSurfaces, vectorOfTransforms, typeOfransform);
+    levelSetImage = computeLevelSetImage(levelSetImage, vectorOfSurfaces, vectorOfTransforms, options.transform);
   }
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  if (parser->ArgumentExists("-levelset")) {
-    std::string fileName;
-    parser->GetCommandLineArgument("-levelset", fileName);
-
-    std::cout << "output the level-set image " << fileName << std::endl;
+  if (options.levelsetFile != "") {
+    std::cout << "output the level-set image " << options.levelsetFile << std::endl;
     std::cout << "   size " << levelSetImage->GetLargestPossibleRegion().GetSize() << std::endl;
     std::cout << "spacing " << levelSetImage->GetSpacing() << std::endl;
     std::cout << " origin " << levelSetImage->GetOrigin() << std::endl;
@@ -268,7 +272,7 @@ int main(int argc, char** argv) {
     multiply->SetInput(levelSetImage);
     multiply->SetConstant(-1);
 
-    if (!writeImage<FloatImageType>(multiply->GetOutput(), fileName)) {
+    if (!writeImage<FloatImageType>(multiply->GetOutput(), options.levelsetFile)) {
       return EXIT_FAILURE;
     }
   }
@@ -277,8 +281,7 @@ int main(int argc, char** argv) {
   for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
 
     // define full file name for output surface
-    typedef boost::filesystem::path fp;
-    fp path = fp(surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(surfaceFile).filename().string());
+    fp path = fp(options.surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(options.surfaceFile).filename().string());
     std::string outputSurfaceFile = path.string();
 
     std::cout << "output file " << outputSurfaceFile << std::endl;
@@ -299,11 +302,9 @@ int main(int argc, char** argv) {
     metrics->PrintReport(std::cout);
 
     // print report to *.csv file
-    if (parser->ArgumentExists("-report")) {
-      std::string fileName;
-      parser->GetCommandLineArgument("-report", fileName);
-      std::cout << "print report to the file: " << fileName << std::endl;
-      metrics->PrintReportToFile(fileName, getBaseNameFromPath(outputSurfaceFile));
+    if (options.reportFile!="") {
+      std::cout << "print report to the file: " << options.reportFile << std::endl;
+      metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(outputSurfaceFile));
     }
   }
 
@@ -405,4 +406,38 @@ FloatImageType::Pointer computeLevelSetImage(FloatImageType::Pointer levelSetIma
   return levelSetImage;
 }
 
+po::options_description initializeProgramOptions(ProgramOptions& options)
+{
+  po::options_description mandatory("Mandatory options");
+  mandatory.add_options()
+    ("list,l", po::value<std::string>(&options.listFile), "The path to the file for list of surfaces to align.")
+    ("output,o", po::value<std::string>(&options.surfaceFile), "The path to the output surface file.")
+    ;
 
+  po::options_description input("Optional input options");
+  input.add_options()
+    ("stages", po::value<size_t>(&options.stages), "The number of stages to align input surfaces.")
+    ("transform", po::value<size_t>(&options.transform), "The type of the used spatial transform.")
+    ("iterations,t", po::value<size_t>(&options.iterations), "The number of iterations.")
+    ;
+
+  po::options_description output("Optional output options");
+  output.add_options()
+    ("levelset,l", po::value<std::string>(&options.levelsetFile), "The path for output level-set image.")
+    ;
+
+  po::options_description report("Optional report options");
+  report.add_options()
+    ("report,r", po::value<std::string>(&options.reportFile), "The path to the file to print report.")
+    ;
+
+  po::options_description help("Optional options");
+  help.add_options()
+    ("help,h", po::bool_switch(&options.help), "Display this help message")
+    ;
+
+  po::options_description description;
+  description.add(mandatory).add(input).add(output).add(report).add(help);
+
+  return description;
+}
