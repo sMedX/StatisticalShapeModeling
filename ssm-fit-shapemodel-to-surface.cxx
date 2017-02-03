@@ -263,16 +263,16 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
     ("model,m", po::value<std::string>(&options.modelFile), "The path to input shape model file.")
-    ("surface,i", po::value<std::string>(&options.surfaceFile), "The path to the input surface file.")
+    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path to the input surface file.")
     ("output,o", po::value<std::string>(&options.outputFile), "The path for the output surface file.")
     ;
 
   po::options_description input("Optional input options");
   input.add_options()
-    ("transform", po::value<size_t>(&options.transform)->default_value(options.transform), "The sigma of the Gaussian kernel measured in world coordinates.")
-    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The relaxation factor for Laplacian smoothing.")
-    ("degree", po::value<size_t>(&options.degree)->default_value(options.degree), "The relaxation factor for Laplacian smoothing.")
-    ("regularization", po::value<double>(&options.regularization)->default_value(options.regularization), "The number of iterations.")
+    ("transform", po::value<size_t>(&options.transform)->default_value(options.transform), "The type of the used spatial transform.")
+    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
+    ("degree", po::value<size_t>(&options.degree)->default_value(options.degree), "The degree of residuals to compute shape model to image metric.")
+    ("regularization", po::value<double>(&options.regularization)->multitoken(), "The regularization factor.")
     ;
 
   po::options_description output("Optional output options");
