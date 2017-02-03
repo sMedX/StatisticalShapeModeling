@@ -1,4 +1,5 @@
 ﻿#include <boost/program_options.hpp>
+
 #include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
@@ -7,63 +8,59 @@
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
-#include "utils/itkCommandLineArgumentParser.h"
-
 #include "ssm/ssmPointSetToImageMetrics.h"
 #include "ssm/ssmShapeModelToImageRegistrationMethod.h"
 #include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 
-struct RegistrationOptions
+struct ProgramOptions
 {
-  size_t transform = 1;
+  bool help;
+  std::string listFile;
+  std::string surfaceFile;
+  std::string reportFile;
+  std::string referenceFile;
+  std::string outputReferenceFile;
+
+  size_t components = 100;
+  double scale = 100;
   std::vector<double> parameters;
   std::vector<double> regularization;
-  double scale = 100;
-  unsigned int iterations = 500;
-  unsigned int degree;
+  size_t stages = 1;
+  size_t transform = 1;
+  size_t iterations = 500;
+  size_t degree=2;
   double margin = 0.10;
   double spacing = 1.0;
 };
 
+typedef boost::filesystem::path fp;
+namespace po = boost::program_options;
+po::options_description initializeProgramOptions(ProgramOptions& poParameters);
+
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
-MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, RegistrationOptions & options);
+MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, ProgramOptions & options);
 
 int main(int argc, char** argv)
 {
-  RegistrationOptions options;
-
-  itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
-  parser->SetCommandLineArguments(argc, argv);
-
-  std::string listFile;
-  parser->GetCommandLineArgument("-list", listFile);
-
-  std::string outputFile;
-  parser->GetCommandLineArgument("-output", outputFile);
-
-  std::string referenceFile;
-  parser->GetCommandLineArgument("-reference", referenceFile);
-
-  parser->GetCommandLineArgument("-transform", options.transform);
-  parser->GetCommandLineArgument("-iterations", options.iterations);
-  parser->GetCommandLineArgument("-regularization", options.regularization);
-  parser->GetCommandLineArgument("-parameters", options.parameters);
-  parser->GetCommandLineArgument("-scale", options.scale);
-  parser->GetCommandLineArgument("-degree", options.degree);
-
-  unsigned int numberOfStages = 1;
-  parser->GetCommandLineArgument("-stages", numberOfStages);
-
-  unsigned int numberOfComponents = 100;
-  parser->GetCommandLineArgument("-components", numberOfComponents);
-
-  std::cout << std::endl;
-  std::cout << " shape model to image registration" << std::endl;
-  std::cout << "   output surface file " << outputFile << std::endl;
-  std::cout << "      number of stages " << numberOfStages << std::endl;
-  std::cout << "  number of iterations " << options.iterations << std::endl;
-  std::cout << "                degree " << options.degree << std::endl;
+  ProgramOptions options;
+  po::options_description description = initializeProgramOptions(options);
+  po::variables_map vm;
+  try {
+    po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
+    po::store(parsedOptions, vm);
+    po::notify(vm);
+  }
+  catch (po::error& e) {
+    cerr << "An exception occurred while parsing the command line:" << endl;
+    cerr << e.what() << endl << endl;
+    cout << description << endl;
+    return EXIT_FAILURE;
+  }
+  if (options.help == true) {
+    cout << description << endl;
+    return EXIT_SUCCESS;
+  }
 
   for (int n = options.regularization.size(); n < options.parameters.size(); ++n) {
     options.regularization.push_back(options.regularization.back());
@@ -85,10 +82,10 @@ int main(int argc, char** argv)
   //----------------------------------------------------------------------------
   // read the reference surface
   MeshType::Pointer reference = MeshType::New();
-  if (!readMesh<MeshType>(reference, referenceFile)) {
+  if (!readMesh<MeshType>(reference, options.referenceFile)) {
     return EXIT_FAILURE;
   }
-  std::cout << "reference " << referenceFile << std::endl;
+  std::cout << "reference surface " << options.referenceFile << std::endl;
   std::cout << "number of cells " << reference->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << reference->GetNumberOfPoints() << std::endl;
   std::cout << std::endl;
@@ -97,7 +94,7 @@ int main(int argc, char** argv)
   // read list of files
   StringList listOfFiles;
   try {
-    listOfFiles = getFileList(listFile);
+    listOfFiles = getFileList(options.listFile);
   }
   catch (ifstream::failure & e) {
     cerr << "could not read the data-list: " << e.what() << endl;
@@ -129,11 +126,11 @@ int main(int argc, char** argv)
   itk::TimeProbe clock;
   clock.Start();
 
-  for (size_t stage = 0; stage < numberOfStages; ++stage) {
-    std::cout << "establish correspondence stage (" << stage+1 << " / " << numberOfStages << ")" << std::endl;
+  for (size_t stage = 0; stage < options.stages; ++stage) {
+    std::cout << "establish correspondence stage (" << stage + 1 << " / " << options.stages << ")" << std::endl;
 
     // build GP model for the reference surface
-    StatisticalModelType::Pointer model = BuildGPModel(reference, options.parameters[0], options.scale, numberOfComponents);
+    StatisticalModelType::Pointer model = BuildGPModel(reference, options.parameters[0], options.scale, options.components);
 
     // initialize reference to zero
     typedef itk::VectorContainer<long unsigned int,MeshType::PointType> VContainer;
@@ -158,7 +155,7 @@ int main(int argc, char** argv)
       }
 
       // compute metrics and write output surface to file
-      if (stage + 1 == numberOfStages) {
+      if (stage + 1 == options.stages) {
         // compute metrics
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
         SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
@@ -185,16 +182,14 @@ int main(int argc, char** argv)
         metrics->PrintReport(std::cout);
 
         // print report to *.csv file
-        if (parser->ArgumentExists("-report")) {
-          std::string fileName;
-          parser->GetCommandLineArgument("-report", fileName);
-          std::cout << "print report to file " << fileName << std::endl;
-          metrics->PrintReportToFile(fileName, getBaseNameFromPath(vectorOfFiles[count]));
+        if (options.reportFile != "") {
+          std::cout << "print report to file " << options.reportFile << std::endl;
+          metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(vectorOfFiles[count]));
         }
 
         // write output surface to file
         typedef boost::filesystem::path fp;
-        fp path = fp(outputFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(outputFile).filename().string());
+        fp path = fp(options.surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(options.surfaceFile).filename().string());
         std::string fileName = path.string();
         std::cout << "write surface to file " << fileName << std::endl;
         if (!writeMesh<MeshType>(output, fileName)) {
@@ -203,11 +198,9 @@ int main(int argc, char** argv)
       }
     }
 
-    // write reference to file
-    if (parser->ArgumentExists("-output-reference")) {
-      std::string fileName;
-      parser->GetCommandLineArgument("-output-reference", fileName);
-      fileName = addFileNameSuffix(fileName, "-" + std::to_string(stage + 1));
+    // write the reference surface to the file
+    if (options.outputReferenceFile != "") {
+      std::string fileName = addFileNameSuffix(options.outputReferenceFile, "-" + std::to_string(stage + 1));
       if (!writeMesh<MeshType>(reference, fileName)) {
         EXIT_FAILURE;
       }
@@ -221,7 +214,7 @@ int main(int argc, char** argv)
 }
 //==============================================================================
 // Shape model to surface registration
-MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer initialModel, RegistrationOptions & options)
+MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer initialModel, ProgramOptions & options)
 {
   // compute level set image
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
@@ -375,4 +368,42 @@ StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double par
   std::cout << std::endl;
 
   return model;
+}
+
+po::options_description initializeProgramOptions(ProgramOptions& options)
+{
+  po::options_description mandatory("Mandatory options");
+  mandatory.add_options()
+    ("list", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to establish correspondence.")
+    ("reference", po::value<std::string>(&options.referenceFile), "The path to the input reference surface.")
+    ("surface", po::value<std::string>(&options.surfaceFile), "The path to the output surface file.")
+    ;
+
+  po::options_description output("Optional input options");
+  output.add_options()
+    ("components", po::value<size_t>(&options.components), "The number of components for GP shape model.")
+    ("scale", po::value<double>(&options.scale), "The scaling.")
+    ("parameters", po::value<std::vector<double>>(&options.parameters)->multitoken(), "The number of components for GP shape model.")
+    ("regularization", po::value<std::vector<double>>(&options.regularization)->multitoken(), "The number of components for GP shape model.")
+    ("stages", po::value<size_t>(&options.stages), "The number of stages to establish correspondence.")
+    ("transform", po::value<size_t>(&options.transform), "The type of the used spatial transform.")
+    ("iterations", po::value<size_t>(&options.iterations), "The number of iterations.")
+    ("degree", po::value<size_t>(&options.degree), "The number of iterations.")
+    ;
+
+  po::options_description report("Optional report options");
+  report.add_options()
+    ("output-reference", po::value<std::string>(&options.outputReferenceFile), "The path to the output reference surface.")
+    ("report", po::value<std::string>(&options.reportFile), "The path to the file to print report.")
+    ;
+
+  po::options_description help("Optional options");
+  help.add_options()
+    ("help,h", po::bool_switch(&options.help), "Display this help message")
+    ;
+
+  po::options_description description;
+  description.add(mandatory).add(output).add(report).add(help);
+
+  return description;
 }
