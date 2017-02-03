@@ -318,4 +318,3 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 
   return description;
 }
-
