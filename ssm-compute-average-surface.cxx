@@ -1,42 +1,42 @@
-#include <itkMesh.h>
-#include <itkImage.h>
-#include <itkMultiplyImageFilter.h>
-#include <itkAddImageFilter.h>
+#include <boost/program_options.hpp>
 #include <utils/statismo-build-models-utils.h>
-
+#include "utils/ssmTypes.h"
 #include "utils/io.h"
-#include "utils/itkCommandLineArgumentParser.h"
-#include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmSurfaceToLevelSetImageFilter.h"
 
-const unsigned int Dimension = 3;
-typedef itk::Image<unsigned char, Dimension> BinaryImageType;
-typedef itk::Image<float, Dimension> FloatImageType;
-typedef itk::Mesh<float, Dimension> MeshType;
-using fp = boost::filesystem::path;
+struct ProgramOptions
+{
+  bool help;
+  std::string listFile;
+  std::string surfaceFile;
+};
+
+namespace po = boost::program_options;
+po::options_description initializeProgramOptions(ProgramOptions& poParameters);
 
 int main(int argc, char** argv) {
+  ProgramOptions options;
+  po::options_description description = initializeProgramOptions(options);
+  po::variables_map vm;
+  try {
+    po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
+    po::store(parsedOptions, vm);
+    po::notify(vm);
+  }
+  catch (po::error& e) {
+    cerr << "An exception occurred while parsing the command line:" << endl;
+    cerr << e.what() << endl << endl;
+    cout << description << endl;
+    return EXIT_FAILURE;
+  }
+  if (options.help == true) {
+    cout << description << endl;
+    return EXIT_SUCCESS;
+  }
 
-  itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
-
-  parser->SetCommandLineArguments(argc, argv);
-
-  std::string listFile;
-  parser->GetCommandLineArgument("-list", listFile);
-
-  std::string meanSurfaceFile;
-  parser->GetCommandLineArgument("-output", meanSurfaceFile);
-
-  std::cout << std::endl;
-  std::cout << "parameters" << std::endl;
-  std::cout << "    list of files " << listFile << std::endl;
-  std::cout << "   output surface " << meanSurfaceFile << std::endl;
-  std::cout << std::endl;
-
-  // read surface in to vector
+  // read surfaces into vector
   StringList listOfFiles;
   try {
-    listOfFiles = getFileList(listFile);
+    listOfFiles = getFileList(options.listFile);
   }
   catch (ifstream::failure & e) {
     cerr << "Could not read the data-list:" << endl;
@@ -50,7 +50,6 @@ int main(int argc, char** argv) {
   for (StringList::const_iterator it = listOfFiles.begin(); it != listOfFiles.end(); ++it) {
     std::string fileName = it->c_str();
     MeshType::Pointer surface = MeshType::New();
-
     if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
@@ -67,33 +66,48 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // build mean surface
+  // compute the average surface
+  MeshType::Pointer average = vectorOfSurfaces[0];
 
-  MeshType::Pointer meanSurface = vectorOfSurfaces[0];
+  for (size_t n = 0; n < average->GetNumberOfPoints(); ++n) {
+    MeshType::PointType point(0);
 
-  for (int n = 0; n < meanSurface->GetNumberOfPoints(); ++n) {
-    MeshType::PointType point;
-    point.Fill(0);
-
-    for (int s = 0; s < vectorOfSurfaces.size(); ++s) {
-      for (int d = 0; d < MeshType::PointDimension; ++d) {
+    for (size_t s = 0; s < vectorOfSurfaces.size(); ++s) {
+      for (size_t d = 0; d < MeshType::PointDimension; ++d) {
         point[d] += vectorOfSurfaces[s]->GetPoint(n)[d];
       }
     }
 
-    for (int d = 0; d < MeshType::PointDimension; ++d) {
+    for (size_t d = 0; d < MeshType::PointDimension; ++d) {
       point[d] /= vectorOfSurfaces.size();
     }
 
-    meanSurface->SetPoint(n, point);
+    average->SetPoint(n, point);
   }
 
-  std::cout << "write surface to the file " << meanSurfaceFile << std::endl;
-  if (!writeMesh<MeshType>(meanSurface, meanSurfaceFile)) {
+  std::cout << "write surface to the file " << options.surfaceFile << std::endl;
+  if (!writeMesh<MeshType>(average, options.surfaceFile)) {
     return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;
 }
 
+po::options_description initializeProgramOptions(ProgramOptions& options)
+{
+  po::options_description mandatory("Mandatory options");
+  mandatory.add_options()
+    ("list", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to average.")
+    ("surface", po::value<std::string>(&options.surfaceFile), "The path for the output surface.")
+    ;
 
+  po::options_description help("Optional options");
+  help.add_options()
+    ("help,h", po::bool_switch(&options.help), "Display this help message")
+    ;
+
+  po::options_description description;
+  description.add(mandatory).add(help);
+
+  return description;
+}
