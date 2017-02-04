@@ -293,7 +293,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
     ("image,i", po::value<std::string>(&options.imageFile), "The path to the input image file.")
-    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path to the output surface file.")
+    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surface file.")
     ;
 
   po::options_description output("Optional input options");
@@ -301,14 +301,14 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
     ("sigma", po::value<double>(&options.sigma)->default_value(options.sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
     ("factor", po::value<double>(&options.relaxation)->default_value(options.relaxation), "The relaxation factor for Laplacian smoothing.")
     ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
-    ("points", po::value<size_t>(&options.points)->default_value(options.points), "The number of points in output surface.")
+    ("points", po::value<size_t>(&options.points)->default_value(options.points), "The number of points in the output surface.")
     ("level", po::value<double>(&options.levelValue), "The level value to extract surface.")
     ("isbinary", po::value<bool>(&options.isbinary)->default_value(options.isbinary), "The type of input image.")
     ;
 
   po::options_description report("Optional report options");
   report.add_options()
-    ("report,r", po::value<std::string>(&options.reportFile), "The path to the file to print report.")
+    ("report,r", po::value<std::string>(&options.reportFile), "The path for the file to print report.")
     ;
 
   po::options_description help("Optional options");
