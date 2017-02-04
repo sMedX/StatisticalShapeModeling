@@ -23,7 +23,7 @@ struct ProgramOptions
   std::string levelsetFile;
   std::string reportFile;
   std::string transformFile;
-  size_t transform = 1;
+  size_t transform = 2;
   size_t iterations = 500;
   size_t degree = 2;
   double regularization = 0.1;
@@ -262,7 +262,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 {
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
-    ("model,m", po::value<std::string>(&options.modelFile), "The path to input shape model file.")
+    ("model,m", po::value<std::string>(&options.modelFile), "The path to the input shape model file.")
     ("surface,s", po::value<std::string>(&options.surfaceFile), "The path to the input surface file.")
     ("output,o", po::value<std::string>(&options.outputFile), "The path for the output surface file.")
     ;
@@ -272,7 +272,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
     ("transform", po::value<size_t>(&options.transform)->default_value(options.transform), "The type of the used spatial transform.")
     ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
     ("degree", po::value<size_t>(&options.degree)->default_value(options.degree), "The degree of residuals to compute shape model to image metric.")
-    ("regularization", po::value<double>(&options.regularization)->multitoken(), "The regularization factor.")
+    ("regularization", po::value<double>(&options.regularization)->default_value(options.regularization), "The regularization factor.")
     ;
 
   po::options_description output("Optional output options");
