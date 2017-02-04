@@ -56,10 +56,15 @@ int main(int argc, char** argv) {
     vectorOfSurfaces.push_back(surface);
     vectorOfFiles.push_back(fileName);
 
-    std::cout << "input surface polydata info " << fileName << std::endl;
-    std::cout << " number of cells " << surface->GetNumberOfCells() << std::endl;
+    std::cout << fileName << std::endl;
+    std::cout << "number of cells  " << surface->GetNumberOfCells() << std::endl;
     std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
     std::cout << std::endl;
+
+    if (vectorOfSurfaces[0]->GetNumberOfPoints() != surface->GetNumberOfPoints()) {
+      std::cout << "The number of points must be the same for all surfaces" << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
   std::cout << "number of surfaces " << vectorOfSurfaces.size() << std::endl;
@@ -97,8 +102,8 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 {
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
-    ("list", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to average.")
-    ("surface", po::value<std::string>(&options.surfaceFile), "The path for the output surface.")
+    ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to average.")
+    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surface.")
     ;
 
   po::options_description help("Optional options");
