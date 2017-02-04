@@ -62,7 +62,12 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
-  for (int n = options.regularization.size(); n < options.parameters.size(); ++n) {
+  if (options.regularization.size() == 0 || options.parameters.size() == 0) {
+    std::cout << "parameters to build shape model and regularization factors mus be specified" << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  for (size_t n = options.regularization.size(); n < options.parameters.size(); ++n) {
     options.regularization.push_back(options.regularization.back());
   }
 
@@ -374,27 +379,31 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 {
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
-    ("list", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to establish correspondence.")
-    ("reference", po::value<std::string>(&options.referenceFile), "The path to the input reference surface.")
-    ("surface", po::value<std::string>(&options.surfaceFile), "The path to the output surface file.")
+    ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to establish correspondence.")
+    ("reference,r", po::value<std::string>(&options.referenceFile), "The path to the input reference surface.")
+    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surfaces.")
     ;
 
-  po::options_description output("Optional input options");
-  output.add_options()
-    ("components", po::value<size_t>(&options.components), "The number of components for GP shape model.")
-    ("scale", po::value<double>(&options.scale), "The scaling.")
-    ("parameters", po::value<std::vector<double>>(&options.parameters)->multitoken(), "The number of components for GP shape model.")
+  po::options_description input("Optional input options");
+  input.add_options()
+    ("components", po::value<size_t>(&options.components)->default_value(options.components), "The number of components to build GP shape model.")
+    ("scale", po::value<double>(&options.scale)->default_value(options.scale), "The scaling.")
+    ("parameters", po::value<std::vector<double>>(&options.parameters)->multitoken(), "The parameters to build GP shape model.")
     ("regularization", po::value<std::vector<double>>(&options.regularization)->multitoken(), "The regularization factor.")
-    ("stages", po::value<size_t>(&options.stages), "The number of stages to establish correspondence.")
-    ("transform", po::value<size_t>(&options.transform), "The type of the used spatial transform.")
-    ("iterations", po::value<size_t>(&options.iterations), "The number of iterations.")
-    ("degree", po::value<size_t>(&options.degree), "The number of iterations.")
+    ("stages", po::value<size_t>(&options.stages)->default_value(options.stages), "The number of stages to establish correspondence.")
+    ("transform", po::value<size_t>(&options.transform)->default_value(options.transform), "The type of the used spatial transform.")
+    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
+    ("degree", po::value<size_t>(&options.degree)->default_value(options.degree), "The degree of residuals to compute shape model to image metric.")
+    ;
+
+  po::options_description output("Optional output options");
+  output.add_options()
+    ("output-reference", po::value<std::string>(&options.outputReferenceFile), "The path for the output reference surface.")
     ;
 
   po::options_description report("Optional report options");
   report.add_options()
-    ("output-reference", po::value<std::string>(&options.outputReferenceFile), "The path to the output reference surface.")
-    ("report", po::value<std::string>(&options.reportFile), "The path to the file to print report.")
+    ("report,r", po::value<std::string>(&options.reportFile), "The path for the file to print report.")
     ;
 
   po::options_description help("Optional options");
@@ -403,7 +412,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
     ;
 
   po::options_description description;
-  description.add(mandatory).add(output).add(report).add(help);
+  description.add(mandatory).add(input).add(report).add(help);
 
   return description;
 }
