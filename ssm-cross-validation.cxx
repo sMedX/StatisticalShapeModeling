@@ -1,4 +1,6 @@
+﻿#include <boost/program_options.hpp>
 #include <boost/scoped_ptr.hpp>
+
 #include <utils/statismo-build-models-utils.h>
 #include <DataManager.h>
 #include <itkPCAModelBuilder.h>
@@ -11,9 +13,7 @@
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
-#include "utils/itkCommandLineArgumentParser.h"
 
-// All the statismo classes have to be parameterized with the RepresenterType.
 typedef MeshType::PointType PointType;
 typedef statismo::DataManager<MeshType> DataManagerType;
 typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
@@ -25,23 +25,43 @@ typedef statismo::VectorType VectorType;
 typedef DataManagerType::CrossValidationFoldListType CVFoldListType;
 typedef DataManagerType::DataItemListType DataItemListType;
 
+struct ProgramOptions
+{
+  bool help;
+  bool write;
+  std::string listFile;
+  std::string reportFile;
+  std::vector<size_t> components;
+};
+
+typedef boost::filesystem::path fp;
+namespace po = boost::program_options;
+po::options_description initializeProgramOptions(ProgramOptions& poParameters);
+
 int main(int argc, char** argv)
 {
-  itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
-  parser->SetCommandLineArguments(argc, argv);
-
-  std::string listFile;
-  parser->GetCommandLineArgument("-list", listFile);
-
-  std::vector<unsigned int> numberOfComponents;
-  parser->GetCommandLineArgument("-components", numberOfComponents);
-
-  bool write = false;
-  parser->GetCommandLineArgument("-write", write);
+  ProgramOptions options;
+  po::options_description description = initializeProgramOptions(options);
+  po::variables_map vm;
+  try {
+    po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
+    po::store(parsedOptions, vm);
+    po::notify(vm);
+  }
+  catch (po::error& e) {
+    cerr << "An exception occurred while parsing the command line:" << endl;
+    cerr << e.what() << endl << endl;
+    cout << description << endl;
+    return EXIT_FAILURE;
+  }
+  if (options.help == true) {
+    cout << description << endl;
+    return EXIT_SUCCESS;
+  }
 
   StringList fileNames;
   try {
-    fileNames = getFileList(listFile);
+    fileNames = getFileList(options.listFile);
   }
   catch (ifstream::failure & e) {
     cerr << "Could not read the data-list:" << endl;
@@ -52,7 +72,6 @@ int main(int argc, char** argv)
   try {
     std::string fileName = fileNames.begin()->c_str();
     MeshType::Pointer surface = MeshType::New();
-
     if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
@@ -66,41 +85,36 @@ int main(int argc, char** argv)
     for (StringList::const_iterator it = fileNames.begin(); it != fileNames.end(); ++it) {
       std::string fileName = it->c_str();
       MeshType::Pointer surface = MeshType::New();
-
       if (!readMesh<MeshType>(surface, fileName)) {
         return EXIT_FAILURE;
       }
-
-      // We provide the filename as a second argument. It will be written as metadata, and allows us to more easily figure out what we did later.
       dataManager->AddDataset(surface, fileName);
     }
 
     CVFoldListType cvFoldList = dataManager->GetCrossValidationFolds(dataManager->GetNumberOfSamples(), true);
-
-    if (numberOfComponents.size() == 0) {
-      numberOfComponents.push_back(dataManager->GetNumberOfSamples());
-    }
-
-    std::cout << "successfully loaded " << dataManager->GetNumberOfSamples() << " samples " << std::endl;
-    std::cout << "    number of folds " << cvFoldList.size() << std::endl;
+    std::cout << "number of surfaces " << dataManager->GetNumberOfSamples() << std::endl;
+    std::cout << "number of folds    " << cvFoldList.size() << std::endl;
     std::cout << std::endl;
 
-    // iterate over cvFoldList to get all the folds
-    for (const auto & components : numberOfComponents) {
-      for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
+    if (options.components.size() == 0) {
+      options.components.push_back(dataManager->GetNumberOfSamples());
+    }
 
+    // iterate over cvFoldList to get all the folds
+    for (const auto & components : options.components) {
+      for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
         // create the model
         ModelBuilderType::Pointer pcaModelBuilder = ModelBuilderType::New();
         StatisticalModelType::Pointer model = pcaModelBuilder->BuildNewModel(it->GetTrainingData(), 0);
 
-        //reduce the number of components
+        // reduce the number of components
         ReducedVarianceModelBuilderType::Pointer reducedVarModelBuilder = ReducedVarianceModelBuilderType::New();
         if (components < model->GetNumberOfPrincipalComponents()) {
           model = reducedVarModelBuilder->BuildNewModelWithLeadingComponents(model, components);
         }
 
-        std::cout << "built model from " << it->GetTrainingData().size() << " samples" << std::endl;
-        std::cout << "number of principal components " << model->GetNumberOfPrincipalComponents() << std::endl;
+        std::cout << "built model from     " << it->GetTrainingData().size() << " samples" << std::endl;
+        std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
         std::cout << std::endl;
 
         // Now we can iterate over the test data and do whatever validation we would like to do.
@@ -112,8 +126,8 @@ int main(int argc, char** argv)
           MeshType::Pointer testSample = (*it)->GetSample();
           MeshType::Pointer outputSample = model->DrawSample(model->ComputeCoefficientsForDataset(testSample));
 
-          if (write) {
-            std::string suffix = "-cv-components-" + std::to_string(model->GetNumberOfPrincipalComponents());
+          if (options.write) {
+            std::string suffix = "-cv-" + std::to_string(model->GetNumberOfPrincipalComponents());
             std::string fileName = addFileNameSuffix(surfaceName, suffix);
             if (!writeMesh<MeshType>(outputSample, fileName)) {
               return EXIT_FAILURE;
@@ -169,10 +183,7 @@ int main(int argc, char** argv)
           std::cout << "    Maximal = " << maximal << " mm" << std::endl;
           std::cout << std::endl;
 
-          if (parser->ArgumentExists("-report")) {
-            std::string reportFile;
-            parser->GetCommandLineArgument("-report", reportFile);
-
+          if (options.reportFile != "") {
             std::string dlm = ";";
             std::string header = dlm;
             std::string scores = getBaseNameFromPath(surfaceName) + dlm;
@@ -195,16 +206,17 @@ int main(int argc, char** argv)
             header += "Maximal, mm" + dlm;
             scores += std::to_string(maximal) + dlm;
 
-            bool fileExist = boost::filesystem::exists(reportFile);
+            bool fileExist = boost::filesystem::exists(options.reportFile);
 
-            std::ofstream ofile;
-            ofile.open(reportFile, std::ofstream::out | std::ofstream::app);
+            std::ofstream file;
+            file.open(options.reportFile, std::ofstream::out | std::ofstream::app);
 
             if (!fileExist) {
-              ofile << header << std::endl;
+              file << header << std::endl;
             }
-            ofile << scores << std::endl;
-            ofile.close();
+
+            file << scores << std::endl;
+            file.close();
           }
         }
       }
@@ -214,4 +226,33 @@ int main(int argc, char** argv)
     std::cout << "Exception occurred while building the shape model" << std::endl;
     std::cout << e.what() << std::endl;
   }
+}
+
+po::options_description initializeProgramOptions(ProgramOptions& options)
+{
+  po::options_description mandatory("Mandatory options");
+  mandatory.add_options()
+    ("list", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces.")
+    ;
+
+  po::options_description input("Optional input options");
+  input.add_options()
+    ("write", po::value<bool>(&options.write), "Write surfaces.")
+    ("components", po::value<std::vector<size_t>>(&options.components)->multitoken(), "The number of components for GP shape model.")
+    ;
+
+  po::options_description report("Optional report options");
+  report.add_options()
+    ("report,r", po::value<std::string>(&options.reportFile), "The path to the file to print report.")
+    ;
+
+  po::options_description help("Optional options");
+  help.add_options()
+    ("help,h", po::bool_switch(&options.help), "Display this help message")
+    ;
+
+  po::options_description description;
+  description.add(mandatory).add(input).add(report).add(help);
+
+  return description;
 }

@@ -1,8 +1,4 @@
-#ifndef __utils_h
-#define __utils_h
-
-#include <string>
-#include <iostream>
+#pragma once
 #include <boost/filesystem.hpp>
 
 #include <itkObject.h>
@@ -23,11 +19,8 @@ template <typename TImage>
 bool readImage(typename TImage::Pointer image, const std::string& fileName)
 {
   typedef itk::ImageFileReader<TImage> Reader;
-
   typename Reader::Pointer reader = Reader::New();
-
   reader->SetFileName(fileName);
-
   try {
     reader->Update();
   }
@@ -36,7 +29,6 @@ bool readImage(typename TImage::Pointer image, const std::string& fileName)
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
-
   image->Graft(reader->GetOutput());
   return true;
 }
@@ -46,13 +38,10 @@ template <typename TImage>
 bool writeImage(const TImage* image, const std::string& fileName)
 {
   typedef itk::ImageFileWriter<TImage> Writer;
-
   typename Writer::Pointer writer = Writer::New();
-
   writer->SetInput(image);
   writer->SetFileName(fileName);
   writer->SetUseCompression(true);
-
   try {
     writer->Update();
   }
@@ -61,7 +50,6 @@ bool writeImage(const TImage* image, const std::string& fileName)
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
-
   return true;
 }
 
@@ -72,7 +60,6 @@ bool readMesh(typename TMesh::Pointer mesh, const std::string& fileName)
   typedef itk::MeshFileReader<TMesh> MeshFileReader;
   typename MeshFileReader::Pointer reader = MeshFileReader::New();
   reader->SetFileName(fileName);
-
   try {
     reader->Update();
   }
@@ -81,7 +68,6 @@ bool readMesh(typename TMesh::Pointer mesh, const std::string& fileName)
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
-
   mesh->Graft(reader->GetOutput());
   return true;
 }
@@ -92,12 +78,10 @@ bool writeMesh(const TMesh* mesh, const std::string& fileName)
 {
   typedef itk::MeshFileWriter<TMesh> MeshFileWriter;
   typename MeshFileWriter::Pointer writer = MeshFileWriter::New();
-
   writer->SetFileName(fileName);
   writer->SetInput(mesh);
   writer->SetUseCompression(true);
   writer->SetFileTypeAsBINARY();
-
   try {
     writer->Update();
   }
@@ -106,20 +90,16 @@ bool writeMesh(const TMesh* mesh, const std::string& fileName)
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
-
   return true;
 }
 
 bool readVTKPolydata(vtkPolyData* surface, const std::string& filename)
 {
   typedef vtkSmartPointer<vtkPolyDataReader> Reader;
-
   Reader reader = Reader::New();
   reader->SetFileName(filename.c_str());
   reader->Update();
-
   surface->ShallowCopy(reader->GetOutput());
-
   return true;
 }
 
@@ -132,11 +112,9 @@ bool writeVTKPolydata(vtkPolyData* surface, const std::string& fileName)
   writer->SetFileName(fileName.c_str());
   writer->SetFileTypeToBinary();
   bool result = static_cast<bool>(writer->Write());
-
   if (!result) {
     std::cerr << "Error: Unable to write surface to file '" << fileName << "'" << std::endl;
   }
-
   return result;
 }
 
@@ -149,7 +127,6 @@ bool writeTransform(const TransformType* transform, const std::string& fileName)
   typename itk::TransformFileWriterTemplate<ScalarType>::Pointer writer = itk::TransformFileWriterTemplate<ScalarType>::New();
   writer->SetInput(transform);
   writer->SetFileName(fileName);
-
   try {
     writer->Update();
   }
@@ -158,18 +135,16 @@ bool writeTransform(const TransformType* transform, const std::string& fileName)
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
-
   return true;
 }
 
-//! Writes a transform to a file  
+//! Reads a transform from a file
 typedef itk::TransformFileReader::TransformListType * TransformListType;
 bool readTransform(TransformListType transforms, const std::string& fileName)
 {
   itk::TransformFactoryBase::RegisterDefaultTransforms();
   itk::TransformFileReader::Pointer reader = itk::TransformFileReader::New();
   reader->SetFileName(fileName);
-
   try {
     reader->Update();
   }
@@ -178,14 +153,10 @@ bool readTransform(TransformListType transforms, const std::string& fileName)
     std::cerr << "Error: " << err << std::endl;
     return false;
   }
-
   transforms = reader->GetTransformList();
-  std::cout << transforms->size() << std::endl;
-
   return true;
 }
 
-//----------------------------------------------------------------------------
 std::string getDirectoryFromPath(const std::string& fileName)
 {
   boost::filesystem::path path(fileName);
@@ -210,5 +181,3 @@ std::string getBaseNameFromPath(const std::string& fileName)
   boost::filesystem::path path(fileName);
   return path.stem().string();
 }
-
-#endif

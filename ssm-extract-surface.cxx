@@ -1,3 +1,5 @@
+#include <boost/program_options.hpp>
+
 #include <vtkPolyData.h>
 #include <vtkMarchingCubes.h>
 #include <vtkSmoothPolyDataFilter.h>
@@ -15,53 +17,53 @@
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
-#include "utils/itkCommandLineArgumentParser.h"
 #include "ssm/ssmPointSetToImageMetrics.h"
+#include "ssm/ssmBinaryImageToLevelSetImageFilter.h"
 
-double AverageLengthOfEdges(vtkPolyData*poly);
-double AverageAreaOfCells(vtkPolyData*poly);
-FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground);
+double averageLengthOfEdges(vtkPolyData* poly);
+double averageAreaOfCells(vtkPolyData* poly);
+
+struct ProgramOptions
+{
+  bool help;
+  std::string imageFile;
+  std::string surfaceFile;
+  std::string reportFile;
+  double sigma = 1.0;
+  double relaxation = 0.2;
+  size_t iterations = 100;
+  size_t points = 0;
+  bool isbinary = true;
+  double levelValue = std::numeric_limits<double>::lowest();
+};
+
+namespace po = boost::program_options;
+po::options_description initializeProgramOptions(ProgramOptions& poParameters);
 
 int main(int argc, char** argv) {
-
-  itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
-
-  parser->SetCommandLineArguments(argc, argv);
-
-  std::string imageFile;
-  parser->GetCommandLineArgument("-image", imageFile);
-
-  std::string surfaceFile;
-  parser->GetCommandLineArgument("-output", surfaceFile);
-
-  double sigma = 1;
-  parser->GetCommandLineArgument("-sigma", sigma);
-
-  double relaxation = 0.2;
-  parser->GetCommandLineArgument("-relaxation", relaxation);
-
-  unsigned int numberOfIterations = 100;
-  parser->GetCommandLineArgument("-iterations", numberOfIterations);
-
-  unsigned int numberOfPoints = 0;
-  parser->GetCommandLineArgument("-points", numberOfPoints);
-
-  bool isbinary = true;
-  parser->GetCommandLineArgument("-binary", isbinary);
-
-  std::cout << std::endl;
-  std::cout << "      parameters " << std::endl;
-  std::cout << "           sigma " << sigma << std::endl;
-  std::cout << "      relaxation " << relaxation << std::endl;
-  std::cout << "      iterations " << numberOfIterations << std::endl;
-  std::cout << "number of points " << numberOfPoints << std::endl;
-  std::cout << " image is binary " << isbinary << std::endl;
-  std::cout << std::endl;
+  ProgramOptions options;
+  po::options_description description = initializeProgramOptions(options);
+  po::variables_map vm;
+  try {
+    po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
+    po::store(parsedOptions, vm);
+    po::notify(vm);
+  }
+  catch (po::error& e) {
+    cerr << "An exception occurred while parsing the command line:" << endl;
+    cerr << e.what() << endl << endl;
+    cout << description << endl;
+    return EXIT_FAILURE;
+  }
+  if (options.help == true) {
+    cout << description << endl;
+    return EXIT_SUCCESS;
+  }
 
   //----------------------------------------------------------------------------
   // read image
   FloatImageType::Pointer image = FloatImageType::New();
-  if (!readImage<FloatImageType>(image, imageFile)) {
+  if (!readImage<FloatImageType>(image, options.imageFile)) {
     return EXIT_FAILURE;
   }
 
@@ -71,19 +73,15 @@ int main(int argc, char** argv) {
   labelValues->SetImage(image);
   labelValues->Compute();
 
-  double levelValue;
-  if (parser->ArgumentExists("-level")) {
-    parser->GetCommandLineArgument("-level", levelValue);
-  }
-  else {
-    levelValue = 0.5*(labelValues->GetMinimum() + labelValues->GetMaximum());
+  if (options.levelValue < labelValues->GetMinimum() || options.levelValue > labelValues->GetMaximum()) {
+    options.levelValue = 0.5*(labelValues->GetMinimum() + labelValues->GetMaximum());
   }
 
-  std::cout << "input image " << imageFile << std::endl;
+  std::cout << "input image " << options.imageFile << std::endl;
   std::cout << "       size " << image->GetLargestPossibleRegion().GetSize() << std::endl;
   std::cout << "    spacing " << image->GetSpacing() << std::endl;
   std::cout << "     origin " << image->GetOrigin() << std::endl;
-  std::cout << "level value " << levelValue << std::endl;
+  std::cout << "level value " << options.levelValue << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -93,7 +91,7 @@ int main(int argc, char** argv) {
   typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
   RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
   gaussian->SetInput(image);
-  gaussian->SetSigma(sigma);
+  gaussian->SetSigma(options.sigma);
 
   // fill holes after smoothing
   typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
@@ -118,7 +116,7 @@ int main(int argc, char** argv) {
   typedef vtkSmartPointer<vtkMarchingCubes> MarchingCubes;
   MarchingCubes mcubes = MarchingCubes::New();
   mcubes->SetInputData(convertor->GetOutput());
-  mcubes->SetValue(0, levelValue);
+  mcubes->SetValue(0, options.levelValue);
   try {
     mcubes->Update();
   }
@@ -129,8 +127,8 @@ int main(int argc, char** argv) {
   vtkSmartPointer<vtkPolyData> surface = mcubes->GetOutput();
 
   // decimate surface
-  if (numberOfPoints > 0) {
-    double reduction = 1 - (numberOfPoints - 1) / (double)surface->GetNumberOfPoints();
+  if (options.points > 0) {
+    double reduction = 1 - (options.points - 1) / (double)surface->GetNumberOfPoints();
     std::cout << "reduction to decimate surface " << reduction << std::endl;
     vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
     decimate->SetInputData(surface);
@@ -150,8 +148,8 @@ int main(int argc, char** argv) {
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
   SmoothPolyData smoother = SmoothPolyData::New();
   smoother->SetInputData(surface);
-  smoother->SetNumberOfIterations(numberOfIterations);
-  smoother->SetRelaxationFactor(relaxation);
+  smoother->SetNumberOfIterations(options.iterations);
+  smoother->SetRelaxationFactor(options.relaxation);
   try {
     smoother->Update();
   }
@@ -178,7 +176,7 @@ int main(int argc, char** argv) {
   surface = normals->GetOutput();
 
   // write polydata to the file
-  if (!writeVTKPolydata(surface, surfaceFile)) {
+  if (!writeVTKPolydata(surface, options.surfaceFile)) {
     return EXIT_FAILURE;
   }
 
@@ -186,14 +184,14 @@ int main(int argc, char** argv) {
   std::vector<PairType> surfaceInfo;
   surfaceInfo.push_back(PairType("number of points", std::to_string(surface->GetNumberOfPoints())));
   surfaceInfo.push_back(PairType("number of cells", std::to_string(surface->GetNumberOfCells())));
-  surfaceInfo.push_back(PairType("length of edges", std::to_string(AverageLengthOfEdges(surface))));
-  surfaceInfo.push_back(PairType("area of cells", std::to_string(AverageAreaOfCells(surface))));
+  surfaceInfo.push_back(PairType("length of edges", std::to_string(averageLengthOfEdges(surface))));
+  surfaceInfo.push_back(PairType("area of cells", std::to_string(averageAreaOfCells(surface))));
 
-  std::cout << "output surface polydata " << surfaceFile << std::endl;
+  std::cout << "output surface polydata " << options.surfaceFile << std::endl;
   std::cout << "       number of cells  " << surface->GetNumberOfCells() << std::endl;
   std::cout << "       number of points " << surface->GetNumberOfPoints() << std::endl;
-  std::cout << "average length of edges " << AverageLengthOfEdges(surface) << endl;
-  std::cout << "  average area of cells " << AverageAreaOfCells(surface) << endl;
+  std::cout << "average length of edges " << averageLengthOfEdges(surface) << endl;
+  std::cout << "  average area of cells " << averageAreaOfCells(surface) << endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -211,8 +209,19 @@ int main(int argc, char** argv) {
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
   metrics->SetFixedPointSet(pointSet);
   metrics->SetInfo(surfaceInfo);
-  if (isbinary) {
-    metrics->SetMovingImage(ComputeDistanceMapImage(image, labelValues->GetMinimum(), labelValues->GetMaximum()));
+  if (options.isbinary) {
+    // compute level set image
+    typedef ssm::BinaryImageToLevelSetImageFilter<FloatImageType, FloatImageType> BinaryImageToLevelSetImageType;
+    BinaryImageToLevelSetImageType::Pointer levelset = BinaryImageToLevelSetImageType::New();
+    levelset->SetInput(image);
+    try {
+      levelset->Update();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      return EXIT_FAILURE;
+    }
+    metrics->SetMovingImage(levelset->GetOutput());
   }
   else {
     metrics->SetMovingImage(image);
@@ -221,18 +230,16 @@ int main(int argc, char** argv) {
   metrics->PrintReport(std::cout);
 
   // write report to *.csv file
-  if (parser->ArgumentExists("-report")) {
-    std::string fileName;
-    parser->GetCommandLineArgument("-report", fileName);
-    std::cout << "print report to the file: " << fileName << std::endl;
-    metrics->PrintReportToFile(fileName, getBaseNameFromPath(surfaceFile));
+  if (options.reportFile!="") {
+    std::cout << "print report to the file: " << options.reportFile << std::endl;
+    metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.surfaceFile));
   }
 
   return EXIT_SUCCESS;
 }
 
 
-double AverageLengthOfEdges(vtkPolyData*poly)
+double averageLengthOfEdges(vtkPolyData*poly)
 {
   const unsigned int numberOfCells = poly->GetNumberOfCells();
   double sum = 0;
@@ -255,13 +262,12 @@ double AverageLengthOfEdges(vtkPolyData*poly)
   return sum / (3*numberOfCells);
 }
 
-
-double AverageAreaOfCells(vtkPolyData*poly)
+double averageAreaOfCells(vtkPolyData*poly)
 {
-  const unsigned int numberOfCells = poly->GetNumberOfCells();
+  const size_t numberOfCells = poly->GetNumberOfCells();
   double sum = 0;
 
-  for (int n = 0; n < numberOfCells; ++n) {
+  for (size_t n = 0; n < numberOfCells; ++n) {
     double a[3], b[3], c[3];
     double p1[3], p2[3], p3[3];
 
@@ -282,39 +288,36 @@ double AverageAreaOfCells(vtkPolyData*poly)
   return sum / numberOfCells;
 }
 
-
-FloatImageType::Pointer ComputeDistanceMapImage(FloatImageType::Pointer image, float background, float foreground)
+po::options_description initializeProgramOptions(ProgramOptions& options)
 {
-  typedef itk::SignedMaurerDistanceMapImageFilter<FloatImageType, FloatImageType> DistanceFilterType;
-  DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
-  distanceToForeground->SetUseImageSpacing(true);
-  distanceToForeground->SetInput(image);
-  distanceToForeground->SetBackgroundValue(background);
-  distanceToForeground->SetInsideIsPositive(false);
+  po::options_description mandatory("Mandatory options");
+  mandatory.add_options()
+    ("image,i", po::value<std::string>(&options.imageFile), "The path to the input image file.")
+    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surface file.")
+    ;
 
-  DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
-  distanceToBackground->SetUseImageSpacing(true);
-  distanceToBackground->SetInput(image);
-  distanceToBackground->SetBackgroundValue(foreground);
-  distanceToBackground->SetInsideIsPositive(true);
+  po::options_description output("Optional input options");
+  output.add_options()
+    ("sigma", po::value<double>(&options.sigma)->default_value(options.sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
+    ("factor", po::value<double>(&options.relaxation)->default_value(options.relaxation), "The relaxation factor for Laplacian smoothing.")
+    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
+    ("points", po::value<size_t>(&options.points)->default_value(options.points), "The number of points in the output surface.")
+    ("level", po::value<double>(&options.levelValue), "The level value to extract surface.")
+    ("isbinary", po::value<bool>(&options.isbinary)->default_value(options.isbinary), "The type of input image.")
+    ;
 
-  typedef itk::AddImageFilter <FloatImageType> AddImageFilterType;
-  AddImageFilterType::Pointer addfilter = AddImageFilterType::New();
-  addfilter->SetInput1(distanceToForeground->GetOutput());
-  addfilter->SetInput2(distanceToBackground->GetOutput());
+  po::options_description report("Optional report options");
+  report.add_options()
+    ("report,r", po::value<std::string>(&options.reportFile), "The path for the file to print report.")
+    ;
 
-  typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
-  FilterType::Pointer multiply = FilterType::New();
-  multiply->SetInput(addfilter->GetOutput());
-  multiply->SetConstant(0.5);
-  try {
-    multiply->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    throw;
-  }
+  po::options_description help("Optional options");
+  help.add_options()
+    ("help,h", po::bool_switch(&options.help), "Display this help message")
+    ;
 
-  return multiply->GetOutput();
+  po::options_description description;
+  description.add(mandatory).add(output).add(report).add(help);
+
+  return description;
 }
-
