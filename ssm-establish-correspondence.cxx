@@ -387,7 +387,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   po::options_description input("Optional input options");
   input.add_options()
     ("components", po::value<size_t>(&options.components)->default_value(options.components), "The number of components to build GP shape model.")
-    ("scale", po::value<double>(&options.scale)->default_value(options.scale), "The scaling.")
+    ("scale", po::value<double>(&options.scale)->default_value(options.scale), "The scaling factor to scale the kernel.")
     ("parameters", po::value<std::vector<double>>(&options.parameters)->multitoken(), "The parameters to build GP shape model.")
     ("regularization", po::value<std::vector<double>>(&options.regularization)->multitoken(), "The regularization factor.")
     ("stages", po::value<size_t>(&options.stages)->default_value(options.stages), "The number of stages to establish correspondence.")
