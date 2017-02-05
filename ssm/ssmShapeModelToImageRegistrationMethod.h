@@ -1,21 +1,24 @@
 #pragma once
 
+#include <itkTimeProbe.h>
 #include <itkImage.h>
 #include <itkStatisticalModel.h>
 #include <itkTransform.h>
+#include <itkCompositeTransform.h>
 #include <itkStatisticalShapeModelTransform.h>
 #include <itkLBFGSOptimizer.h>
 
-#include "itkShapeModelToImageMetric.h"
+#include "ssmShapeModelToImageMetric.h"
+#include "ssmTransformInitializer.h"
 
-namespace itk
+namespace ssm
 {
   template <typename TShapeModel, typename TOutputMesh>
-  class ShapeModelRegistrationMethod : public itk::ProcessObject
+  class ShapeModelToImageRegistrationMethod : public itk::ProcessObject
   {
   public:
     /** Standard class typedefs. */
-    typedef ShapeModelRegistrationMethod    Self;
+    typedef ShapeModelToImageRegistrationMethod       Self;
     typedef itk::ProcessObject                        Superclass;
     typedef itk::SmartPointer< Self >                 Pointer;
     typedef itk::SmartPointer< const Self >           ConstPointer;
@@ -42,13 +45,16 @@ namespace itk
     typedef typename itk::Optimizer::ScalesType ScalesType;
     typedef typename itk::StatisticalShapeModelTransform<DatasetType, double, PointDimension> ShapeTransformType;
     typedef itk::ShapeModelToImageMetric<TShapeModel, LevelSetImageType> MetricType;
+    typedef ssm::TransformInitializer<CoordinateRepresentationType> TransformInitializerType;
+    typedef itk::Transform<CoordinateRepresentationType, PointDimension> TransformType;
+    typedef itk::CompositeTransform<CoordinateRepresentationType, PointDimension> CompositeTransformType;
 
     /** Smart Pointer type to a DataObject. */
     typedef typename itk::DataObject::Pointer DataObjectPointer;
 
     /** Method for creation through the object factory. */
     itkNewMacro(Self);
-    itkTypeMacro(ShapeModelRegistrationMethod, itk::ProcessObject);
+    itkTypeMacro(ShapeModelToImageRegistrationMethod, itk::ProcessObject);
 
     /** Returns the transform resulting from the registration process  */
     const OutputMeshType* GetOutput() const;
@@ -84,11 +90,18 @@ namespace itk
     itkSetMacro(ModelScale, double);
     itkGetMacro(ModelScale, double);
 
+    itkSetMacro(Degree, unsigned int);
+    itkGetMacro(Degree, unsigned int);
+
+    itkSetObjectMacro(TransformInitializer, TransformInitializerType);
+    itkGetObjectMacro(TransformInitializer, TransformInitializerType);
+
     void PrintReport(std::ostream& os);
+    itk::TimeProbe::CountType GetElapsedTime() { return m_Clock.GetTotal(); }
 
   protected:
-    ShapeModelRegistrationMethod();
-    ~ShapeModelRegistrationMethod() {}
+    ShapeModelToImageRegistrationMethod();
+    ~ShapeModelToImageRegistrationMethod() {}
 
     void GenerateData();
     void InitializeTransform();
@@ -102,17 +115,27 @@ namespace itk
     typename OutputMeshType::Pointer m_OutputMesh;
     typename MetricType::Pointer m_Metric;
     OptimizerType::ParametersType m_InitialParameters;
+    size_t m_NumberOfSpatialParameters;
+    size_t m_NumberOfShapeModelParameters;
 
+    typename TransformType::Pointer m_Transform;
+    typename TransformType::Pointer m_SpatialTransform;
     typename ShapeTransformType::Pointer m_ShapeTransform;
+    TransformInitializerType::Pointer m_TransformInitializer;
+    ScalesType m_SpatialScales;
     ScalesType m_Scales;
     double m_ModelScale = 3;
     unsigned int m_NumberOfIterations = 500;
     double m_LineSearchAccuracy = 0.1;
     double m_DefaultStepLength = 0.1;
-    double m_GradientConvergenceTolerance = 1e-07;
+    double m_GradientConvergenceTolerance = 1e-05;
     double m_RegularizationParameter = 0.1;
+    unsigned int m_Degree = 2;
+    itk::TimeProbe m_Clock;
+
   };
 }
+
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkShapeModelRegistrationMethod.hxx"
+#include "ssmShapeModelToImageRegistrationMethod.hxx"
 #endif
