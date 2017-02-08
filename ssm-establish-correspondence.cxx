@@ -412,7 +412,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
     ;
 
   po::options_description description;
-  description.add(mandatory).add(input).add(report).add(help);
+  description.add(mandatory).add(input).add(output).add(report).add(help);
 
   return description;
 }
