@@ -398,7 +398,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 
   po::options_description output("Optional output options");
   output.add_options()
-    ("output-reference", po::value<std::string>(&options.outputReferenceFile), "The path for the output reference surface.")
+    ("output-reference", po::value<std::string>(&options.outputReferenceFile), "The path for the output updated reference surfaces.")
     ;
 
   po::options_description report("Optional report options");
