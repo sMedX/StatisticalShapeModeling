@@ -49,43 +49,6 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
-  /*
-  itk::CommandLineArgumentParser::Pointer parser = itk::CommandLineArgumentParser::New();
-
-  parser->SetCommandLineArguments(argc, argv);
-
-  std::string modelFile;
-  parser->GetCommandLineArgument("-model", modelFile);
-
-  std::string surfaceFile;
-  parser->GetCommandLineArgument("-surface", surfaceFile);
-
-  std::string outputFile;
-  parser->GetCommandLineArgument("-output", outputFile);
-
-  size_t typeOfransform = 1;
-  parser->GetCommandLineArgument("-transform", typeOfransform);
-
-  size_t numberOfIterations = 500;
-  parser->GetCommandLineArgument("-iterations", numberOfIterations);
-
-  double regularization = 0.1;
-  parser->GetCommandLineArgument("-regularization", regularization);
-
-  size_t degree = 2;
-  parser->GetCommandLineArgument("-degree", degree);
-
-  std::cout << std::endl;
-  std::cout << " shape model to image registration" << std::endl;
-  std::cout << "            model file " << modelFile << std::endl;
-  std::cout << "    input surface file " << surfaceFile << std::endl;
-  std::cout << "   output surface file " << outputFile << std::endl;
-  std::cout << "  number of iterations " << numberOfIterations << std::endl;
-  std::cout << "     type of transform " << typeOfransform << std::endl;
-  std::cout << "                degree " << degree << std::endl;
-  std::cout << "        regularization " << regularization << std::endl;
-  std::cout << std::endl;
-  */
   //----------------------------------------------------------------------------
   // read surface
   MeshType::Pointer surface = MeshType::New();
