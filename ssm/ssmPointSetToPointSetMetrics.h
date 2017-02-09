@@ -1,7 +1,7 @@
 #pragma once
 #include <boost/filesystem.hpp>
 
-#include <itkSingleValuedCostFunction.h>
+#include <itkObject.h>
 #include <itkKdTreeGenerator.h>
 #include <itkListSample.h>
 #include <itkSampleToHistogramFilter.h>
@@ -39,10 +39,12 @@ namespace ssm
     typedef typename TreeGeneratorType::KdTreeType TreeType;
     typedef typename TreeType::InstanceIdentifierVectorType NeighborhoodType;
 
+    /** Type of the additional information. */
     typedef std::pair<std::string, std::string> PairType;
     typedef std::vector<PairType> InfoType;
+    itkSetMacro(Info, InfoType);
 
-    /** Get/Set the Fixed Image.  */
+    /** Get/Set the Fixed Point Set.  */
     itkSetConstObjectMacro(FixedPointSet, FixedPointSetType);
     itkGetConstObjectMacro(FixedPointSet, FixedPointSetType);
 
@@ -60,8 +62,6 @@ namespace ssm
 
     itkSetMacro(HistogramSize, size_t);
     itkGetMacro(HistogramSize, size_t);
-
-    itkSetMacro(Info, InfoType);
 
     /*Get metrics values. */
     itkGetMacro(MeanValue, MeasureType);
