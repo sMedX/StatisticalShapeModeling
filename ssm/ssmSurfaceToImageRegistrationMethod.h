@@ -5,6 +5,7 @@
 #include <itkLBFGSOptimizer.h>
 #include <itkCompositeTransform.h>
 #include <itkPointSet.h>
+#include <itkPointSetToImageMetric.h>
 
 #include "ssmTransformInitializer.h"
 
