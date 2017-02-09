@@ -152,7 +152,6 @@ namespace ssm
     FixedPointSetConstPointer m_FixedPointSet;
     MovingPointSetConstPointer m_MovingPointSet;
 
-    double m_Radius = 10;
     size_t m_BucketSize = 16;
     size_t m_HistogramSize = 1000;
     double m_LevelOfQuantile = 0.95;
@@ -165,7 +164,6 @@ namespace ssm
     InfoType m_Info;
 
     typename ListSampleType::Pointer m_ListOfPoints;
-    typename TreeGeneratorType::Pointer m_TreeGenerator;
     typename TreeType::ConstPointer m_Tree;
 
     void ComputeMetrics(std::vector<MeasureType> & metrics, typename FixedPointSetType::ConstPointer fixedPointSet, typename MovingPointSetType::ConstPointer movingPointSet)
@@ -188,12 +186,12 @@ namespace ssm
 
         NeighborhoodType neighbors;
         std::vector<double> distancies;
-        m_Tree->Search(fixedPoint, m_Radius, neighbors, distancies);
+        m_Tree->Search(fixedPoint, 1, neighbors, distancies);
         if (distancies.size() == 0) {
           continue;
         }
+        MeasureType distance = distancies[0];
 
-        MeasureType distance = *std::min_element(distancies.begin(), distancies.end());
         measures->PushBack(distance);
         mean += distance;
         rmse += distance * distance;
@@ -235,17 +233,17 @@ namespace ssm
         m_ListOfPoints->PushBack(it.Value());
       }
 
-      m_TreeGenerator = TreeGeneratorType::New();
-      m_TreeGenerator->SetSample(m_ListOfPoints);
-      m_TreeGenerator->SetBucketSize(m_BucketSize);
+      TreeGeneratorType::Pointer generator = TreeGeneratorType::New();
+      generator->SetSample(m_ListOfPoints);
+      generator->SetBucketSize(m_BucketSize);
       try {
-        m_TreeGenerator->Update();
+        generator->Update();
       }
       catch (itk::ExceptionObject& excep) {
         itkExceptionMacro(<< excep);
       }
 
-      m_Tree = m_TreeGenerator->GetOutput();
+      m_Tree = generator->GetOutput();
     }
   };
 }
