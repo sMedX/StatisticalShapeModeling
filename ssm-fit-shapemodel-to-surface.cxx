@@ -6,7 +6,6 @@
 #include <itkSignedMaurerDistanceMapImageFilter.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
-#include <statismo-build-gp-model-kernels.h>
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
