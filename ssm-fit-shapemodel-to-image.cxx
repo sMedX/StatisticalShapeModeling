@@ -2,9 +2,6 @@
 
 #include <itkImageMomentsCalculator.h>
 #include <itkTriangleMeshToBinaryImageFilter.h>
-#include <itkSignedMaurerDistanceMapImageFilter.h>
-#include <itkTransformFileWriter.h>
-#include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 
 #include "utils/ssmTypes.h"

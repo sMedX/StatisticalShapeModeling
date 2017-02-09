@@ -1,10 +1,7 @@
 ﻿#include <boost/program_options.hpp>
 
-#include <boost/program_options.hpp>
 #include <itkImageMomentsCalculator.h>
 #include <itkTriangleMeshToBinaryImageFilter.h>
-#include <itkSignedMaurerDistanceMapImageFilter.h>
-#include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 
 #include "utils/ssmTypes.h"
