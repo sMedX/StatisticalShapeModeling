@@ -181,7 +181,7 @@ namespace ssm
 
       typedef itk::Vector<MeasureType, 1> VectorType;
       typedef itk::Statistics::ListSample<VectorType> ListSampleType;
-      ListSampleType::Pointer sample = ListSampleType::New();
+      ListSampleType::Pointer measures = ListSampleType::New();
 
       for (typename FixedPointSetType::PointsContainerConstIterator fixed = fixedContainer->Begin(); fixed != fixedContainer->End(); ++fixed) {
         typename FixedPointSetType::PointType fixedPoint = fixed.Value();
@@ -194,7 +194,7 @@ namespace ssm
         }
 
         MeasureType distance = *std::min_element(distancies.begin(), distancies.end());
-        sample->PushBack(distance);
+        measures->PushBack(distance);
         mean += distance;
         rmse += distance * distance;
         maximal = std::max(maximal, distance);
@@ -210,7 +210,7 @@ namespace ssm
 
       typedef itk::Statistics::SampleToHistogramFilter<ListSampleType, HistogramType> SampleToHistogramFilterType;
       SampleToHistogramFilterType::Pointer sampleToHistogram = SampleToHistogramFilterType::New();
-      sampleToHistogram->SetInput(sample);
+      sampleToHistogram->SetInput(measures);
       sampleToHistogram->SetAutoMinimumMaximum(true);
       sampleToHistogram->SetHistogramSize(size);
       try {
