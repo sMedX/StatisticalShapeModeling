@@ -7,12 +7,10 @@
 #include <itkStandardMeshRepresenter.h>
 #include <itkReducedVarianceModelBuilder.h>
 #include <itkStatisticalModel.h>
-#include <itkSampleToHistogramFilter.h>
-#include <itkListSample.h>
-#include <itkHistogram.h>
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
+#include "ssm/ssmPointSetToPointSetMetrics.h"
 
 typedef MeshType::PointType PointType;
 typedef statismo::DataManager<MeshType> DataManagerType;
@@ -126,97 +124,40 @@ int main(int argc, char** argv)
           MeshType::Pointer testSample = (*it)->GetSample();
           MeshType::Pointer outputSample = model->DrawSample(model->ComputeCoefficientsForDataset(testSample));
 
+          typedef std::pair<std::string, std::string> PairType;
+          std::vector<PairType> info;
+          info.push_back(PairType("Components", std::to_string(model->GetNumberOfPrincipalComponents())));
+          info.push_back(PairType("Probability", std::to_string(model->ComputeProbabilityOfDataset(testSample))));
+
+          // compute metrics
+          typedef itk::PointSet<MeshType::PointType, MeshType::PointDimension> PointSetType;
+          PointSetType::Pointer pointSet1 = PointSetType::New();
+          pointSet1->SetPoints(testSample->GetPoints());
+
+          PointSetType::Pointer pointSet2 = PointSetType::New();
+          pointSet2->SetPoints(outputSample->GetPoints());
+
+          typedef ssm::PointSetToPointSetMetrics<PointSetType> PointSetToPointSetMetricsType;
+          PointSetToPointSetMetricsType::Pointer metrics = PointSetToPointSetMetricsType::New();
+          metrics->SetFixedPointSet(pointSet1);
+          metrics->SetMovingPointSet(pointSet2);
+          metrics->SetInfo(info);
+          metrics->Compute();
+          metrics->PrintReport(std::cout);
+
+          // print report to *.csv file
+          if (options.reportFile != "") {
+            std::cout << "print report to the file: " << options.reportFile << std::endl;
+            metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(surfaceName));
+          }
+
+          // write samples
           if (options.write) {
             std::string suffix = "-cv-" + std::to_string(model->GetNumberOfPrincipalComponents());
             std::string fileName = addFileNameSuffix(surfaceName, suffix);
             if (!writeMesh<MeshType>(outputSample, fileName)) {
               return EXIT_FAILURE;
             }
-          }
-
-          double probability = model->ComputeProbabilityOfDataset(testSample);
-          double mean = 0;
-          double rmse = 0;
-          double maximal = 0;
-          PointType p1, p2;
-
-          typedef itk::Vector<double, 1> VectorType;
-          typedef itk::Statistics::ListSample<VectorType> ListSampleType;
-          ListSampleType::Pointer sample = ListSampleType::New();
-
-          for (size_t n = 0; n < testSample->GetNumberOfPoints(); ++n) {
-            double dist = std::numeric_limits<double>::max();
-            p1.CastFrom<float>(testSample->GetPoint(n));
-
-            for (size_t m = 0; m < outputSample->GetNumberOfPoints(); ++m) {
-              p2.CastFrom<float>(outputSample->GetPoint(m));
-              dist = std::min(dist, p1.EuclideanDistanceTo(p2));
-            }
-
-            sample->PushBack(dist);
-            mean += dist;
-            rmse += dist * dist;
-            maximal = std::max(maximal, dist);
-          }
-
-          mean = mean / testSample->GetNumberOfPoints();
-          rmse = std::sqrt(rmse / testSample->GetNumberOfPoints());
-
-          typedef itk::Statistics::Histogram<float, itk::Statistics::DenseFrequencyContainer2> HistogramType;
-          typedef itk::Statistics::SampleToHistogramFilter<ListSampleType, HistogramType> SampleToHistogramFilterType;
-          SampleToHistogramFilterType::Pointer sampleToHistogram = SampleToHistogramFilterType::New();
-          sampleToHistogram->SetInput(sample);
-          sampleToHistogram->SetAutoMinimumMaximum(true);
-          SampleToHistogramFilterType::HistogramSizeType histogramSize(1);
-          histogramSize.Fill(1000);
-          sampleToHistogram->SetHistogramSize(histogramSize);
-          sampleToHistogram->Update();
-
-          const HistogramType* histogram = sampleToHistogram->GetOutput();
-          double quantileValue = histogram->Quantile(0, 0.95);
-
-          std::cout << surfaceName << std::endl;
-          std::cout << "Probability = " << probability << std::endl;
-          std::cout << "       Mean = " << mean << " mm" << std::endl;
-          std::cout << "       RMSE = " << rmse << " mm" << std::endl;
-          std::cout << "   Quantile = " << quantileValue << ", level = " << 0.95 << std::endl;
-          std::cout << "    Maximal = " << maximal << " mm" << std::endl;
-          std::cout << std::endl;
-
-          if (options.reportFile != "") {
-            std::string dlm = ";";
-            std::string header = dlm;
-            std::string scores = getBaseNameFromPath(surfaceName) + dlm;
-
-            header += "Components" + dlm;
-            scores += std::to_string(model->GetNumberOfPrincipalComponents()) + dlm;
-
-            header += "Probability" + dlm;
-            scores += std::to_string(probability) + dlm;
-
-            header += "Mean, mm" + dlm;
-            scores += std::to_string(mean) + dlm;
-
-            header += "RMSE, mm" + dlm;
-            scores += std::to_string(rmse) + dlm;
-
-            header += "Quantile " + std::to_string(0.95) + dlm;
-            scores += std::to_string(quantileValue) + dlm;
-
-            header += "Maximal, mm" + dlm;
-            scores += std::to_string(maximal) + dlm;
-
-            bool fileExist = boost::filesystem::exists(options.reportFile);
-
-            std::ofstream file;
-            file.open(options.reportFile, std::ofstream::out | std::ofstream::app);
-
-            if (!fileExist) {
-              file << header << std::endl;
-            }
-
-            file << scores << std::endl;
-            file.close();
           }
         }
       }

@@ -4,6 +4,8 @@
 #include <itkSingleValuedCostFunction.h>
 #include <itkKdTreeGenerator.h>
 #include <itkListSample.h>
+#include <itkSampleToHistogramFilter.h>
+#include <itkHistogram.h>
 #include <itkPointSet.h>
 
 namespace ssm
