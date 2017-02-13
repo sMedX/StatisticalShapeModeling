@@ -7,6 +7,7 @@
 #include <itkStandardMeshRepresenter.h>
 #include <itkReducedVarianceModelBuilder.h>
 #include <itkStatisticalModel.h>
+#include <itkPointsLocator.h>
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
@@ -30,11 +31,14 @@ struct ProgramOptions
   std::string listFile;
   std::string reportFile;
   std::vector<size_t> components;
+  size_t numberOfSamples = 5;
 };
 
 typedef boost::filesystem::path fp;
 namespace po = boost::program_options;
 po::options_description initializeProgramOptions(ProgramOptions& poParameters);
+
+double computeSpecificity(const DataItemListType& testMeshes, unsigned numberOfSamples);
 
 int main(int argc, char** argv)
 {
@@ -98,6 +102,9 @@ int main(int argc, char** argv)
       options.components.push_back(dataManager->GetNumberOfSamples());
     }
 
+    double specificity = itk::NumericTraits<double>::Zero;
+    double generalization = itk::NumericTraits<double>::Zero;
+
     // iterate over cvFoldList to get all the folds
     for (const auto & components : options.components) {
       for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
@@ -145,6 +152,8 @@ int main(int argc, char** argv)
           metrics->Compute();
           metrics->PrintReport(std::cout);
 
+          generalization += metrics->GetRMSEValue();
+
           // print report to *.csv file
           if (options.reportFile != "") {
             std::cout << "print report to the file: " << options.reportFile << std::endl;
@@ -162,11 +171,85 @@ int main(int argc, char** argv)
         }
       }
     }
+
+    DataItemListType allMeshes;
+    DataItemListType trainData = cvFoldList.begin()->GetTrainingData();
+    DataItemListType testData = cvFoldList.begin()->GetTestingData();
+    allMeshes.insert(allMeshes.end(), trainData.begin(), trainData.end());
+    allMeshes.insert(allMeshes.end(), testData.begin(), testData.end());
+
+    specificity = computeSpecificity(allMeshes, options.numberOfSamples);
+    generalization = generalization / dataManager->GetNumberOfSamples();
+
+    std::cout << "specificity:      " << specificity << std::endl;
+    std::cout << "generalization:   " << generalization << std::endl;
+
+    if (options.reportFile != "") {
+      std::ofstream file(options.reportFile, std::ofstream::out | std::ofstream::app);
+
+      file << "Specificity: " << specificity << std::endl;
+      file << "Generalization: " << generalization << std::endl;
+      file.close();
+    }
   }
   catch (statismo::StatisticalModelException& e) {
     std::cout << "Exception occurred while building the shape model" << std::endl;
     std::cout << e.what() << std::endl;
   }
+}
+
+double computeEuclideanPointDist(MeshType::PointType pt1, MeshType::PointType pt2) {
+  double sumSquares = 0;
+  for (unsigned i = 0; i < pt1.Dimension; i++)  {
+    double dist = pt1[i] - pt2[i];
+    sumSquares += dist * dist;
+  }
+  return std::sqrt(sumSquares);
+}
+
+std::vector<double> computeDistance(MeshType::Pointer testMesh, MeshType::Pointer sample)
+{
+  std::vector<double> distanceValues;
+  typedef itk::PointsLocator< MeshType::PointsContainer > PointsLocatorType;
+
+  PointsLocatorType::Pointer ptLocator = PointsLocatorType::New();
+  ptLocator->SetPoints(sample->GetPoints());
+  ptLocator->Initialize();
+
+  for (unsigned i = 0; i < testMesh->GetNumberOfPoints(); i++) {
+    MeshType::PointType sourcePt = testMesh->GetPoint(i);
+    int closestPointId = ptLocator->FindClosestPoint(sourcePt);
+    MeshType::PointType targetPt = sample->GetPoint(closestPointId);
+    distanceValues.push_back(computeEuclideanPointDist(sourcePt, targetPt));
+  }
+  return distanceValues;
+}
+
+double computeSpecificity(const DataItemListType& testMeshes, unsigned numberOfSamples)
+{
+  double accumulatedDistToClosestTrainingShape = 0;
+
+  ModelBuilderType::Pointer pcaModelBuilder = ModelBuilderType::New();
+  StatisticalModelType::Pointer model = pcaModelBuilder->BuildNewModel(testMeshes, 0);
+
+  for (unsigned i = 0; i < numberOfSamples; i++) {
+    MeshType::Pointer sample = model->DrawSample();
+    double minDist = std::numeric_limits<double>::max();
+
+    for (DataItemListType::const_iterator it = testMeshes.begin(); it != testMeshes.end(); ++it) {
+      MeshType::Pointer testMesh = (*it)->GetSample();
+      std::vector<double> distanceValues = computeDistance(testMesh, sample);
+      double dist = std::accumulate(distanceValues.begin(), distanceValues.end(), 0.0) / testMesh->GetNumberOfPoints();
+
+      if (dist < minDist) {
+        minDist = dist;
+      }
+    }
+    accumulatedDistToClosestTrainingShape += minDist;
+  }
+  double specificity = accumulatedDistToClosestTrainingShape / numberOfSamples;
+
+  return specificity;
 }
 
 po::options_description initializeProgramOptions(ProgramOptions& options)
@@ -180,6 +263,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   input.add_options()
     ("write", po::value<bool>(&options.write), "Write surfaces.")
     ("components", po::value<std::vector<size_t>>(&options.components)->multitoken(), "The number of components for GP shape model.")
+    ("samples", po::value<size_t>(&options.numberOfSamples)->default_value(options.numberOfSamples), "The number of samples for specificity calculation.")
     ;
 
   po::options_description report("Optional report options");
