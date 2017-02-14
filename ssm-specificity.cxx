@@ -16,6 +16,7 @@ typedef statismo::DataManager<MeshType> DataManagerType;
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 typedef DataManagerType::DataItemListType DataItemListType;
 typedef std::vector<MeshType::Pointer> MeshVectorType;
+typedef itk::PointSet<MeshType::PointType, MeshType::PointDimension> PointSetType;
 
 struct ProgramOptions
 {
@@ -23,13 +24,14 @@ struct ProgramOptions
   std::string modelFile;
   std::string listFile;
   std::string reportFile;
-  size_t numberOfSamples = 10;
+  size_t numberOfSamples = 100;
 };
 
 typedef boost::filesystem::path fp;
 namespace po = boost::program_options;
 po::options_description initializeProgramOptions(ProgramOptions& poParameters);
-double computeSpecificity(StatisticalModelType::Pointer model, const MeshVectorType testMeshes, unsigned numberOfSamples);
+
+double computeSpecificity(StatisticalModelType::Pointer model, const MeshVectorType vectorOfSurfaces, size_t numberOfSamples);
 
 int main(int argc, char** argv)
 {
@@ -66,6 +68,7 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
+  // read surfaces
   StringList fileNames;
   try {
     fileNames = getFileList(options.listFile);
@@ -77,25 +80,23 @@ int main(int argc, char** argv)
   }
 
   MeshVectorType vectorOfSurfaces;
-
   for (const auto & fileName : fileNames) {
     MeshType::Pointer surface = MeshType::New();
-
     if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
     vectorOfSurfaces.push_back(surface);
   }
 
-  std::cout << "model  " << options.modelFile << std::endl;
-  std::cout << "number of surfaces  " << vectorOfSurfaces.size() << std::endl;
-  std::cout << "number of samples  " << options.numberOfSamples << std::endl;
+  std::cout << "model " << options.modelFile << std::endl;
+  std::cout << "number of random shapes " << options.numberOfSamples << std::endl;
+  std::cout << "number of train shapes  " << vectorOfSurfaces.size() << std::endl;
   std::cout << std::endl;
 
-  //compute specificity
+  // compute specificity
   double specificity = computeSpecificity(model, vectorOfSurfaces, options.numberOfSamples);
 
-  std::cout << "Specificity of model:   " << specificity << std::endl;
+  std::cout << "specificity of the model " << specificity << std::endl;
   std::cout << std::endl;
 
   // print report to *.csv file
@@ -107,61 +108,48 @@ int main(int argc, char** argv)
   }
 }
 
-double computeSpecificity(StatisticalModelType::Pointer model, const MeshVectorType testMeshes, unsigned numberOfSamples)
+double computeSpecificity(StatisticalModelType::Pointer model, const MeshVectorType vectorOfSurfaces, size_t numberOfSamples)
 {
-  double accumulatedDistToClosestTrainingShape = 0;
+  double specificity = 0;
 
-  for (unsigned i = 0; i < numberOfSamples; i++) {
-    MeshType::Pointer sample = model->DrawSample();
+  for (size_t count = 0; count < numberOfSamples; ++count) {
 
-    std::cout << "  Sample: " << i + 1 << std::endl;
+    MeshType::Pointer randomSurface = model->DrawSample();
+    PointSetType::Pointer randomPointSet = PointSetType::New();
+    randomPointSet->SetPoints(randomSurface->GetPoints());
 
-    double minDist = std::numeric_limits<double>::max();
+    double value = std::numeric_limits<double>::max();
 
-    for (MeshVectorType::const_iterator it = testMeshes.begin(); it != testMeshes.end(); ++it) {
-      MeshType::Pointer testMesh = it->GetPointer();
+    for (const auto & shape : vectorOfSurfaces) {
 
-      typedef std::pair<std::string, std::string> PairType;
-      std::vector<PairType> info;
-      info.push_back(PairType("Components", std::to_string(model->GetNumberOfPrincipalComponents())));
-      info.push_back(PairType("Probability", std::to_string(model->ComputeProbabilityOfDataset(testMesh))));
+      MeshType::Pointer trainShape = shape;
+      PointSetType::Pointer trainPointSet = PointSetType::New();
+      trainPointSet->SetPoints(trainShape->GetPoints());
 
       // compute metrics
-      typedef itk::PointSet<MeshType::PointType, MeshType::PointDimension> PointSetType;
-      PointSetType::Pointer pointSet1 = PointSetType::New();
-      pointSet1->SetPoints(testMesh->GetPoints());
-
-      PointSetType::Pointer pointSet2 = PointSetType::New();
-      pointSet2->SetPoints(sample->GetPoints());
-
       typedef ssm::PointSetToPointSetMetrics<PointSetType> PointSetToPointSetMetricsType;
       PointSetToPointSetMetricsType::Pointer metrics = PointSetToPointSetMetricsType::New();
-      metrics->SetFixedPointSet(pointSet1);
-      metrics->SetMovingPointSet(pointSet2);
-      metrics->SetInfo(info);
+      metrics->SetFixedPointSet(randomPointSet);
+      metrics->SetMovingPointSet(trainPointSet);
       metrics->Compute();
 
-      double dist = metrics->GetRMSEValue();
-
-      if (dist < minDist) {
-        minDist = dist;
-      }
+      value = std::min(value, metrics->GetRMSEValue());
     }
-    accumulatedDistToClosestTrainingShape += minDist;
-    std::cout << "    Minimal average distance: " << minDist << std::endl;
-    std::cout << std::endl;
+
+    specificity += value;
+
+    std::cout << count + 1 << "/" << numberOfSamples << " distance: " << value << std::endl;
   }
 
-  double specificity = accumulatedDistToClosestTrainingShape / numberOfSamples;
-  return specificity;
+  return specificity / numberOfSamples;
 }
 
 po::options_description initializeProgramOptions(ProgramOptions& options)
 {
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
-    ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces.")
     ("model,m", po::value<std::string>(&options.modelFile), "The path to the input shape model file.")
+    ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces.")
     ;
 
   po::options_description input("Optional input options");
