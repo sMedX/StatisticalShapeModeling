@@ -98,6 +98,8 @@ int main(int argc, char** argv)
       options.components.push_back(dataManager->GetNumberOfSamples());
     }
 
+    double generalization = itk::NumericTraits<double>::Zero;
+
     // iterate over cvFoldList to get all the folds
     for (const auto & components : options.components) {
       for (CVFoldListType::const_iterator it = cvFoldList.begin(); it != cvFoldList.end(); ++it) {
@@ -145,6 +147,8 @@ int main(int argc, char** argv)
           metrics->Compute();
           metrics->PrintReport(std::cout);
 
+          generalization += metrics->GetRMSEValue();
+
           // print report to *.csv file
           if (options.reportFile != "") {
             std::cout << "print report to the file: " << options.reportFile << std::endl;
@@ -161,6 +165,15 @@ int main(int argc, char** argv)
           }
         }
       }
+    }
+
+    generalization = generalization / dataManager->GetNumberOfSamples();
+    std::cout << "generalization:   " << generalization << std::endl;
+
+    if (options.reportFile != "") {
+      std::ofstream file(options.reportFile, std::ofstream::out | std::ofstream::app);
+      file << "Generalization: " << generalization << std::endl;
+      file.close();
     }
   }
   catch (statismo::StatisticalModelException& e) {
