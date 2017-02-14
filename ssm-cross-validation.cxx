@@ -171,23 +171,11 @@ int main(int argc, char** argv)
         }
       }
     }
-
-    DataItemListType allMeshes;
-    DataItemListType trainData = cvFoldList.begin()->GetTrainingData();
-    DataItemListType testData = cvFoldList.begin()->GetTestingData();
-    allMeshes.insert(allMeshes.end(), trainData.begin(), trainData.end());
-    allMeshes.insert(allMeshes.end(), testData.begin(), testData.end());
-
-    specificity = computeSpecificity(allMeshes, options.numberOfSamples);
     generalization = generalization / dataManager->GetNumberOfSamples();
-
-    std::cout << "specificity:      " << specificity << std::endl;
     std::cout << "generalization:   " << generalization << std::endl;
 
     if (options.reportFile != "") {
       std::ofstream file(options.reportFile, std::ofstream::out | std::ofstream::app);
-
-      file << "Specificity: " << specificity << std::endl;
       file << "Generalization: " << generalization << std::endl;
       file.close();
     }
@@ -196,60 +184,6 @@ int main(int argc, char** argv)
     std::cout << "Exception occurred while building the shape model" << std::endl;
     std::cout << e.what() << std::endl;
   }
-}
-
-double computeEuclideanPointDist(MeshType::PointType pt1, MeshType::PointType pt2) {
-  double sumSquares = 0;
-  for (unsigned i = 0; i < pt1.Dimension; i++)  {
-    double dist = pt1[i] - pt2[i];
-    sumSquares += dist * dist;
-  }
-  return std::sqrt(sumSquares);
-}
-
-std::vector<double> computeDistance(MeshType::Pointer testMesh, MeshType::Pointer sample)
-{
-  std::vector<double> distanceValues;
-  typedef itk::PointsLocator< MeshType::PointsContainer > PointsLocatorType;
-
-  PointsLocatorType::Pointer ptLocator = PointsLocatorType::New();
-  ptLocator->SetPoints(sample->GetPoints());
-  ptLocator->Initialize();
-
-  for (unsigned i = 0; i < testMesh->GetNumberOfPoints(); i++) {
-    MeshType::PointType sourcePt = testMesh->GetPoint(i);
-    int closestPointId = ptLocator->FindClosestPoint(sourcePt);
-    MeshType::PointType targetPt = sample->GetPoint(closestPointId);
-    distanceValues.push_back(computeEuclideanPointDist(sourcePt, targetPt));
-  }
-  return distanceValues;
-}
-
-double computeSpecificity(const DataItemListType& testMeshes, unsigned numberOfSamples)
-{
-  double accumulatedDistToClosestTrainingShape = 0;
-
-  ModelBuilderType::Pointer pcaModelBuilder = ModelBuilderType::New();
-  StatisticalModelType::Pointer model = pcaModelBuilder->BuildNewModel(testMeshes, 0);
-
-  for (unsigned i = 0; i < numberOfSamples; i++) {
-    MeshType::Pointer sample = model->DrawSample();
-    double minDist = std::numeric_limits<double>::max();
-
-    for (DataItemListType::const_iterator it = testMeshes.begin(); it != testMeshes.end(); ++it) {
-      MeshType::Pointer testMesh = (*it)->GetSample();
-      std::vector<double> distanceValues = computeDistance(testMesh, sample);
-      double dist = std::accumulate(distanceValues.begin(), distanceValues.end(), 0.0) / testMesh->GetNumberOfPoints();
-
-      if (dist < minDist) {
-        minDist = dist;
-      }
-    }
-    accumulatedDistToClosestTrainingShape += minDist;
-  }
-  double specificity = accumulatedDistToClosestTrainingShape / numberOfSamples;
-
-  return specificity;
 }
 
 po::options_description initializeProgramOptions(ProgramOptions& options)
@@ -263,7 +197,6 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   input.add_options()
     ("write", po::value<bool>(&options.write), "Write surfaces.")
     ("components", po::value<std::vector<size_t>>(&options.components)->multitoken(), "The number of components for GP shape model.")
-    ("samples", po::value<size_t>(&options.numberOfSamples)->default_value(options.numberOfSamples), "The number of samples for specificity calculation.")
     ;
 
   po::options_description report("Optional report options");
