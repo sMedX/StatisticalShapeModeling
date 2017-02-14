@@ -69,5 +69,5 @@ target_link_libraries(ssm-fit-shapemodel-to-surface ${Boost_PROGRAM_OPTIONS_LIBR
 add_executable(ssm-fit-shapemodel-to-image ssm-fit-shapemodel-to-image.cxx)
 target_link_libraries(ssm-fit-shapemodel-to-image ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
-add_executable(ssm-calculate-specificity-of-spapemodel ssm-calculate-specificity-of-shapemodel.cxx)
-target_link_libraries(ssm-calculate-specificity-of-spapemodel ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-calculate-specificity-of-shapemodel ssm-calculate-specificity-of-shapemodel.cxx)
+target_link_libraries(ssm-calculate-specificity-of-shapemodel ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
