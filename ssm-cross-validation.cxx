@@ -102,7 +102,6 @@ int main(int argc, char** argv)
       options.components.push_back(dataManager->GetNumberOfSamples());
     }
 
-    double specificity = itk::NumericTraits<double>::Zero;
     double generalization = itk::NumericTraits<double>::Zero;
 
     // iterate over cvFoldList to get all the folds
