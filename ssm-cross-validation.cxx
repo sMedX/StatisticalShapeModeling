@@ -7,7 +7,6 @@
 #include <itkStandardMeshRepresenter.h>
 #include <itkReducedVarianceModelBuilder.h>
 #include <itkStatisticalModel.h>
-#include <itkPointsLocator.h>
 
 #include "utils/ssmTypes.h"
 #include "utils/io.h"
@@ -31,14 +30,11 @@ struct ProgramOptions
   std::string listFile;
   std::string reportFile;
   std::vector<size_t> components;
-  size_t numberOfSamples = 5;
 };
 
 typedef boost::filesystem::path fp;
 namespace po = boost::program_options;
 po::options_description initializeProgramOptions(ProgramOptions& poParameters);
-
-double computeSpecificity(const DataItemListType& testMeshes, unsigned numberOfSamples);
 
 int main(int argc, char** argv)
 {
