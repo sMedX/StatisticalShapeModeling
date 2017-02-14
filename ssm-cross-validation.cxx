@@ -166,6 +166,7 @@ int main(int argc, char** argv)
         }
       }
     }
+
     generalization = generalization / dataManager->GetNumberOfSamples();
     std::cout << "generalization:   " << generalization << std::endl;
 
