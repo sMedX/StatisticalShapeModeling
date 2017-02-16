@@ -21,7 +21,7 @@ struct ProgramOptions
   std::string referenceFile;
   std::string outputReferenceFile;
 
-  size_t components = 100;
+  std::vector<size_t> components;
   double scale = 100;
   std::vector<double> parameters;
   std::vector<double> regularization;
@@ -38,7 +38,7 @@ namespace po = boost::program_options;
 po::options_description initializeProgramOptions(ProgramOptions& poParameters);
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions);
+StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions);
 MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, ProgramOptions & options);
 
 int main(int argc, char** argv)
@@ -62,23 +62,33 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
-  if (options.regularization.size() == 0 || options.parameters.size() == 0) {
-    std::cout << "parameters to build shape model and regularization factors mus be specified" << std::endl;
+  if (options.parameters.size() == 0 || options.components.size() == 0 || options.regularization.size() == 0 ) {
+    std::cout << "parameters, components and regularization factors mus be specified" << std::endl;
     return EXIT_FAILURE;
+  }
+
+  for (size_t n = options.components.size(); n < options.parameters.size(); ++n) {
+    options.components.push_back(options.components.back());
   }
 
   for (size_t n = options.regularization.size(); n < options.parameters.size(); ++n) {
     options.regularization.push_back(options.regularization.back());
   }
 
-  std::cout << "        regularization ";
-  for (auto value : options.regularization) {
+  std::cout << "            parameters ";
+  for (auto value : options.parameters) {
     std::cout << value << " ";
   }
   std::cout << std::endl;
 
-  std::cout << "            parameters ";
-  for (auto value : options.parameters) {
+  std::cout << "            components ";
+  for (auto value : options.components) {
+    std::cout << value << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "        regularization ";
+  for (auto value : options.regularization) {
     std::cout << value << " ";
   }
   std::cout << std::endl;
@@ -135,12 +145,10 @@ int main(int argc, char** argv)
     std::cout << "establish correspondence stage (" << stage + 1 << " / " << options.stages << ")" << std::endl;
 
     // build GP model for the reference surface
-    StatisticalModelType::Pointer model = BuildGPModel(reference, options.parameters[0], options.scale, options.components);
+    StatisticalModelType::Pointer model = buildGPModel(reference, options.parameters[0], options.scale, options.components[0]);
 
-    // initialize reference to zero
-    typedef itk::VectorContainer<long unsigned int,MeshType::PointType> VContainer;
-    
-    for (VContainer::Iterator iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
+    // initialize reference by zero
+    for (MeshType::PointsContainerIterator iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
       iter.Value().Fill(0);
     }
 
@@ -152,7 +160,7 @@ int main(int argc, char** argv)
       MeshType::Pointer output = shapeModelToSurfaceRegistration(surface, model, options);
 
       // add output to reference
-      for (VContainer::Iterator iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
+      for (MeshType::PointsContainerIterator iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
         MeshType::PointType point = output->GetPoint(iter.Index());
         for (size_t d = 0; d < MeshType::PointDimension; ++d) {
           iter.Value()[d] += point[d] / numberOfSurfaces;
@@ -244,7 +252,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 
     // if stage > 0 update GP model
     if (stage > 0) {
-      model = BuildGPModel(surface, options.parameters[stage], options.scale, model->GetNumberOfPrincipalComponents());
+      model = buildGPModel(surface, options.parameters[stage], options.scale, options.components[stage]);
     }
 
     // initialize spatial transform
@@ -327,7 +335,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 
 //==============================================================================
 // Build Gaussian process model
-StatisticalModelType::Pointer BuildGPModel(MeshType::Pointer surface, double parameters, double scale, int numberOfBasisFunctions)
+StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions)
 {
   itk::TimeProbe clock;
   clock.Start();
@@ -386,7 +394,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 
   po::options_description input("Optional input options");
   input.add_options()
-    ("components", po::value<size_t>(&options.components)->default_value(options.components), "The number of components to build GP shape model.")
+    ("components", po::value<std::vector<size_t>>(&options.components)->multitoken(), "The number of components to build GP shape model.")
     ("scale", po::value<double>(&options.scale)->default_value(options.scale), "The scaling factor to scale the kernel.")
     ("parameters", po::value<std::vector<double>>(&options.parameters)->multitoken(), "The parameters to build GP shape model.")
     ("regularization", po::value<std::vector<double>>(&options.regularization)->multitoken(), "The regularization factor.")
