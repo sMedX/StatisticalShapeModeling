@@ -42,7 +42,11 @@ namespace ssm
     /** Type of the additional information. */
     typedef std::pair<std::string, std::string> PairType;
     typedef std::vector<PairType> InfoType;
-    itkSetMacro(Info, InfoType);
+
+    void SetInfo(InfoType& info)
+    {
+      m_Info = info;
+    }
 
     /** Get/Set the Fixed Point Set.  */
     itkSetConstObjectMacro(FixedPointSet, FixedPointSetType);
