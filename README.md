@@ -1,3 +1,5 @@
+[![Build Status](http://178.62.239.31:8080/buildStatus/icon?job=SSM-nightly)](http://178.62.239.31:8080/job/SSM-nightly/)
+
 ##Statistical Shape Modeling
 
 Project for statistical shape modeling with [statismo](https://github.com/statismo/statismo).
