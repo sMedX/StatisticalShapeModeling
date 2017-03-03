@@ -28,11 +28,11 @@ namespace ssm
     itkTypeMacro(PointSetToImageMetrics, Object);
 
     /** Types transferred from the base class */
-    typedef typename double                              MeasureType;
-    typedef typename TFixedPointSet                      FixedPointSetType;
+    typedef double                                       MeasureType;
+    typedef TFixedPointSet                               FixedPointSetType;
     typedef typename FixedPointSetType::PointType        FixedPointType;
     typedef typename FixedPointSetType::ConstPointer     FixedPointSetConstPointer;
-    typedef typename TMovingImage                        MovingImageType;
+    typedef TMovingImage                                 MovingImageType;
     typedef typename MovingImageType::ConstPointer       MovingImageConstPointer;
 
     typedef typename FixedPointSetType::PointsContainerConstIterator     PointIterator;
@@ -41,7 +41,11 @@ namespace ssm
     /**  Type of the additional information. */
     typedef std::pair<std::string, std::string> PairType;
     typedef std::vector<PairType> InfoType;
-    itkSetMacro(Info, InfoType);
+    
+    void SetInfo(InfoType& info)
+    {
+      m_Info = info;
+    }
 
     /** Get/Set the fixed point set.  */
     itkSetConstObjectMacro(FixedPointSet, FixedPointSetType);

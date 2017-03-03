@@ -27,9 +27,9 @@ namespace ssm
     itkTypeMacro(PointSetToPointSetMetrics, itk::Object);
 
     /** Types transferred from the base class */
-    typedef typename double                                MeasureType;
-    typedef typename TFixedPointSet                        FixedPointSetType;
-    typedef typename TMovingPointSet                       MovingPointSetType;
+    typedef double                                         MeasureType;
+    typedef TFixedPointSet                                 FixedPointSetType;
+    typedef TMovingPointSet                                MovingPointSetType;
     typedef typename FixedPointSetType::ConstPointer       FixedPointSetConstPointer;
     typedef typename MovingPointSetType::ConstPointer      MovingPointSetConstPointer;
 
@@ -42,7 +42,11 @@ namespace ssm
     /** Type of the additional information. */
     typedef std::pair<std::string, std::string> PairType;
     typedef std::vector<PairType> InfoType;
-    itkSetMacro(Info, InfoType);
+
+    void SetInfo(InfoType& info)
+    {
+      m_Info = info;
+    }
 
     /** Get/Set the Fixed Point Set.  */
     itkSetConstObjectMacro(FixedPointSet, FixedPointSetType);
@@ -233,7 +237,7 @@ namespace ssm
         m_ListOfPoints->PushBack(it.Value());
       }
 
-      TreeGeneratorType::Pointer generator = TreeGeneratorType::New();
+      typename TreeGeneratorType::Pointer generator = TreeGeneratorType::New();
       generator->SetSample(m_ListOfPoints);
       generator->SetBucketSize(m_BucketSize);
       try {

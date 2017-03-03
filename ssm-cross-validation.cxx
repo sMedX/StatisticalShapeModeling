@@ -1,4 +1,6 @@
-﻿#include <boost/program_options.hpp>
+﻿#include <fstream>
+
+#include <boost/program_options.hpp>
 #include <boost/scoped_ptr.hpp>
 
 #include <utils/statismo-build-models-utils.h>

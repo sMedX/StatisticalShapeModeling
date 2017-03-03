@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include <boost/program_options.hpp>
 #include <boost/scoped_ptr.hpp>
 
