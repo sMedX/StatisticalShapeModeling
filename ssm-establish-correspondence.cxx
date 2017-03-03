@@ -1,4 +1,6 @@
-﻿#include <boost/program_options.hpp>
+﻿#include <fstream>
+
+#include <boost/program_options.hpp>
 
 #include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>

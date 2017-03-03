@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include <boost/program_options.hpp>
 #include <utils/statismo-build-models-utils.h>
 #include "utils/ssmTypes.h"
