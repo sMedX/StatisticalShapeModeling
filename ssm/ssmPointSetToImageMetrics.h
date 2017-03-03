@@ -28,11 +28,11 @@ namespace ssm
     itkTypeMacro(PointSetToImageMetrics, Object);
 
     /** Types transferred from the base class */
-    typedef typename double                              MeasureType;
-    typedef typename TFixedPointSet                      FixedPointSetType;
+    typedef double                                       MeasureType;
+    typedef TFixedPointSet                               FixedPointSetType;
     typedef typename FixedPointSetType::PointType        FixedPointType;
     typedef typename FixedPointSetType::ConstPointer     FixedPointSetConstPointer;
-    typedef typename TMovingImage                        MovingImageType;
+    typedef TMovingImage                                 MovingImageType;
     typedef typename MovingImageType::ConstPointer       MovingImageConstPointer;
 
     typedef typename FixedPointSetType::PointsContainerConstIterator     PointIterator;
