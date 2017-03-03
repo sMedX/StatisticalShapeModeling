@@ -237,7 +237,7 @@ namespace ssm
         m_ListOfPoints->PushBack(it.Value());
       }
 
-      TreeGeneratorType::Pointer generator = TreeGeneratorType::New();
+      typename TreeGeneratorType::Pointer generator = TreeGeneratorType::New();
       generator->SetSample(m_ListOfPoints);
       generator->SetBucketSize(m_BucketSize);
       try {
