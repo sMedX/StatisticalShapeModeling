@@ -15,10 +15,10 @@
 #include <vtkMath.h>
 #include <vtkCell.h>
 
-#include "utils/ssmTypes.h"
-#include "utils/io.h"
-#include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmBinaryImageToLevelSetImageFilter.h"
+#include "ssmTypes.h"
+#include "ssmUtils.h"
+#include "ssmPointSetToImageMetrics.h"
+#include "ssmBinaryImageToLevelSetImageFilter.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);

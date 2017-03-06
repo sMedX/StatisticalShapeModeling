@@ -8,11 +8,11 @@
 #include <statismo-build-gp-model-kernels.h>
 #include <utils/statismo-build-models-utils.h>
 
-#include "utils/ssmTypes.h"
-#include "utils/io.h"
-#include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmShapeModelToImageRegistrationMethod.h"
-#include "ssm/ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmTypes.h"
+#include "ssmUtils.h"
+#include "ssmPointSetToImageMetrics.h"
+#include "ssmShapeModelToImageRegistrationMethod.h"
+#include "ssmSurfaceToLevelSetImageFilter.h"
 
 struct ProgramOptions
 {
