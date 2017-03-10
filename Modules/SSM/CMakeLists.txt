@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.2)
-
 project(SSM)
 
 set(HEADER
@@ -20,4 +18,4 @@ set(HEADER
     ssmBinaryImageToLevelSetImageFilter.h
 )
 
-add_custom_target(SSM ALL ${HEADER})
+add_custom_target(SSM ALL SOURCES ${HEADER})
