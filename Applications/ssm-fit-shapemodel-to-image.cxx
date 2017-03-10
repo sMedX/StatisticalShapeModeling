@@ -4,17 +4,17 @@
 #include <itkTriangleMeshToBinaryImageFilter.h>
 #include <itkStandardMeshRepresenter.h>
 
-#include "utils/ssmTypes.h"
-#include "utils/io.h"
-#include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmShapeModelToImageRegistrationMethod.h"
-#include "ssm/ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmTypes.h"
+#include "ssmUtils.h"
+#include "ssmPointSetToImageMetrics.h"
+#include "ssmShapeModelToImageRegistrationMethod.h"
+#include "ssmBinaryImageToLevelSetImageFilter.h"
 
 struct ProgramOptions
 {
   bool help;
   std::string modelFile;
-  std::string surfaceFile;
+  std::string imageFile;
   std::string outputFile;
   std::string levelsetFile;
   std::string reportFile;
@@ -50,14 +50,14 @@ int main(int argc, char** argv)
   }
 
   //----------------------------------------------------------------------------
-  // read surface
-  MeshType::Pointer surface = MeshType::New();
-  if (!readMesh<MeshType>(surface, options.surfaceFile)) {
+  // read image
+  BinaryImageType::Pointer image = BinaryImageType::New();
+  if (!readImage<BinaryImageType>(image, options.imageFile)) {
     return EXIT_FAILURE;
   }
-  std::cout << "surface " << surface << std::endl;
-  std::cout << "number of cells   " << surface->GetNumberOfCells() << std::endl;
-  std::cout << "number of points  " << surface->GetNumberOfPoints() << std::endl;
+  std::cout << "image " << options.imageFile << std::endl;
+  std::cout << "size    " << image->GetLargestPossibleRegion().GetSize() << std::endl;
+  std::cout << "spacing " << image->GetSpacing() << std::endl;
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
@@ -82,14 +82,9 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // compute level set image
-  double margin = 0.20;
-  BinaryImageType::SpacingType spacing(1);
-
-  typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
-  SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(margin);
-  levelset->SetSpacing(spacing);
-  levelset->SetInput(surface);
+  typedef ssm::BinaryImageToLevelSetImageFilter<BinaryImageType, FloatImageType> BinaryImageToLevelSetImageType;
+  BinaryImageToLevelSetImageType::Pointer levelset = BinaryImageToLevelSetImageType::New();
+  levelset->SetInput(image);
   try {
     levelset->Update();
   }
@@ -100,6 +95,7 @@ int main(int argc, char** argv)
 
   // initialize spatial transform
   MeshType::BoundingBoxType::ConstPointer boundingBox = model->DrawMean()->GetBoundingBox();
+  BinaryImageType::SpacingType spacing(1);
   BinaryImageType::PointType origin = boundingBox->GetMinimum();
   BinaryImageType::SizeType size;
   for (size_t n = 0; n < Dimension; ++n) {
@@ -129,7 +125,7 @@ int main(int argc, char** argv)
   movingCalculator->Compute();
 
   ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
-  fixedCalculator->SetImage(levelset->GetMask());
+  fixedCalculator->SetImage(image);
   fixedCalculator->Compute();
 
   typedef ImageCalculatorType::VectorType VectorType;
@@ -175,8 +171,8 @@ int main(int argc, char** argv)
   typedef std::pair<std::string, std::string> PairType;
   std::vector<PairType> info;
   info.push_back(PairType("Metric", std::to_string(shapeModelToSurfaceRegistration->GetOptimizer()->GetValue())));
+  info.push_back(PairType("Elapsed time", std::to_string(shapeModelToSurfaceRegistration->GetElapsedTime())));
 
-  //----------------------------------------------------------------------------
   // compute metrics
   typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
   typedef ShapeModelRegistrationMethod::PointSetType PointSetType;
@@ -193,19 +189,20 @@ int main(int argc, char** argv)
 
   // write report to *.csv file
   if (options.reportFile != "") {
-    metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.surfaceFile));
+    std::cout << "print report to the file: " << options.reportFile << std::endl;
+    metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.imageFile));
   }
 
   // write surface
+  std::cout << "write output surface to the file: " << options.outputFile << std::endl;
   if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), options.outputFile)) {
     return EXIT_FAILURE;
   }
 
   // write levelset image
-  if (options.levelsetFile != "" ) {
-    if (!writeImage(shapeModelToSurfaceRegistration->GetLevelSetImage(), options.reportFile)) {
-      return EXIT_FAILURE;
-    }
+  if (options.levelsetFile != "") {
+    std::cout << "write level set image to the file: " << options.levelsetFile << std::endl;
+    writeImage(shapeModelToSurfaceRegistration->GetLevelSetImage(), options.levelsetFile);
   }
 
   // write transform
@@ -222,7 +219,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
     ("model,m", po::value<std::string>(&options.modelFile), "The path to the input shape model file.")
-    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path to the input surface file.")
+    ("image,i", po::value<std::string>(&options.imageFile), "The path to the input image file.")
     ("output,o", po::value<std::string>(&options.outputFile), "The path for the output surface file.")
     ;
 

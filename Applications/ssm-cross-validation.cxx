@@ -10,9 +10,9 @@
 #include <itkReducedVarianceModelBuilder.h>
 #include <itkStatisticalModel.h>
 
-#include "utils/ssmTypes.h"
-#include "utils/io.h"
-#include "ssm/ssmPointSetToPointSetMetrics.h"
+#include "ssmTypes.h"
+#include "ssmUtils.h"
+#include "ssmPointSetToPointSetMetrics.h"
 
 typedef MeshType::PointType PointType;
 typedef statismo::DataManager<MeshType> DataManagerType;

@@ -6,12 +6,12 @@
 #include <itkAddImageFilter.h>
 #include <utils/statismo-build-models-utils.h>
 
-#include "utils/ssmTypes.h"
-#include "utils/io.h"
-#include "ssm/ssmPointSetToImageMetrics.h"
-#include "ssm/ssmSurfaceToLevelSetImageFilter.h"
-#include "ssm/ssmSurfaceToImageRegistrationMethod.h"
-#include "ssm/ssmMeshPropertiesCalculator.h"
+#include "ssmTypes.h"
+#include "ssmUtils.h"
+#include "ssmPointSetToImageMetrics.h"
+#include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmSurfaceToImageRegistrationMethod.h"
+#include "ssmMeshPropertiesCalculator.h"
 
 typedef std::vector<MeshType::Pointer> MeshVectorType;
 typedef itk::Transform<double, MeshType::PointDimension> TransformType;

@@ -2,8 +2,9 @@
 
 #include <boost/program_options.hpp>
 #include <utils/statismo-build-models-utils.h>
-#include "utils/ssmTypes.h"
-#include "utils/io.h"
+
+#include "ssmTypes.h"
+#include "ssmUtils.h"
 
 struct ProgramOptions
 {
@@ -25,13 +26,13 @@ int main(int argc, char** argv) {
     po::notify(vm);
   }
   catch (po::error& e) {
-    cerr << "An exception occurred while parsing the command line:" << endl;
-    cerr << e.what() << endl << endl;
-    cout << description << endl;
+    std::cerr << "An exception occurred while parsing the command line:" << std::endl;
+    std::cerr << e.what() << std::endl;
+    std::cout << description << std::endl;
     return EXIT_FAILURE;
   }
   if (options.help == true) {
-    cout << description << endl;
+    std::cout << description << std::endl;
     return EXIT_SUCCESS;
   }
 
