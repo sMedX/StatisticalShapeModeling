@@ -1,7 +1,7 @@
 project(SSM)
 
 set(HEADER
-	ssmTypes.h
+    ssmTypes.h
     ssmTransformInitializer.h
     ssmSurfaceToLevelSetImageFilter.h
     ssmSurfaceToLevelSetImageFilter.hxx

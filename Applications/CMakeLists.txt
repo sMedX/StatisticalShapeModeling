@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.2)
-
 project(SSM)
 
 add_executable(ssm-extract-surface ssm-extract-surface.cxx)
