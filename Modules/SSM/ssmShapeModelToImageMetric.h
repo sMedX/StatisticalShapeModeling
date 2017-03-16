@@ -6,7 +6,7 @@
 #include <itkInterpolateImageFunction.h>
 #include <itkGradientRecursiveGaussianImageFilter.h>
 
-namespace itk
+namespace ssm
 {
 template <typename TShapeModel,  typename TImage>
 class ShapeModelToImageMetric:public itk::SingleValuedCostFunction

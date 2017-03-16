@@ -6,7 +6,7 @@
 #include <vnl/vnl_vector.h>
 #include "ssmShapeModelToImageMetric.h"
 
-namespace itk
+namespace ssm
 {
 /**
  * Constructor

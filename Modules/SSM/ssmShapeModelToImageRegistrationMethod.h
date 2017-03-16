@@ -44,7 +44,7 @@ namespace ssm
     typedef itk::LBFGSOptimizer OptimizerType;
     typedef typename itk::Optimizer::ScalesType ScalesType;
     typedef typename itk::StatisticalShapeModelTransform<DatasetType, double, PointDimension> ShapeTransformType;
-    typedef itk::ShapeModelToImageMetric<TShapeModel, LevelSetImageType> MetricType;
+    typedef ssm::ShapeModelToImageMetric<TShapeModel, LevelSetImageType> MetricType;
     typedef ssm::TransformInitializer<CoordinateRepresentationType> TransformInitializerType;
     typedef itk::Transform<CoordinateRepresentationType, PointDimension> TransformType;
     typedef itk::CompositeTransform<CoordinateRepresentationType, PointDimension> CompositeTransformType;

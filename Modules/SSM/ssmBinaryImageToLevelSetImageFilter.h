@@ -82,5 +82,4 @@ namespace ssm
     typename TInputImage::PixelType m_BackgroundValue;
     typename TInputImage::PixelType m_ForegroundValue;
   };
-
 }

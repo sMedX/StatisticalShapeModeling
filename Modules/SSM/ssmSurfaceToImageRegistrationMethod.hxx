@@ -17,7 +17,6 @@
 #include <type_traits>
 #include <algorithm>
 
-
 #include "ssmSurfaceToImageRegistrationMethod.h"
 
 namespace ssm
