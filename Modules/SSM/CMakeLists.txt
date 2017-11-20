@@ -2,6 +2,8 @@ project(SSM)
 
 set(HEADER
     ssmTypes.h
+	ssmBinaryMask3DMeshSource.h
+	ssmBinaryMask3DMeshSource.hxx
     ssmTransformInitializer.h
     ssmSurfaceToLevelSetImageFilter.h
     ssmSurfaceToLevelSetImageFilter.hxx
