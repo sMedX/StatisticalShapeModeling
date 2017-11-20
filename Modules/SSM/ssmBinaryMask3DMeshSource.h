@@ -22,8 +22,8 @@ public:
   itkTypeMacro(BinaryMask3DMeshSource, itk::ProcessObject);
 
   /** Hold on to the type information specified by the template parameters. */
-  typedef TOutputMesh                            OutputMeshType;
-  typedef typename vtkSmartPointer<TOutputMesh>  OutputMeshPointer;
+  typedef TOutputMesh                   OutputMeshType;
+  typedef vtkSmartPointer<TOutputMesh>  OutputMeshPointer;
 
   /** Input Image Type Definition. */
   typedef TInputImage                           InputImageType;
@@ -40,6 +40,9 @@ public:
   void Update() { this->GenerateData(); };
 
   itkGetMacro(LevelValue, double);
+  
+  itkSetMacro(Sigma, double);
+  itkGetMacro(Sigma, double);
 
   itkSetMacro(NumberOfIterations, size_t);
   itkGetMacro(NumberOfIterations, size_t);

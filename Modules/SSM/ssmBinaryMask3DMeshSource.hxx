@@ -17,7 +17,7 @@ namespace ssm
 template< typename TInputImage, typename TOutputMesh >
 BinaryMask3DMeshSource< TInputImage, TOutputMesh>::BinaryMask3DMeshSource()
 {
-  m_Sigma = 1;
+  m_Sigma = 0;
   m_NumberOfIterations = 100;
   m_RelaxationFactor = 0.2;
   m_NumberOfPoints = 0;
@@ -54,6 +54,10 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
   m_LevelValue = 0.5*(labelValues->GetMinimum() + labelValues->GetMaximum());
 
   // smoothing
+  if (m_Sigma < itk::NumericTraits<double>::epsilon()) {
+    m_Sigma = this->GetInput()->GetSpacing().GetVnlVector().max_value();
+  }
+
   typedef itk::RecursiveGaussianImageFilter<InputImageType, FloatImageType> RecursiveGaussianImageFilterType;
   auto gaussian = RecursiveGaussianImageFilterType::New();
   gaussian->SetInput(this->GetInput());
