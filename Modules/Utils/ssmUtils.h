@@ -14,6 +14,8 @@
 #include <vtkPolyData.h>
 #include <itkMesh.h>
 
+#include "ssmTypes.h"
+
 //! Reads a templated image from a file via ITK ImageFileReader
 template <typename TImage>
 bool readImage(typename TImage::Pointer image, const std::string& fileName)
@@ -180,4 +182,32 @@ std::string getBaseNameFromPath(const std::string& fileName)
 {
   boost::filesystem::path path(fileName);
   return path.stem().string();
+}
+
+StringList readListOfFiles(const std::string& fileName)
+{
+  StringList fileList;
+
+  std::ifstream file;
+  try {
+    file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    file.open(fileName.c_str(), std::ifstream::in);
+    std::string line;
+    while (getline(file, line)) {
+      if (line != "") {
+        //reading files with windows EOL on Linux results in the \r not being removed from the line ending
+        if (*line.rbegin() == '\r') {
+          line.erase(line.length() - 1, 1);
+        }
+        fileList.push_back(line);
+      }
+    }
+  }
+  catch (std::ifstream::failure e) {
+    if (file.eof() == false) {
+      throw std::ifstream::failure("Failed to read the file '" + fileName + "'.");
+    }
+  }
+
+  return fileList;
 }
