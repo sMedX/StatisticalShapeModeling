@@ -1,17 +1,6 @@
 #include <boost/program_options.hpp>
 
 #include <vtkPolyData.h>
-#include <vtkMarchingCubes.h>
-#include <vtkSmoothPolyDataFilter.h>
-#include <vtkPolyDataNormals.h>
-#include <vtkDecimatePro.h>
-#include <itkImageToVTKImageFilter.h>
-#include <itkGrayscaleFillholeImageFilter.h>
-#include <itkRecursiveGaussianImageFilter.h>
-#include <itkMinimumMaximumImageCalculator.h>
-#include <itkSignedMaurerDistanceMapImageFilter.h>
-#include <itkAddImageFilter.h>
-#include <itkMultiplyImageFilter.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
 
@@ -19,6 +8,7 @@
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmBinaryImageToLevelSetImageFilter.h"
+#include "ssmBinaryMask3DMeshSource.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
@@ -26,15 +16,14 @@ double averageAreaOfCells(vtkPolyData* poly);
 struct ProgramOptions
 {
   bool help;
+  std::string configFile;
   std::string imageFile;
   std::string surfaceFile;
   std::string reportFile;
-  double sigma = 1.0;
+  double sigma = 0;
   double relaxation = 0.2;
   size_t iterations = 100;
   size_t points = 0;
-  bool isbinary = true;
-  double levelValue = std::numeric_limits<double>::lowest();
 };
 
 namespace po = boost::program_options;
@@ -62,124 +51,25 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // read image
-  FloatImageType::Pointer image = FloatImageType::New();
-  if (!readImage<FloatImageType>(image, options.imageFile)) {
+  auto image = BinaryImageType::New();
+  if (!readImage<BinaryImageType>(image, options.imageFile)) {
     return EXIT_FAILURE;
   }
 
-  // compute the minimum and the maximum intensity values of label
-  typedef itk::MinimumMaximumImageCalculator <FloatImageType> MinimumMaximumImageCalculatorType;
-  MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
-  labelValues->SetImage(image);
-  labelValues->Compute();
-
-  if (options.levelValue < labelValues->GetMinimum() || options.levelValue > labelValues->GetMaximum()) {
-    options.levelValue = 0.5*(labelValues->GetMinimum() + labelValues->GetMaximum());
+  typedef ssm::BinaryMask3DMeshSource<BinaryImageType, vtkPolyData> BinaryMask3DMeshSourceType;
+  auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
+  binaryMaskToSurface->SetInput(image);
+  try {
+    binaryMaskToSurface->Update();
   }
-
-  std::cout << "input image " << options.imageFile << std::endl;
-  std::cout << "       size " << image->GetLargestPossibleRegion().GetSize() << std::endl;
-  std::cout << "    spacing " << image->GetSpacing() << std::endl;
-  std::cout << "     origin " << image->GetOrigin() << std::endl;
-  std::cout << "level value " << options.levelValue << std::endl;
-  std::cout << std::endl;
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    return EXIT_FAILURE;
+  }
+  auto surface = binaryMaskToSurface->GetOutput();
 
   //----------------------------------------------------------------------------
-  // image processing
-
-  // smoothing
-  typedef itk::RecursiveGaussianImageFilter<FloatImageType, FloatImageType> RecursiveGaussianImageFilterType;
-  RecursiveGaussianImageFilterType::Pointer gaussian = RecursiveGaussianImageFilterType::New();
-  gaussian->SetInput(image);
-  gaussian->SetSigma(options.sigma);
-
-  // fill holes after smoothing
-  typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
-  GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
-  fillholes->SetInput(gaussian->GetOutput());
-  fillholes->SetFullyConnected(true);
-  try {
-    fillholes->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  //----------------------------------------------------------------------------
-  // convert ITK image to VTK image
-  typedef itk::ImageToVTKImageFilter<FloatImageType> ConvertorType;
-  ConvertorType::Pointer convertor = ConvertorType::New();
-  convertor->SetInput(fillholes->GetOutput());
-  convertor->Update();
-
-  typedef vtkSmartPointer<vtkMarchingCubes> MarchingCubes;
-  MarchingCubes mcubes = MarchingCubes::New();
-  mcubes->SetInputData(convertor->GetOutput());
-  mcubes->SetValue(0, options.levelValue);
-  try {
-    mcubes->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
-  }
-  vtkSmartPointer<vtkPolyData> surface = mcubes->GetOutput();
-
-  // decimate surface
-  if (options.points > 0) {
-    double reduction = 1 - (options.points - 1) / (double)surface->GetNumberOfPoints();
-    std::cout << "reduction to decimate surface " << reduction << std::endl;
-    vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
-    decimate->SetInputData(surface);
-    decimate->SetTargetReduction(reduction);
-    decimate->SetPreserveTopology(true);
-    decimate->SetSplitting(false);
-    try {
-      decimate->Update();
-    }
-    catch (itk::ExceptionObject& excep) {
-      std::cerr << excep << std::endl;
-      return EXIT_FAILURE;
-    }
-    surface = decimate->GetOutput();
-  }
-
-  typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
-  SmoothPolyData smoother = SmoothPolyData::New();
-  smoother->SetInputData(surface);
-  smoother->SetNumberOfIterations(options.iterations);
-  smoother->SetRelaxationFactor(options.relaxation);
-  try {
-    smoother->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  typedef vtkSmartPointer<vtkPolyDataNormals> PolyDataNormals;
-  PolyDataNormals normals = PolyDataNormals::New();
-  normals->SetInputData(smoother->GetOutput());
-  normals->AutoOrientNormalsOn();
-  normals->FlipNormalsOff();
-  normals->ConsistencyOn();
-  normals->ComputeCellNormalsOff();
-  normals->SplittingOff();
-  try {
-    normals->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
-  }
-  surface = normals->GetOutput();
-
-  // write polydata to the file
-  if (!writeVTKPolydata(surface, options.surfaceFile)) {
-    return EXIT_FAILURE;
-  }
-
+  // compute report
   typedef std::pair<std::string, std::string> PairType;
   std::vector<PairType> surfaceInfo;
   surfaceInfo.push_back(PairType("number of points", std::to_string(surface->GetNumberOfPoints())));
@@ -195,6 +85,11 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
+  // compute level set image
+  typedef ssm::BinaryImageToLevelSetImageFilter<BinaryImageType, FloatImageType> BinaryImageToLevelSetImageType;
+  auto binaryImageToLevelset = BinaryImageToLevelSetImageType::New();
+  binaryImageToLevelset->SetInput(image);
+
   // setup point set
   typedef itk::PointSet<float, MeshType::PointDimension> PointSetType;
   PointSetType::Pointer pointSet = PointSetType::New();
@@ -207,24 +102,15 @@ int main(int argc, char** argv) {
   // compute metrics
   typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
+  metrics->SetMovingImage(binaryImageToLevelset->GetOutput());
   metrics->SetFixedPointSet(pointSet);
   metrics->SetInfo(surfaceInfo);
-  if (options.isbinary) {
-    // compute level set image
-    typedef ssm::BinaryImageToLevelSetImageFilter<FloatImageType, FloatImageType> BinaryImageToLevelSetImageType;
-    BinaryImageToLevelSetImageType::Pointer levelset = BinaryImageToLevelSetImageType::New();
-    levelset->SetInput(image);
-    try {
-      levelset->Update();
-    }
-    catch (itk::ExceptionObject& excep) {
-      std::cerr << excep << std::endl;
-      return EXIT_FAILURE;
-    }
-    metrics->SetMovingImage(levelset->GetOutput());
+  try {
+    binaryImageToLevelset->Update();
   }
-  else {
-    metrics->SetMovingImage(image);
+  catch (itk::ExceptionObject& excep) {
+    std::cerr << excep << std::endl;
+    return EXIT_FAILURE;
   }
   metrics->Compute();
   metrics->PrintReport(std::cout);
@@ -259,7 +145,7 @@ double averageLengthOfEdges(vtkPolyData*poly)
            sqrt(vtkMath::Distance2BetweenPoints(p2, p3));
   }
 
-  return sum / (3*numberOfCells);
+  return sum / (3 * numberOfCells);
 }
 
 double averageAreaOfCells(vtkPolyData*poly)
@@ -302,8 +188,6 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
     ("factor", po::value<double>(&options.relaxation)->default_value(options.relaxation), "The relaxation factor for Laplacian smoothing.")
     ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
     ("points", po::value<size_t>(&options.points)->default_value(options.points), "The number of points in the output surface.")
-    ("level", po::value<double>(&options.levelValue), "The level value to extract surface.")
-    ("isbinary", po::value<bool>(&options.isbinary)->default_value(options.isbinary), "The type of input image.")
     ;
 
   po::options_description report("Optional report options");

@@ -53,19 +53,14 @@ public:
   itkSetMacro(RelaxationFactor, double);
   itkGetMacro(RelaxationFactor, double);
 
+  void PrintReport() const;
+
 protected:
   BinaryMask3DMeshSource();
   ~BinaryMask3DMeshSource() {};
-  void PrintSelf(std::ostream & os, itk::Indent indent) const ITK_OVERRIDE;
 
   void GenerateData() ITK_OVERRIDE;
   typename TInputImage::ConstPointer GetInput();
-
-
-  bool       m_RegionOfInterestProvidedByUser;
-  RegionType m_RegionOfInterest;
-
-  virtual void GenerateOutputInformation() ITK_OVERRIDE {}  // do nothing ITK_OVERRIDE
 
 private:
   BinaryMask3DMeshSource(const Self &) ITK_DELETE_FUNCTION;
@@ -90,7 +85,7 @@ private:
   double m_Reduction;
   size_t m_NumberOfPoints;
 };
-} // end namespace itk
+}
 
 #ifndef ITK_MANUAL_INSTANTIATION
 #include "ssmBinaryMask3DMeshSource.hxx"

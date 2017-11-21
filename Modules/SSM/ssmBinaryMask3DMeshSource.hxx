@@ -114,24 +114,12 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
   normals->Update();
 
   m_Output = normals->GetOutput();
-
-  this->CreateMesh();
 }
 
+/** Print report */
 template< typename TInputImage, typename TOutputMesh >
-void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::CreateMesh()
+void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::PrintReport() const
 {
-}
 
-
-/** PrintSelf */
-template< typename TInputImage, typename TOutputMesh >
-void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::PrintSelf(std::ostream & os, itk::Indent indent) const
-{
-  Superclass::PrintSelf(os, indent);
-
-  os << indent
-     << "ObjectValue: " << static_cast<itk::NumericTraits<unsigned char>::PrintType >( m_ObjectValue )
-     << std::endl;
 }
 }
