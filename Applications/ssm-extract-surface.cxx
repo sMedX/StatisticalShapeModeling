@@ -1,4 +1,6 @@
 #include <boost/program_options.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 
 #include <vtkPolyData.h>
 #include <vtkMath.h>
@@ -9,9 +11,6 @@
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmBinaryImageToLevelSetImageFilter.h"
 #include "ssmBinaryMask3DMeshSource.h"
-
-double averageLengthOfEdges(vtkPolyData* poly);
-double averageAreaOfCells(vtkPolyData* poly);
 
 struct ProgramOptions
 {
@@ -26,10 +25,17 @@ struct ProgramOptions
   size_t points = 0;
 };
 
+double averageLengthOfEdges(vtkPolyData* poly);
+double averageAreaOfCells(vtkPolyData* poly);
+void  extractSurface(const ProgramOptions & options);
+
 namespace po = boost::program_options;
+namespace pt = boost::property_tree;
+
 po::options_description initializeProgramOptions(ProgramOptions& poParameters);
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   ProgramOptions options;
   po::options_description description = initializeProgramOptions(options);
   po::variables_map vm;
@@ -38,7 +44,7 @@ int main(int argc, char** argv) {
     po::store(parsedOptions, vm);
     po::notify(vm);
   }
-  catch (po::error& e) {
+  catch (const po::error& e) {
     cerr << "An exception occurred while parsing the command line:" << endl;
     cerr << e.what() << endl << endl;
     cout << description << endl;
@@ -49,11 +55,32 @@ int main(int argc, char** argv) {
     return EXIT_SUCCESS;
   }
 
-  //----------------------------------------------------------------------------
+  bool configIsDesabled = vm["config"].empty();
+
+  if ( configIsDesabled ) {
+    extractSurface(options);
+  }
+  else {
+    pt::ptree ptree;
+
+    try {
+      pt::ini_parser::read_ini(options.configFile, ptree);
+    }
+    catch (const pt::ptree_error &e) {
+      cerr << "An exception occurred while parsing the ini file:" << options.configFile << endl;
+      cout << e.what() << endl;
+    }
+  }
+
+  return EXIT_SUCCESS;
+}
+
+void extractSurface(const ProgramOptions & options )
+{
   // read image
   auto image = BinaryImageType::New();
   if (!readImage<BinaryImageType>(image, options.imageFile)) {
-    return EXIT_FAILURE;
+    throw;
   }
 
   typedef ssm::BinaryMask3DMeshSource<BinaryImageType, vtkPolyData> BinaryMask3DMeshSourceType;
@@ -64,13 +91,13 @@ int main(int argc, char** argv) {
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
+    throw;
   }
   auto surface = binaryMaskToSurface->GetOutput();
 
   // write polydata to the file
   if (!writeVTKPolydata(surface, options.surfaceFile)) {
-    return EXIT_FAILURE;
+    throw;
   }
 
   //----------------------------------------------------------------------------
@@ -108,7 +135,7 @@ int main(int argc, char** argv) {
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
+    throw;
   }
   metrics->PrintReport(std::cout);
 
@@ -118,7 +145,7 @@ int main(int argc, char** argv) {
     metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.surfaceFile));
   }
 
-  return EXIT_SUCCESS;
+  return;
 }
 
 
@@ -175,6 +202,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 {
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
+    ("config,c", po::value<std::string>(&options.configFile), "The path to the config ini file.")
     ("image,i", po::value<std::string>(&options.imageFile), "The path to the input image file.")
     ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surface file.")
     ;
