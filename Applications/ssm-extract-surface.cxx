@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 
   // setup point set
   typedef itk::PointSet<float, MeshType::PointDimension> PointSetType;
-  PointSetType::Pointer pointSet = PointSetType::New();
+  auto pointSet = PointSetType::New();
   for (size_t n = 0; n < surface->GetPoints()->GetNumberOfPoints(); ++n) {
     PointSetType::PointType point;
     point.CastFrom<double>(surface->GetPoints()->GetPoint(n));
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 
   // compute metrics
   typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
-  PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
+  auto metrics = PointSetToImageMetricsType::New();
   metrics->SetMovingImage(binaryImageToLevelset->GetOutput());
   metrics->SetFixedPointSet(pointSet);
   metrics->SetInfo(surfaceInfo);
