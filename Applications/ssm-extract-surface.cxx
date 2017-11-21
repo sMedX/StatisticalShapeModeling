@@ -1,6 +1,7 @@
 #include <boost/program_options.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
+#include <boost/format.hpp>
 
 #include <vtkPolyData.h>
 #include <vtkMath.h>
@@ -17,7 +18,7 @@ struct ProgramOptions
   bool help;
   std::string configFile;
   std::string imageFile;
-  std::string surfaceFile;
+  std::string outputFile;
   std::string reportFile;
   double sigma = 0;
   double relaxation = 0.2;
@@ -46,7 +47,7 @@ int main(int argc, char** argv)
   }
   catch (const po::error& e) {
     cerr << "An exception occurred while parsing the command line:" << endl;
-    cerr << e.what() << endl << endl;
+    cerr << e.what() << endl;
     cout << description << endl;
     return EXIT_FAILURE;
   }
@@ -56,11 +57,14 @@ int main(int argc, char** argv)
   }
 
   bool configIsDesabled = vm["config"].empty();
+  StringList listOfFiles;
 
   if ( configIsDesabled ) {
     extractSurface(options);
+    return EXIT_SUCCESS;
   }
   else {
+    const std::string group = "EXTRACTION.";
     pt::ptree ptree;
 
     try {
@@ -70,6 +74,41 @@ int main(int argc, char** argv)
       cerr << "An exception occurred while parsing the ini file:" << options.configFile << endl;
       cout << e.what() << endl;
     }
+
+    ProgramOptions op;
+    options = op;
+
+    // read list of files
+    try {
+      listOfFiles = readListOfFiles(ptree.get<std::string>(group + "list"));
+    }
+    catch (ifstream::failure & e) {
+      std::cerr << "Could not read the list of files: " << e.what() << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    try {
+      options.sigma = ptree.get<double>(group + "sigma");
+      options.relaxation = ptree.get<double>(group + "relaxation");
+      options.iterations = ptree.get<size_t>(group + "iterations");
+      options.points = ptree.get<size_t>(group + "points");
+      options.reportFile = ptree.get<std::string>(group + "report");
+      options.outputFile = ptree.get<std::string>(group + "output");
+    }
+    catch (...) {
+    }
+  }
+
+  // extract surfaces
+  const std::string format = options.outputFile;
+
+  for (const auto & imageFile : listOfFiles) {
+    options.imageFile = imageFile;
+    options.outputFile = (boost::format(format) % getBaseNameFromPath(options.imageFile)).str();
+
+    std::cout << options.imageFile << std::endl;
+    std::cout << options.outputFile << std::endl;
+    extractSurface(options);
   }
 
   return EXIT_SUCCESS;
@@ -96,7 +135,7 @@ void extractSurface(const ProgramOptions & options )
   auto surface = binaryMaskToSurface->GetOutput();
 
   // write polydata to the file
-  if (!writeVTKPolydata(surface, options.surfaceFile)) {
+  if (!writeVTKPolydata(surface, options.outputFile)) {
     throw;
   }
 
@@ -142,7 +181,7 @@ void extractSurface(const ProgramOptions & options )
   // write report to *.csv file
   if (options.reportFile!="") {
     std::cout << "print report to the file: " << options.reportFile << std::endl;
-    metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.surfaceFile));
+    metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.outputFile));
   }
 
   return;
@@ -204,7 +243,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   mandatory.add_options()
     ("config,c", po::value<std::string>(&options.configFile), "The path to the config ini file.")
     ("image,i", po::value<std::string>(&options.imageFile), "The path to the input image file.")
-    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surface file.")
+    ("surface,s", po::value<std::string>(&options.outputFile), "The path for the output surface file.")
     ;
 
   po::options_description output("Optional input options");
