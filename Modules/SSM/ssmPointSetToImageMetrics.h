@@ -72,7 +72,13 @@ namespace ssm
     {
       std::string indent = "    ";
 
-      os << "Metric values:" << std::endl;
+      std::cout << "Information" << std::endl;
+      for (const auto & pair : m_Info) {
+        std::cout << pair.first << " " << pair.second << std::endl;
+      }
+      os << std::endl;
+
+      os << "Metric values" << std::endl;
       os << indent << "    Mean = " << m_MeanValue << std::endl;
       os << indent << "    RMSE = " << m_RMSEValue << std::endl;
       os << indent << "Quantile = " << m_QuantileValue << ", level = " << m_LevelOfQuantile << std::endl;
@@ -128,6 +134,10 @@ namespace ssm
       if (!m_MovingImage) {
         itkExceptionMacro(<< "Moving image has not been assigned");
       }
+      if (m_MovingImage->GetSource()) {
+        m_MovingImage->GetSource()->Update();
+      }
+
       m_Interpolator = InterpolatorType::New();
       m_Interpolator->SetInputImage(m_MovingImage);
 
