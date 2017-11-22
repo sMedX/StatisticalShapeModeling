@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   // read list of files
   StringList listOfFiles;
   try {
-    listOfFiles = readListOfFiles(ptree.get<std::string>("FILES.list"));
+    listOfFiles = readListFromFile(ptree.get<std::string>("FILES.list"));
   }
   catch (ifstream::failure & e) {
     std::cerr << "Could not read the list of files: "  << e.what() << std::endl;

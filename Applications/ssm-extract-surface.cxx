@@ -59,10 +59,9 @@ int main(int argc, char** argv)
   StringList listOfInputFiles;
 
   try {
-    listOfInputFiles = readListOfFiles(options.inp_list);
+    listOfInputFiles = readListFromFile(options.inp_list);
   }
   catch (std::ifstream::failure & e) {
-    std::cerr << "Could not read list of files to the file: " << options.inp_list << std::endl;
     std::cout << e.what() << std::endl;
     return EXIT_FAILURE;
   }
@@ -81,15 +80,9 @@ int main(int argc, char** argv)
 
   // write list of files to file
   try {
-    std::ofstream file(options.out_list, std::ofstream::out);
-    for (const auto & outputFile : listOfOutputFiles) {
-      std::cout << outputFile << std::endl;
-      file << outputFile << std::endl;
-    }
-    file.close();
+    writeListToFile(options.out_list, listOfOutputFiles);
   }
   catch (std::ofstream::failure & e) {
-    std::cerr << "Could not write the list of files to the file: " << options.out_list << std::endl;
     std::cout << e.what() << std::endl;
     return EXIT_FAILURE;
   }

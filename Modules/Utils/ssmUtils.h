@@ -197,9 +197,9 @@ std::string getBaseNameFromPath(const std::string& fileName)
   return path.stem().string();
 }
 
-StringList readListOfFiles(const std::string& fileName)
+StringList readListFromFile(const std::string& fileName)
 {
-  StringList fileList;
+  StringList list;
 
   std::ifstream file;
   try {
@@ -212,15 +212,30 @@ StringList readListOfFiles(const std::string& fileName)
         if (*line.rbegin() == '\r') {
           line.erase(line.length() - 1, 1);
         }
-        fileList.push_back(line);
+        list.push_back(line);
       }
     }
   }
   catch (std::ifstream::failure e) {
     if (file.eof() == false) {
-      throw std::ifstream::failure("Failed to read the file '" + fileName + "'.");
+      throw std::ifstream::failure("Failed to read list from the file: " + fileName);
     }
   }
 
-  return fileList;
+  return list;
+}
+
+void writeListToFile(const std::string & fileName, const StringList & list)
+{
+  std::ofstream file(fileName, std::ofstream::out);
+  if (!file.is_open()) {
+    throw std::ofstream::failure("Failed to write list to the file : " + fileName);
+  }
+
+  for (const auto & string : list) {
+    file << string << std::endl;
+  }
+  file.close();
+
+  return;
 }
