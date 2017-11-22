@@ -26,7 +26,7 @@ public:
   std::string reportFile;
 
   double sigma;
-  double relaxation;
+  double factor;
   size_t iterations;
   size_t points;
 
@@ -54,7 +54,7 @@ public:
     return true;
   }
 
-  bool ReadOptions()
+  bool ReadConfigFile()
   {
     SurfaceExtractionOptions();
     pt::ptree ptree;
@@ -82,7 +82,7 @@ public:
     try { sigma = ptree.get<double>(group + ".sigma"); }
     catch (...) {}
 
-    try {relaxation = ptree.get<double>(group + ".relaxation"); }
+    try {factor = ptree.get<double>(group + ".factor"); }
     catch (...) {}
 
     try { iterations = ptree.get<size_t>(group + ".iterations"); }
@@ -119,7 +119,7 @@ public:
     std::cout << std::endl;
     std::cout << group << std::endl;
     std::cout << sigma << std::endl;
-    std::cout << relaxation << std::endl;
+    std::cout << factor << std::endl;
     std::cout << iterations << std::endl;
     std::cout << points << std::endl;
     std::cout << std::endl;
@@ -131,7 +131,7 @@ public:
 
     help = false;
     sigma = 0;
-    relaxation = 0.2;
+    factor = 0.2;
     iterations = 100;
     points = 0;
 
@@ -145,7 +145,7 @@ public:
     po::options_description inputOptions("Optional input options");
     inputOptions.add_options()
       ("sigma", po::value<double>(&sigma)->default_value(sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
-      ("factor", po::value<double>(&relaxation)->default_value(relaxation), "The relaxation factor for Laplacian smoothing.")
+      ("factor", po::value<double>(&factor)->default_value(factor), "The relaxation factor for Laplacian smoothing.")
       ("iterations", po::value<size_t>(&iterations)->default_value(iterations), "The number of iterations.")
       ("points", po::value<size_t>(&points)->default_value(points), "The number of points in the output surface.")
       ;

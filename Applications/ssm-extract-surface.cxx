@@ -27,7 +27,7 @@ int main(int argc, char** argv)
   }
 
   // read options from config file
-  if (!options.ReadOptions()) {
+  if (!options.ReadConfigFile()) {
     return EXIT_FAILURE;
   }
   options.PrintOptions();
