@@ -8,7 +8,7 @@
 namespace pt = boost::property_tree;
 namespace po = boost::program_options;
 
-class ProgramOptions
+class SurfaceExtractionOptions
 {
 public:
 
@@ -32,7 +32,6 @@ public:
 
   bool ParseCommandLine(int argc, char** argv)
   {
-    po::options_description description = Initialize();
     po::variables_map vm;
     try {
       po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
@@ -50,47 +49,14 @@ public:
       return false;
     }
 
-    bool configIsEnabled = !(vm["config"].empty());
+    configIsEnabled = !vm["config"].empty();
 
     return true;
   }
 
-  po::options_description Initialize()
-  {
-    po::options_description mandatoryOptions("Mandatory options");
-    mandatoryOptions.add_options()
-      ("config,c", po::value<std::string>(&configFile), "The path to the config file.")
-      ("input,i", po::value<std::string>(&inputFile), "The path to the input image file.")
-      ("output,o", po::value<std::string>(&outputFile), "The path for the output surface file.")
-      ;
-
-    po::options_description inputOptions("Optional input options");
-    inputOptions.add_options()
-      ("sigma", po::value<double>(&sigma)->default_value(sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
-      ("factor", po::value<double>(&relaxation)->default_value(relaxation), "The relaxation factor for Laplacian smoothing.")
-      ("iterations", po::value<size_t>(&iterations)->default_value(iterations), "The number of iterations.")
-      ("points", po::value<size_t>(&points)->default_value(points), "The number of points in the output surface.")
-      ;
-
-    po::options_description reportOptions("Optional report options");
-    reportOptions.add_options()
-      ("report,r", po::value<std::string>(&reportFile), "The path for the file to print report.")
-      ;
-
-    po::options_description helpOptions("Optional options");
-    helpOptions.add_options()
-      ("help,h", po::bool_switch(&help), "Display this help message")
-      ;
-
-    po::options_description description;
-    description.add(mandatoryOptions).add(inputOptions).add(reportOptions).add(helpOptions);
-
-    return description;
-  }
-
   bool ReadOptions()
   {
-    ProgramOptions();
+    SurfaceExtractionOptions();
     pt::ptree ptree;
 
     try {
@@ -159,7 +125,7 @@ public:
     std::cout << std::endl;
   };
 
-  ProgramOptions() 
+  SurfaceExtractionOptions() 
   {
     group = "EXTRACTION";
 
@@ -168,7 +134,35 @@ public:
     relaxation = 0.2;
     iterations = 100;
     points = 0;
+
+    po::options_description mandatoryOptions("Mandatory options");
+    mandatoryOptions.add_options()
+      ("config,c", po::value<std::string>(&configFile), "The path to the config file.")
+      ("input,i", po::value<std::string>(&inputFile), "The path to the input image file.")
+      ("output,o", po::value<std::string>(&outputFile), "The path for the output surface file.")
+      ;
+
+    po::options_description inputOptions("Optional input options");
+    inputOptions.add_options()
+      ("sigma", po::value<double>(&sigma)->default_value(sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
+      ("factor", po::value<double>(&relaxation)->default_value(relaxation), "The relaxation factor for Laplacian smoothing.")
+      ("iterations", po::value<size_t>(&iterations)->default_value(iterations), "The number of iterations.")
+      ("points", po::value<size_t>(&points)->default_value(points), "The number of points in the output surface.")
+      ;
+
+    po::options_description reportOptions("Optional report options");
+    reportOptions.add_options()
+      ("report,r", po::value<std::string>(&reportFile), "The path for the file to print report.")
+      ;
+
+    po::options_description helpOptions("Optional options");
+    helpOptions.add_options()
+      ("help,h", po::bool_switch(&help), "Display this help message")
+      ;
+
+    description.add(mandatoryOptions).add(inputOptions).add(reportOptions).add(helpOptions);
   };
 
 private:
+  po::options_description description;
 };
