@@ -139,7 +139,7 @@ public:
       return (boost::format(format) % getBaseNameFromPath(fileName)).str();
     }
     catch (const boost::io::format_error &e) {
-      std::cerr << "Could not format with format string " << "'" << format << "'" << std::endl;
+      std::cerr << "Could not format string with format " << format << std::endl;
       std::cout << e.what() << std::endl;
       throw;
     }
