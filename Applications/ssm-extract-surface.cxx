@@ -1,6 +1,3 @@
-#include <boost/program_options.hpp>
-#include <boost/format.hpp>
-
 #include <vtkPolyData.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
@@ -14,37 +11,17 @@
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
-int extractSurface(const ProgramOptions & options);
-
-namespace po = boost::program_options;
-namespace pt = boost::property_tree;
-
-po::options_description initializeProgramOptions(ProgramOptions& poParameters);
+bool extractSurface(const ProgramOptions & options);
 
 int main(int argc, char** argv)
 {
   ProgramOptions options;
-  po::options_description description = initializeProgramOptions(options);
-  po::variables_map vm;
-  try {
-    po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
-    po::store(parsedOptions, vm);
-    po::notify(vm);
-  }
-  catch (const po::error& e) {
-    cerr << "An exception occurred while parsing the command line:" << endl;
-    cerr << e.what() << endl;
-    cout << description << endl;
+
+  if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
   }
-  if (options.help == true) {
-    cout << description << endl;
-    return EXIT_SUCCESS;
-  }
 
-  bool configIsDesabled = vm["config"].empty();
-
-  if ( configIsDesabled ) {
+  if (!options.configIsEnabled) {
     extractSurface(options);
     return EXIT_SUCCESS;
   }
@@ -57,7 +34,6 @@ int main(int argc, char** argv)
 
   // read list of files
   StringList listOfInputFiles;
-
   try {
     listOfInputFiles = readListFromFile(options.inp_list);
   }
@@ -90,12 +66,12 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-int extractSurface(const ProgramOptions & options )
+bool extractSurface(const ProgramOptions & options )
 {
   // read image
   auto image = BinaryImageType::New();
   if (!readImage<BinaryImageType>(image, options.inputFile)) {
-    return 0;
+    return false;
   }
   printImageInfo<BinaryImageType>(image, options.inputFile);
 
@@ -107,13 +83,13 @@ int extractSurface(const ProgramOptions & options )
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    return 0;
+    return false;
   }
   auto surface = binaryMaskToSurface->GetOutput();
 
   // write polydata to the file
   if (!writeVTKPolydata(surface, options.outputFile)) {
-    return 0;
+    return false;
   }
 
   //----------------------------------------------------------------------------
@@ -151,7 +127,7 @@ int extractSurface(const ProgramOptions & options )
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    return 0;
+    return false;
   }
   metrics->PrintReport(std::cout);
 
@@ -162,9 +138,8 @@ int extractSurface(const ProgramOptions & options )
     metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.outputFile));
   }
 
-  return 1;
+  return true;
 }
-
 
 double averageLengthOfEdges(vtkPolyData*poly)
 {
@@ -213,37 +188,4 @@ double averageAreaOfCells(vtkPolyData*poly)
   }
 
   return sum / numberOfCells;
-}
-
-po::options_description initializeProgramOptions(ProgramOptions& options)
-{
-  po::options_description mandatory("Mandatory options");
-  mandatory.add_options()
-    ("config,c", po::value<std::string>(&options.configFile), "The path to the config ini file.")
-    ("image,i", po::value<std::string>(&options.inputFile), "The path to the input image file.")
-    ("surface,s", po::value<std::string>(&options.outputFile), "The path for the output surface file.")
-    ;
-
-  po::options_description output("Optional input options");
-  output.add_options()
-    ("sigma", po::value<double>(&options.sigma)->default_value(options.sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
-    ("factor", po::value<double>(&options.relaxation)->default_value(options.relaxation), "The relaxation factor for Laplacian smoothing.")
-    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
-    ("points", po::value<size_t>(&options.points)->default_value(options.points), "The number of points in the output surface.")
-    ;
-
-  po::options_description report("Optional report options");
-  report.add_options()
-    ("report,r", po::value<std::string>(&options.reportFile), "The path for the file to print report.")
-    ;
-
-  po::options_description help("Optional options");
-  help.add_options()
-    ("help,h", po::bool_switch(&options.help), "Display this help message")
-    ;
-
-  po::options_description description;
-  description.add(mandatory).add(output).add(report).add(help);
-
-  return description;
 }
