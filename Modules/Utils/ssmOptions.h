@@ -8,31 +8,17 @@
 namespace pt = boost::property_tree;
 namespace po = boost::program_options;
 
-class SurfaceExtractionOptions
+//=========================================================================
+// Base options class
+//=========================================================================
+class OptionsBase
 {
 public:
 
-  bool help;
-
-  bool configIsEnabled;
-  std::string configFile;
-  std::string group;
-  std::string format;
-
-  std::string inp_list;
-  std::string out_list;
-  std::string inputFile;
-  std::string outputFile;
-  std::string reportFile;
-
-  double sigma;
-  double factor;
-  size_t iterations;
-  size_t points;
+  bool ConfigIsEnabled()  { return configIsEnabled; }
 
   bool ParseCommandLine(int argc, char** argv)
   {
-    po::variables_map vm;
     try {
       po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
       po::store(parsedOptions, vm);
@@ -50,33 +36,80 @@ public:
     }
 
     configIsEnabled = !vm["config"].empty();
-
     return true;
+  }
+
+protected:
+  OptionsBase()
+  {
+    help = false;
+    configIsEnabled = false;
+
+    po::options_description configOptions("Optional config options");
+    configOptions.add_options()("config,c", po::value<std::string>(&config), "The path to the config file.");
+
+    po::options_description helpOptions("Optional help options");
+    helpOptions.add_options()("help,h", po::bool_switch(&help)->default_value(help), "Display this help message");
+
+    description.add(configOptions).add(helpOptions);
   }
 
   bool ReadConfigFile()
   {
-    SurfaceExtractionOptions();
-    pt::ptree ptree;
-
     try {
-      pt::ini_parser::read_ini(configFile, ptree);
+      pt::ini_parser::read_ini(config, ptree);
     }
     catch (const pt::ptree_error &e) {
-      std::cerr << "An exception occurred while parsing the config file:" << configFile << std::endl;
+      std::cerr << "An exception occurred while parsing the config file:" << config << std::endl;
       std::cout << e.what() << endl;
       return false;
     }
 
     if (ptree.find(group) == ptree.not_found()) {
-      std::cerr << "The group " << group << " is not found in the config file: " << configFile << std::endl;
+      std::cerr << "The group " << group << " is not found in the config file: " << config << std::endl;
+      return false;
+    }
+  }
+
+  bool help;
+  std::string config;
+  std::string group;
+  bool configIsEnabled;
+
+  po::variables_map vm;
+  po::options_description description;
+  pt::ptree ptree;
+};
+
+//=========================================================================
+// Surface extraction options
+//=========================================================================
+class SurfaceExtractionOptions : public OptionsBase
+{
+public:
+  std::string inplist;
+  std::string outlist;
+  std::string inputFile;
+  std::string outputFile;
+  std::string reportFile;
+
+  double sigma;
+  double factor;
+  size_t iterations;
+  size_t points;
+
+  bool ReadConfigFile()
+  {
+    SurfaceExtractionOptions();
+
+    if (!OptionsBase::ReadConfigFile()) {
       return false;
     }
 
-    try { inp_list = ptree.get<std::string>(group + ".inp_list"); }
+    try { inplist = ptree.get<std::string>(group + ".inplist"); }
     catch (...) {}
 
-    try { out_list = ptree.get<std::string>(group + ".out_list"); }
+    try { outlist = ptree.get<std::string>(group + ".outlist"); }
     catch (...) {}
 
     try { sigma = ptree.get<double>(group + ".sigma"); }
@@ -129,7 +162,10 @@ public:
   {
     group = "EXTRACTION";
 
-    help = false;
+    inputFile = "";
+    outputFile = "";
+    reportFile = "";
+
     sigma = 0;
     factor = 0.2;
     iterations = 100;
@@ -137,7 +173,6 @@ public:
 
     po::options_description mandatoryOptions("Mandatory options");
     mandatoryOptions.add_options()
-      ("config,c", po::value<std::string>(&configFile), "The path to the config file.")
       ("input,i", po::value<std::string>(&inputFile), "The path to the input image file.")
       ("output,o", po::value<std::string>(&outputFile), "The path for the output surface file.")
       ;
@@ -147,7 +182,7 @@ public:
       ("sigma", po::value<double>(&sigma)->default_value(sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
       ("factor", po::value<double>(&factor)->default_value(factor), "The relaxation factor for Laplacian smoothing.")
       ("iterations", po::value<size_t>(&iterations)->default_value(iterations), "The number of iterations.")
-      ("points", po::value<size_t>(&points)->default_value(points), "The number of points in the output surface.")
+      ("points", po::value<size_t>(&points)->default_value(points), "The number of points in output surface.")
       ;
 
     po::options_description reportOptions("Optional report options");
@@ -155,14 +190,9 @@ public:
       ("report,r", po::value<std::string>(&reportFile), "The path for the file to print report.")
       ;
 
-    po::options_description helpOptions("Optional options");
-    helpOptions.add_options()
-      ("help,h", po::bool_switch(&help), "Display this help message")
-      ;
-
-    description.add(mandatoryOptions).add(inputOptions).add(reportOptions).add(helpOptions);
+    description.add(mandatoryOptions).add(inputOptions).add(reportOptions);
   };
 
 private:
-  po::options_description description;
+  std::string format;
 };

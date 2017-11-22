@@ -1,6 +1,7 @@
 #include <vtkPolyData.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
+#include <itkTransform.h>
 
 #include "ssmTypes.h"
 #include "ssmUtils.h"
@@ -21,7 +22,7 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  if (!options.configIsEnabled) {
+  if ( !options.ConfigIsEnabled() ) {
     extractSurface(options);
     return EXIT_SUCCESS;
   }
@@ -35,7 +36,7 @@ int main(int argc, char** argv)
   // read list of files
   StringList listOfInputFiles;
   try {
-    listOfInputFiles = readListFromFile(options.inp_list);
+    listOfInputFiles = readListFromFile(options.inplist);
   }
   catch (std::ifstream::failure & e) {
     std::cout << e.what() << std::endl;
@@ -56,7 +57,7 @@ int main(int argc, char** argv)
 
   // write list of files to file
   try {
-    writeListToFile(options.out_list, listOfOutputFiles);
+    writeListToFile(options.outlist, listOfOutputFiles);
   }
   catch (std::ofstream::failure & e) {
     std::cout << e.what() << std::endl;
