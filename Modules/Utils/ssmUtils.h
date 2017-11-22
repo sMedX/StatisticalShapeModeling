@@ -35,6 +35,19 @@ bool readImage(typename TImage::Pointer image, const std::string& fileName)
   return true;
 }
 
+//! print information about image
+template <typename TImage>
+void printImageInfo(const TImage* image, const std::string &info = "")
+{
+  if (info.size() > 0) {
+    std::cout << info << std::endl;
+  }
+  std::cout << "    size " << image->GetLargestPossibleRegion().GetSize() << ", " << image->GetNumberOfComponentsPerPixel() << std::endl;
+  std::cout << "  origin " << image->GetOrigin() << std::endl;
+  std::cout << "spacing  " << image->GetSpacing() << std::endl;
+  std::cout << "direction" << std::endl << image->GetDirection() << std::endl;
+}
+
 //! Writes a templated image to a file via ITK ImageFileWriter
 template <typename TImage>
 bool writeImage(const TImage* image, const std::string& fileName)
