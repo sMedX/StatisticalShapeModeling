@@ -1,6 +1,4 @@
 #include <boost/program_options.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
 #include <boost/format.hpp>
 
 #include <vtkPolyData.h>
@@ -12,23 +10,11 @@
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmBinaryImageToLevelSetImageFilter.h"
 #include "ssmBinaryMask3DMeshSource.h"
-
-struct ProgramOptions
-{
-  bool help;
-  std::string configFile;
-  std::string imageFile;
-  std::string outputFile;
-  std::string reportFile;
-  double sigma = 0;
-  double relaxation = 0.2;
-  size_t iterations = 100;
-  size_t points = 0;
-};
+#include "ssmOptions.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
-void  extractSurface(const ProgramOptions & options);
+int extractSurface(const ProgramOptions & options);
 
 namespace po = boost::program_options;
 namespace pt = boost::property_tree;
@@ -57,70 +43,68 @@ int main(int argc, char** argv)
   }
 
   bool configIsDesabled = vm["config"].empty();
-  StringList listOfFiles;
 
   if ( configIsDesabled ) {
     extractSurface(options);
     return EXIT_SUCCESS;
   }
-  else {
-    const std::string group = "EXTRACTION.";
-    pt::ptree ptree;
 
-    try {
-      pt::ini_parser::read_ini(options.configFile, ptree);
-    }
-    catch (const pt::ptree_error &e) {
-      cerr << "An exception occurred while parsing the ini file:" << options.configFile << endl;
-      cout << e.what() << endl;
-    }
+  // read options from config file
+  if (!options.ReadOptions()) {
+    return EXIT_FAILURE;
+  }
+  options.PrintOptions();
 
-    ProgramOptions op;
-    options = op;
+  // read list of files
+  StringList listOfInputFiles;
 
-    // read list of files
-    try {
-      listOfFiles = readListOfFiles(ptree.get<std::string>(group + "list"));
-    }
-    catch (ifstream::failure & e) {
-      std::cerr << "Could not read the list of files: " << e.what() << std::endl;
-      return EXIT_FAILURE;
-    }
-
-    try {
-      options.sigma = ptree.get<double>(group + "sigma");
-      options.relaxation = ptree.get<double>(group + "relaxation");
-      options.iterations = ptree.get<size_t>(group + "iterations");
-      options.points = ptree.get<size_t>(group + "points");
-      options.reportFile = ptree.get<std::string>(group + "report");
-      options.outputFile = ptree.get<std::string>(group + "output");
-    }
-    catch (...) {
-    }
+  try {
+    listOfInputFiles = readListOfFiles(options.inp_list);
+  }
+  catch (std::ifstream::failure & e) {
+    std::cerr << "Could not read list of files to the file: " << options.inp_list << std::endl;
+    std::cout << e.what() << std::endl;
+    return EXIT_FAILURE;
   }
 
   // extract surfaces
-  const std::string format = options.outputFile;
+  StringList listOfOutputFiles;
 
-  for (const auto & imageFile : listOfFiles) {
-    options.imageFile = imageFile;
-    options.outputFile = (boost::format(format) % getBaseNameFromPath(options.imageFile)).str();
+  for (const auto & inputFile : listOfInputFiles) {
+    options.inputFile = inputFile;
+    options.outputFile = options.FormatOutput(inputFile);
 
-    std::cout << options.imageFile << std::endl;
-    std::cout << options.outputFile << std::endl;
-    extractSurface(options);
+    if (extractSurface(options)) {
+      listOfOutputFiles.push_back(options.outputFile);
+    }
+  }
+
+  // write list of files to file
+  try {
+    std::ofstream file(options.out_list, std::ofstream::out);
+    for (const auto & outputFile : listOfOutputFiles) {
+      std::cout << outputFile << std::endl;
+      file << outputFile << std::endl;
+    }
+    file.close();
+  }
+  catch (std::ofstream::failure & e) {
+    std::cerr << "Could not write the list of files to the file: " << options.out_list << std::endl;
+    std::cout << e.what() << std::endl;
+    return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;
 }
 
-void extractSurface(const ProgramOptions & options )
+int extractSurface(const ProgramOptions & options )
 {
   // read image
   auto image = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(image, options.imageFile)) {
-    throw;
+  if (!readImage<BinaryImageType>(image, options.inputFile)) {
+    return 0;
   }
+  printImageInfo<BinaryImageType>(image, options.inputFile);
 
   typedef ssm::BinaryMask3DMeshSource<BinaryImageType, vtkPolyData> BinaryMask3DMeshSourceType;
   auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
@@ -130,13 +114,13 @@ void extractSurface(const ProgramOptions & options )
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    throw;
+    return 0;
   }
   auto surface = binaryMaskToSurface->GetOutput();
 
   // write polydata to the file
   if (!writeVTKPolydata(surface, options.outputFile)) {
-    throw;
+    return 0;
   }
 
   //----------------------------------------------------------------------------
@@ -174,17 +158,18 @@ void extractSurface(const ProgramOptions & options )
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    throw;
+    return 0;
   }
   metrics->PrintReport(std::cout);
 
   // write report to *.csv file
   if (options.reportFile!="") {
-    std::cout << "print report to the file: " << options.reportFile << std::endl;
+    std::cout << "print report to the file: " << options.reportFile << std::endl; 
+    std::cout << std::endl;
     metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.outputFile));
   }
 
-  return;
+  return 1;
 }
 
 
@@ -242,7 +227,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
     ("config,c", po::value<std::string>(&options.configFile), "The path to the config ini file.")
-    ("image,i", po::value<std::string>(&options.imageFile), "The path to the input image file.")
+    ("image,i", po::value<std::string>(&options.inputFile), "The path to the input image file.")
     ("surface,s", po::value<std::string>(&options.outputFile), "The path for the output surface file.")
     ;
 
