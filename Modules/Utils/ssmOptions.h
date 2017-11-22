@@ -44,7 +44,7 @@ public:
       cout << description << endl;
       return false;
     }
-    if (help == true) {
+    if (help) {
       cout << description << endl;
       return false;
     }
