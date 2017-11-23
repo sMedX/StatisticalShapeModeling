@@ -102,27 +102,27 @@ public:
   bool ReadConfigFile()
   {
     try {
-      pt::ini_parser::read_ini(config, m_ParsedPtree);
+      pt::ini_parser::read_ini(m_Config, m_ParsedPtree);
     }
     catch (const pt::ptree_error &e) {
-      std::cerr << "An exception occurred while parsing the config file:" << AddQuotes(config) << std::endl;
+      std::cerr << "An exception occurred while parsing the config file:" << AddQuotes(m_Config) << std::endl;
       std::cout << e.what() << endl;
       return false;
     }
 
-    if (m_ParsedPtree.find(group) == m_ParsedPtree.not_found()) {
-      std::cerr << "The group " << AddQuotes(group) << " is not found in the config file: " << AddQuotes(config) << std::endl;
+    if (m_ParsedPtree.find(m_NameOfGroup) == m_ParsedPtree.not_found()) {
+      std::cerr << "The group " << AddQuotes(m_NameOfGroup) << " is not found in the config file: " << AddQuotes(m_Config) << std::endl;
       return false;
     }
 
-    m_ParsedPtree = m_ParsedPtree.get_child(group);
+    m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
 
     // check parsed ptree
     std::vector<std::string> listOfKeys;
-    checkParsedTree(m_PtreeOfRequireds, m_ParsedPtree, group, listOfKeys);
+    checkParsedTree(m_PtreeOfRequireds, m_ParsedPtree, m_NameOfGroup, listOfKeys);
 
     if (listOfKeys.size() > 0) {
-      std::cerr << "The keys are not found in the config file: " << AddQuotes(config) << std::endl;
+      std::cerr << "The keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
       for (const auto & str : listOfKeys) {
         std::cerr << AddQuotes(str) << std::endl;
       }
@@ -135,7 +135,7 @@ public:
   void PrintConfig()
   {
     std::cout << std::endl;
-    std::cout << "Config options for group " << AddQuotes(group) << std::endl;
+    std::cout << "Config options for group " << AddQuotes(m_NameOfGroup) << std::endl;
     printTree(m_ParsedPtree, std::cout, 0);
     std::cout << std::endl;
   };
@@ -153,8 +153,11 @@ public:
   };
 
 private:
+
   bool m_Help;
   bool m_ConfigIsEnabled;
+  std::string m_Config;
+  std::string m_NameOfGroup;
 
 protected:
   OptionsBase()
@@ -163,7 +166,7 @@ protected:
     m_ConfigIsEnabled = false;
 
     po::options_description configOptions("Optional config options");
-    configOptions.add_options()("config,c", po::value<std::string>(&config), "The path to the config file.");
+    configOptions.add_options()("config,c", po::value<std::string>(&m_Config), "The path to the config file.");
 
     po::options_description helpOptions("Optional help options");
     helpOptions.add_options()("help,h", po::bool_switch(&m_Help)->default_value(m_Help), "Display this help message");
@@ -173,7 +176,7 @@ protected:
 
   void SetNameOfGroup(const std::string & str)
   {
-    group = str;
+    m_NameOfGroup = str;
   }
 
   template <typename T>
@@ -188,11 +191,8 @@ protected:
 
   std::string Path(const std::string & str) const
   {
-    return group + "." + str;
+    return m_NameOfGroup + "." + str;
   }
-
-  std::string config;
-  std::string group;
 
   po::variables_map m_Vm;
   po::options_description m_Description;
