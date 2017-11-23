@@ -8,19 +8,21 @@
 namespace pt = boost::property_tree;
 namespace po = boost::program_options;
 
-template <typename TreeType>
-void printTree(const TreeType & tree, std::ostream & os, unsigned int level /*=0*/)
+//=========================================================================
+// Some basic functions
+//=========================================================================
+void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=0*/)
 {
   if (!tree.empty()) {
     os << std::endl;
     std::string indent(3 * level, ' ');
 
-    for (typename TreeType::const_iterator it = tree.begin(); it != tree.end(); ++it) {
-      std::string name = it->first;
+    for (const auto & it : tree) {
+      std::string name = it.first;
       name.resize(12);
       os << indent << name << " ";
 
-      printTree<TreeType>(it->second, os, level + 1);
+      printTree(it.second, os, level + 1);
       os << std::endl;
     }
   }
@@ -42,7 +44,7 @@ class OptionsBase
 {
 public:
 
-  bool ConfigIsEnabled() const 
+  const bool & ConfigIsEnabled() const 
   { 
     return configIsEnabled; 
   }
@@ -74,46 +76,50 @@ public:
     return true;
   }
 
+  bool ReadConfigFile()
+  {
+    try {
+      pt::ini_parser::read_ini(config, parsedPtree);
+    }
+    catch (const pt::ptree_error &e) {
+      std::cerr << "An exception occurred while parsing the config file:" << config << std::endl;
+      std::cout << e.what() << endl;
+      return false;
+    }
+
+    if (parsedPtree.find(group) == parsedPtree.not_found()) {
+      std::cerr << "The group " << group << " is not found in the config file: " << config << std::endl;
+      return false;
+    }
+
+    parsedPtree = parsedPtree.get_child(group);
+  }
+
   void PrintConfig()
   {
     std::cout << std::endl;
     std::cout << "Config options for group " << group << std::endl;
-    printTree<pt::ptree>(ptree.get_child(group), std::cout, 0);
+    printTree(parsedPtree, std::cout, 0);
     std::cout << std::endl;
   };
 
   template <typename T>
-  void Put(const std::string & str, T value)
+  T GetDefaultValue(const std::string & str) const
   {
-    ptree.put(Path(str), value);
+    return ptreeOfDefaultValues.get<T>(str);
   };
 
   template <typename T>
   T Get(const std::string & str) const
   {
-    return ptree.get<T>(Path(str));
-  };
-
-  std::string Path(const std::string & str) const
-  {
-    return group + "." + str;
-  }
-
-  bool Find(const std::string & str) const
-  {
-    const auto & child = ptree.get_child(group);
-    if (child.find(str) == child.not_found()) {
-      std::cerr << "Key " << AddQuotes(Path(str)) << " is missing in the config file: " << config << std::endl;
-      return false;
-    }
-    return true;
+    return parsedPtree.get<T>(str);
   };
 
 protected:
   OptionsBase()
   {
     help = false;
-    configIsEnabled = true;
+    configIsEnabled = false;
 
     po::options_description configOptions("Optional config options");
     configOptions.add_options()("config,c", po::value<std::string>(&config), "The path to the config file.");
@@ -124,22 +130,26 @@ protected:
     description.add(configOptions).add(helpOptions);
   }
 
-  bool ReadConfigFile()
+  template <typename T>
+  void Put(const std::string & str, const T & value, const bool & required = true)
   {
-    try {
-      pt::ini_parser::read_ini(config, ptree);
-    }
-    catch (const pt::ptree_error &e) {
-      std::cerr << "An exception occurred while parsing the config file:" << config << std::endl;
-      std::cout << e.what() << endl;
-      return false;
-    }
+    ptreeOfRequireds.put(str, required);
+    ptreeOfDefaultValues.put(str, value);
+  };
 
-    if (ptree.find(group) == ptree.not_found()) {
-      std::cerr << "The group " << group << " is not found in the config file: " << config << std::endl;
+  std::string Path(const std::string & str) const
+  {
+    return group + "." + str;
+  }
+
+  bool Find(const std::string & str) const
+  {
+    if (parsedPtree.find(str) == parsedPtree.not_found()) {
+      std::cerr << "Key " << AddQuotes(Path(str)) << " is missing in the config file: " << config << std::endl;
       return false;
     }
-  }
+    return true;
+  };
 
   bool help;
   std::string config;
@@ -148,7 +158,9 @@ protected:
 
   po::variables_map vm;
   po::options_description description;
-  pt::ptree ptree;
+  pt::ptree parsedPtree;
+  pt::ptree ptreeOfRequireds;
+  pt::ptree ptreeOfDefaultValues;
 };
 
 //=========================================================================
@@ -166,18 +178,18 @@ public:
 
   std::string GetInputList() const
   { 
-    return ptree.get<std::string>(Path("inplist")); 
+    return parsedPtree.get<std::string>("inplist"); 
   }
 
   std::string GetOutputList() const
   {
-    return ptree.get<std::string>(Path("outlist"));
+    return parsedPtree.get<std::string>("outlist");
   }
 
   std::string GetReportFile() const
   {
     if (configIsEnabled)
-      return ptree.get<std::string>(Path("report"));
+      return parsedPtree.get<std::string>("report");
     else
       return vm["report"].as<std::string>();
   }
@@ -218,19 +230,6 @@ public:
       return vm[name].as<size_t>();
   }
 
-  bool ReadConfigFile()
-  {
-    if (!OptionsBase::ReadConfigFile()) {
-      return false;
-    }
-
-    if (!Find("inplist") || !Find("outlist") || !Find("report") || !Find("output")) {
-      return false;
-    }
-
-    return true;
-  }
-
   std::string FormatOutput(const std::string & fileName)
   {
     const auto format = Get<std::string>("output");
@@ -249,10 +248,15 @@ public:
     SetGroup("EXTRACTION");
 
     // initialize ptree
-    Put<double>("sigma", 0);
-    Put<double>("factor", 0.2);
-    Put<size_t>("iterations", 100);
-    Put<size_t>("points", 0);
+    Put<std::string>("inplist", "");
+    Put<std::string>("outlist", "");
+    Put<std::string>("output", "");
+    Put<std::string>("report", "");
+
+    Put<double>("sigma", 0, 0);
+    Put<double>("factor", 0.2, 0);
+    Put<size_t>("iterations", 100, 0);
+    Put<size_t>("points", 0, 0);
 
     // initialize description
     po::options_description mandatoryOptions("Mandatory options");
@@ -260,13 +264,13 @@ public:
       ("input,i", po::value<std::string>(&inputFileName), "The path to the input image file.")
       ("output,o", po::value<std::string>(&outputFileName), "The path for the output surface file.")
       ;
-
+    
     po::options_description inputOptions("Optional input options");
     inputOptions.add_options()
-      ("sigma", po::value<double>()->default_value(GetSigma()), "The sigma of the Gaussian kernel measured in world coordinates.")
-      ("factor", po::value<double>()->default_value(GetFactor()), "The relaxation factor for Laplacian smoothing.")
-      ("iterations", po::value<size_t>()->default_value(GetNumberOfIterations()), "The number of iterations.")
-      ("points", po::value<size_t>()->default_value(GetNumberOfPoints()), "The number of points in output surface.")
+      ("sigma", po::value<double>()->default_value(this->GetDefaultValue<double>("sigma")), "The sigma of the Gaussian kernel measured in world coordinates.")
+      ("factor", po::value<double>()->default_value(this->GetDefaultValue<double>("factor")), "The relaxation factor for Laplacian smoothing.")
+      ("iterations", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("iterations")), "The number of iterations.")
+      ("points", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("points")), "The number of points in output surface.")
       ;
 
     po::options_description reportOptions("Optional report options");
