@@ -79,6 +79,10 @@ bool extractSurface(const SurfaceExtractionOptions & options )
   typedef ssm::BinaryMask3DMeshSource<BinaryImageType, vtkPolyData> BinaryMask3DMeshSourceType;
   auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
   binaryMaskToSurface->SetInput(image);
+  binaryMaskToSurface->SetSigma(options.GetSigma());
+  binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
+  binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
+  binaryMaskToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
   try {
     binaryMaskToSurface->Update();
   }
