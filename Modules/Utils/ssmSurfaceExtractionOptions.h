@@ -88,7 +88,7 @@ public:
 
   std::string FormatOutput(const std::string & fileName)
   {
-    const auto format = Get<std::string>("output");
+    const auto & format = Get<std::string>("output");
     try {
       return (boost::format(format) % getBaseNameFromPath(fileName)).str();
     }
@@ -101,7 +101,7 @@ public:
 
   SurfaceExtractionOptions()
   {
-    SetGroup("EXTRACTION");
+    SetNameOfGroup("EXTRACTION");
 
     // initialize ptree
     Put<std::string>("inplist", "");

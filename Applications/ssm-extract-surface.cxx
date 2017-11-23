@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     }
   }
 
-  // write list of files to file
+  // write list of files
   try {
     writeListToFile(options.GetOutputList(), listOfOutputFiles);
   }
@@ -138,7 +138,7 @@ bool extractSurface(const ssm::SurfaceExtractionOptions & options )
   metrics->PrintReport(std::cout);
 
   // write report to *.csv file
-  std::cout << "write report to the file: " << options.GetReportFile() << std::endl;
+  std::cout << "print report to the file: " << options.GetReportFile() << std::endl;
   std::cout << std::endl;
 
   metrics->PrintReportToFile(options.GetReportFile(), getBaseNameFromPath(options.GetOutputFileName()));
