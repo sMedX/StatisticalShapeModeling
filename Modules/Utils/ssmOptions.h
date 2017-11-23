@@ -8,6 +8,33 @@
 namespace pt = boost::property_tree;
 namespace po = boost::program_options;
 
+template <typename TreeType>
+void printTree(const TreeType & tree, std::ostream & os, unsigned int level /*=0*/)
+{
+  if (!tree.empty()) {
+    os << std::endl;
+    std::string indent(3 * level, ' ');
+
+    for (typename TreeType::const_iterator it = tree.begin(); it != tree.end(); ++it) {
+      std::string name = it->first;
+      name.resize(12);
+      os << indent << name << " ";
+
+      printTree<TreeType>(it->second, os, level + 1);
+      os << std::endl;
+    }
+  }
+  else {
+    std::cout << " " << tree.data();
+  }
+  return;
+}
+
+std::string AddQuotes(std::string str)
+{
+  return "'" + str + "'";
+}
+
 //=========================================================================
 // Base options class
 //=========================================================================
@@ -15,7 +42,15 @@ class OptionsBase
 {
 public:
 
-  bool ConfigIsEnabled()  { return configIsEnabled; }
+  bool ConfigIsEnabled() const 
+  { 
+    return configIsEnabled; 
+  }
+
+  void SetGroup(const std::string & str) 
+  { 
+    group = str; 
+  }
 
   bool ParseCommandLine(int argc, char** argv)
   {
@@ -39,11 +74,46 @@ public:
     return true;
   }
 
+  void PrintConfig()
+  {
+    std::cout << std::endl;
+    std::cout << "Config options for group " << group << std::endl;
+    printTree<pt::ptree>(ptree.get_child(group), std::cout, 0);
+    std::cout << std::endl;
+  };
+
+  template <typename T>
+  void Put(const std::string & str, T value)
+  {
+    ptree.put(Path(str), value);
+  };
+
+  template <typename T>
+  T Get(const std::string & str) const
+  {
+    return ptree.get<T>(Path(str));
+  };
+
+  std::string Path(const std::string & str) const
+  {
+    return group + "." + str;
+  }
+
+  bool Find(const std::string & str) const
+  {
+    const auto & child = ptree.get_child(group);
+    if (child.find(str) == child.not_found()) {
+      std::cerr << "Key " << AddQuotes(Path(str)) << " is missing in the config file: " << config << std::endl;
+      return false;
+    }
+    return true;
+  };
+
 protected:
   OptionsBase()
   {
     help = false;
-    configIsEnabled = false;
+    configIsEnabled = true;
 
     po::options_description configOptions("Optional config options");
     configOptions.add_options()("config,c", po::value<std::string>(&config), "The path to the config file.");
@@ -87,54 +157,83 @@ protected:
 class SurfaceExtractionOptions : public OptionsBase
 {
 public:
-  std::string inplist;
-  std::string outlist;
-  std::string inputFile;
-  std::string outputFile;
-  std::string reportFile;
 
-  double sigma;
-  double factor;
-  size_t iterations;
-  size_t points;
+  void SetInputFileName(const std::string & str) { inputFileName = str; }
+  const std::string & GetInputFileName() const { return inputFileName; } 
+
+  void SetOutputFileName(const std::string & str) { outputFileName = str; }
+  const std::string & GetOutputFileName() const { return outputFileName; }
+
+  std::string GetInputList() const
+  { 
+    return ptree.get<std::string>(Path("inplist")); 
+  }
+
+  std::string GetOutputList() const
+  {
+    return ptree.get<std::string>(Path("outlist"));
+  }
+
+  std::string GetReportFile() const
+  {
+    if (configIsEnabled)
+      return ptree.get<std::string>(Path("report"));
+    else
+      return vm["report"].as<std::string>();
+  }
+
+  double GetSigma() const
+  {
+    const std::string name = "sigma";
+    if (configIsEnabled)
+      return Get<double>(name);
+    else
+      return vm[name].as<double>();
+  }
+
+  double GetFactor() const
+  {
+    const std::string name = "factor";
+    if (configIsEnabled)
+      return Get<double>(name);
+    else
+      return vm[name].as<double>();
+  }
+
+  size_t GetNumberOfPoints() const
+  {
+    const std::string name = "points";
+    if (configIsEnabled)
+      return Get<size_t>(name);
+    else
+      return vm[name].as<size_t>();
+  }
+
+  size_t GetNumberOfIterations() const
+  {
+    const std::string name = "iterations";
+    if (configIsEnabled)
+      return Get<size_t>(name);
+    else
+      return vm[name].as<size_t>();
+  }
 
   bool ReadConfigFile()
   {
-    SurfaceExtractionOptions();
-
     if (!OptionsBase::ReadConfigFile()) {
       return false;
     }
 
-    try { inplist = ptree.get<std::string>(group + ".inplist"); }
-    catch (...) {}
-
-    try { outlist = ptree.get<std::string>(group + ".outlist"); }
-    catch (...) {}
-
-    try { sigma = ptree.get<double>(group + ".sigma"); }
-    catch (...) {}
-
-    try {factor = ptree.get<double>(group + ".factor"); }
-    catch (...) {}
-
-    try { iterations = ptree.get<size_t>(group + ".iterations"); }
-    catch (...) {}
-
-    try { points = ptree.get<size_t>(group + ".points"); }
-    catch (...) {}
-
-    try { reportFile = ptree.get<std::string>(group + ".report"); }
-    catch (...) {}
-
-    try { format = ptree.get<std::string>(group + ".output"); }
-    catch (...) {}
+    if (!Find("inplist") || !Find("outlist") || !Find("report") || !Find("output")) {
+      return false;
+    }
 
     return true;
   }
 
   std::string FormatOutput(const std::string & fileName)
   {
+    const auto format = Get<std::string>("output");
     try {
       return (boost::format(format) % getBaseNameFromPath(fileName)).str();
     }
@@ -145,54 +244,40 @@ public:
     }
   };
 
-  void PrintOptions()
-  {
-    std::cout << inputFile << std::endl;
-    std::cout << outputFile << std::endl;
-    std::cout << std::endl;
-    std::cout << group << std::endl;
-    std::cout << sigma << std::endl;
-    std::cout << factor << std::endl;
-    std::cout << iterations << std::endl;
-    std::cout << points << std::endl;
-    std::cout << std::endl;
-  };
-
   SurfaceExtractionOptions() 
   {
-    group = "EXTRACTION";
+    SetGroup("EXTRACTION");
 
-    inputFile = "";
-    outputFile = "";
-    reportFile = "";
+    // initialize ptree
+    Put<double>("sigma", 0);
+    Put<double>("factor", 0.2);
+    Put<size_t>("iterations", 100);
+    Put<size_t>("points", 0);
 
-    sigma = 0;
-    factor = 0.2;
-    iterations = 100;
-    points = 0;
-
+    // initialize description
     po::options_description mandatoryOptions("Mandatory options");
     mandatoryOptions.add_options()
-      ("input,i", po::value<std::string>(&inputFile), "The path to the input image file.")
-      ("output,o", po::value<std::string>(&outputFile), "The path for the output surface file.")
+      ("input,i", po::value<std::string>(&inputFileName), "The path to the input image file.")
+      ("output,o", po::value<std::string>(&outputFileName), "The path for the output surface file.")
       ;
 
     po::options_description inputOptions("Optional input options");
     inputOptions.add_options()
-      ("sigma", po::value<double>(&sigma)->default_value(sigma), "The sigma of the Gaussian kernel measured in world coordinates.")
-      ("factor", po::value<double>(&factor)->default_value(factor), "The relaxation factor for Laplacian smoothing.")
-      ("iterations", po::value<size_t>(&iterations)->default_value(iterations), "The number of iterations.")
-      ("points", po::value<size_t>(&points)->default_value(points), "The number of points in output surface.")
+      ("sigma", po::value<double>()->default_value(GetSigma()), "The sigma of the Gaussian kernel measured in world coordinates.")
+      ("factor", po::value<double>()->default_value(GetFactor()), "The relaxation factor for Laplacian smoothing.")
+      ("iterations", po::value<size_t>()->default_value(GetNumberOfIterations()), "The number of iterations.")
+      ("points", po::value<size_t>()->default_value(GetNumberOfPoints()), "The number of points in output surface.")
       ;
 
     po::options_description reportOptions("Optional report options");
     reportOptions.add_options()
-      ("report,r", po::value<std::string>(&reportFile), "The path for the file to print report.")
+      ("report,r", po::value<std::string>(), "The path for the file to print report.")
       ;
 
     description.add(mandatoryOptions).add(inputOptions).add(reportOptions);
   };
 
 private:
-  std::string format;
+  std::string inputFileName;
+  std::string outputFileName;
 };
