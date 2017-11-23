@@ -12,11 +12,11 @@
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
-bool extractSurface(const SurfaceExtractionOptions & options);
+bool extractSurface(const ssm::SurfaceExtractionOptions & options);
 
 int main(int argc, char** argv)
 {
-  SurfaceExtractionOptions options;
+  ssm::SurfaceExtractionOptions options;
 
   if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-bool extractSurface(const SurfaceExtractionOptions & options )
+bool extractSurface(const ssm::SurfaceExtractionOptions & options )
 {
   // read image
   auto image = BinaryImageType::New();

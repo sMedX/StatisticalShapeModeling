@@ -8,6 +8,8 @@
 namespace pt = boost::property_tree;
 namespace po = boost::program_options;
 
+namespace ssm
+{
 //=========================================================================
 // Some basic functions
 //=========================================================================
@@ -42,13 +44,13 @@ void checkParsedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree
     const auto &name = it.first;
     const auto &tree = it.second;
 
-    if ( !tree.empty() ) {
+    if (!tree.empty()) {
       key = key + "." + name;
       checkParsedTree(ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key, list);
       return;
     }
-    else{
-      if (ptreeOfRequireds.get<bool>(name) ) {
+    else {
+      if (ptreeOfRequireds.get<bool>(name)) {
         if (parsedPtree.find(name) == parsedPtree.not_found()) {
           list.push_back(key + "." + name);
           continue;
@@ -70,14 +72,14 @@ class OptionsBase
 {
 public:
 
-  const bool & ConfigIsEnabled() const 
-  { 
-    return configIsEnabled; 
+  const bool & ConfigIsEnabled() const
+  {
+    return configIsEnabled;
   }
 
-  void SetGroup(const std::string & str) 
-  { 
-    group = str; 
+  void SetGroup(const std::string & str)
+  {
+    group = str;
   }
 
   bool ParseCommandLine(int argc, char** argv)
@@ -119,7 +121,7 @@ public:
     }
 
     parsedPtree = parsedPtree.get_child(group);
-    
+
     // check parsed ptree
     std::vector<std::string> listOfKeys;
     checkParsedTree(ptreeOfRequireds, parsedPtree, group, listOfKeys);
@@ -204,29 +206,29 @@ class SurfaceExtractionOptions : public OptionsBase
 {
 public:
 
-  void SetInputFileName(const std::string & str) 
-  { 
-    inputFileName = str; 
+  void SetInputFileName(const std::string & str)
+  {
+    inputFileName = str;
   }
 
-  const std::string & GetInputFileName() const 
-  { 
-    return inputFileName; 
-  } 
-
-  void SetOutputFileName(const std::string & str) 
-  { 
-    outputFileName = str; 
+  const std::string & GetInputFileName() const
+  {
+    return inputFileName;
   }
 
-  const std::string & GetOutputFileName() const 
-  { 
-    return outputFileName; 
+  void SetOutputFileName(const std::string & str)
+  {
+    outputFileName = str;
+  }
+
+  const std::string & GetOutputFileName() const
+  {
+    return outputFileName;
   }
 
   std::string GetInputList() const
-  { 
-    return parsedPtree.get<std::string>("inplist"); 
+  {
+    return parsedPtree.get<std::string>("inplist");
   }
 
   std::string GetOutputList() const
@@ -292,7 +294,7 @@ public:
     }
   };
 
-  SurfaceExtractionOptions() 
+  SurfaceExtractionOptions()
   {
     SetGroup("EXTRACTION");
 
@@ -313,7 +315,7 @@ public:
       ("input,i", po::value<std::string>(&inputFileName), "The path to the input image file.")
       ("output,o", po::value<std::string>(&outputFileName), "The path for the output surface file.")
       ;
-    
+
     po::options_description inputOptions("Optional input options");
     inputOptions.add_options()
       ("sigma", po::value<double>()->default_value(this->GetDefaultValue<double>("sigma")), "The sigma of the Gaussian kernel measured in world coordinates.")
@@ -334,3 +336,4 @@ private:
   std::string inputFileName;
   std::string outputFileName;
 };
+}
