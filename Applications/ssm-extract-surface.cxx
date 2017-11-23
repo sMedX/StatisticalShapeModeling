@@ -8,7 +8,7 @@
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmBinaryImageToLevelSetImageFilter.h"
 #include "ssmBinaryMask3DMeshSource.h"
-#include "ssmOptions.h"
+#include "ssmSurfaceExtractionOptions.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
