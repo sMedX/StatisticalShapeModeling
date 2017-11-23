@@ -77,11 +77,6 @@ public:
     return configIsEnabled;
   }
 
-  void SetGroup(const std::string & str)
-  {
-    group = str;
-  }
-
   bool ParseCommandLine(int argc, char** argv)
   {
     try {
@@ -116,7 +111,7 @@ public:
     }
 
     if (parsedPtree.find(group) == parsedPtree.not_found()) {
-      std::cerr << "The group " << group << " is not found in the config file: " << AddQuotes(config) << std::endl;
+      std::cerr << "The group " << AddQuotes(group) << " is not found in the config file: " << AddQuotes(config) << std::endl;
       return false;
     }
 
@@ -170,6 +165,11 @@ protected:
     helpOptions.add_options()("help,h", po::bool_switch(&help)->default_value(help), "Display this help message");
 
     description.add(configOptions).add(helpOptions);
+  }
+
+  void SetNameOfGroup(const std::string & str)
+  {
+    group = str;
   }
 
   template <typename T>
