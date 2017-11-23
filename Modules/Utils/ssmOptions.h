@@ -32,10 +32,10 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=
   return;
 }
 
-bool checkParesedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree, std::string & key)
+void checkParsedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree, std::string & key, std::vector<std::string> & list)
 {
   if (ptreeOfRequireds.empty()) {
-    return true;
+    return;
   }
 
   for (const auto & it : ptreeOfRequireds) {
@@ -44,13 +44,14 @@ bool checkParesedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtre
 
     if ( !tree.empty() ) {
       key = key + "." + name;
-      return checkParesedTree(ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key);
+      checkParsedTree(ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key, list);
+      return;
     }
     else{
       if (ptreeOfRequireds.get<bool>(name) ) {
         if (parsedPtree.find(name) == parsedPtree.not_found()) {
-          key = key + "." + name;
-          return false;
+          list.push_back(key + "." + name);
+          continue;
         }
       }
     }
@@ -120,9 +121,14 @@ public:
     parsedPtree = parsedPtree.get_child(group);
     
     // check parsed ptree
-    std::string key = group;
-    if (!checkParesedTree(ptreeOfRequireds, parsedPtree, key)) {
-      std::cerr << "The key " << AddQuotes(key) << " is not found in the config file: " << AddQuotes(config) << std::endl;
+    std::vector<std::string> listOfKeys;
+    checkParsedTree(ptreeOfRequireds, parsedPtree, group, listOfKeys);
+
+    if (listOfKeys.size() > 0) {
+      std::cerr << "The keys are not found in the config file: " << AddQuotes(config) << std::endl;
+      for (const auto & str : listOfKeys) {
+        std::cerr << AddQuotes(str) << std::endl;
+      }
       return false;
     }
 
@@ -178,15 +184,6 @@ protected:
   {
     return group + "." + str;
   }
-
-  bool Find(const std::string & str) const
-  {
-    if (parsedPtree.find(str) == parsedPtree.not_found()) {
-      std::cerr << "Key " << AddQuotes(Path(str)) << " is missing in the config file: " << config << std::endl;
-      return false;
-    }
-    return true;
-  };
 
   bool help;
   std::string config;
