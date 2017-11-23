@@ -204,11 +204,25 @@ class SurfaceExtractionOptions : public OptionsBase
 {
 public:
 
-  void SetInputFileName(const std::string & str) { inputFileName = str; }
-  const std::string & GetInputFileName() const { return inputFileName; } 
+  void SetInputFileName(const std::string & str) 
+  { 
+    inputFileName = str; 
+  }
 
-  void SetOutputFileName(const std::string & str) { outputFileName = str; }
-  const std::string & GetOutputFileName() const { return outputFileName; }
+  const std::string & GetInputFileName() const 
+  { 
+    return inputFileName; 
+  } 
+
+  void SetOutputFileName(const std::string & str) 
+  { 
+    outputFileName = str; 
+  }
+
+  const std::string & GetOutputFileName() const 
+  { 
+    return outputFileName; 
+  }
 
   std::string GetInputList() const
   { 
@@ -222,10 +236,11 @@ public:
 
   std::string GetReportFile() const
   {
+    const std::string name = "report";
     if (configIsEnabled)
-      return parsedPtree.get<std::string>("report");
+      return parsedPtree.get<std::string>(name);
     else
-      return vm["report"].as<std::string>();
+      return vm[name].as<std::string>();
   }
 
   double GetSigma() const
