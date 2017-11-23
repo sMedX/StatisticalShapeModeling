@@ -31,12 +31,12 @@ int main(int argc, char** argv)
   if (!options.ReadConfigFile()) {
     return EXIT_FAILURE;
   }
-  options.PrintOptions();
+  options.PrintConfig();
 
   // read list of files
   StringList listOfInputFiles;
   try {
-    listOfInputFiles = readListFromFile(options.inplist);
+    listOfInputFiles = readListFromFile(options.GetInputList());
   }
   catch (std::ifstream::failure & e) {
     std::cout << e.what() << std::endl;
@@ -47,17 +47,17 @@ int main(int argc, char** argv)
   StringList listOfOutputFiles;
 
   for (const auto & inputFile : listOfInputFiles) {
-    options.inputFile = inputFile;
-    options.outputFile = options.FormatOutput(inputFile);
+    options.SetInputFileName(inputFile);
+    options.SetOutputFileName(options.FormatOutput(inputFile));
 
     if (extractSurface(options)) {
-      listOfOutputFiles.push_back(options.outputFile);
+      listOfOutputFiles.push_back(options.GetOutputFileName());
     }
   }
 
   // write list of files to file
   try {
-    writeListToFile(options.outlist, listOfOutputFiles);
+    writeListToFile(options.GetOutputList(), listOfOutputFiles);
   }
   catch (std::ofstream::failure & e) {
     std::cout << e.what() << std::endl;
@@ -71,10 +71,10 @@ bool extractSurface(const SurfaceExtractionOptions & options )
 {
   // read image
   auto image = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(image, options.inputFile)) {
+  if (!readImage<BinaryImageType>(image, options.GetInputFileName())) {
     return false;
   }
-  printImageInfo<BinaryImageType>(image, options.inputFile);
+  printImageInfo<BinaryImageType>(image, options.GetInputFileName());
 
   typedef ssm::BinaryMask3DMeshSource<BinaryImageType, vtkPolyData> BinaryMask3DMeshSourceType;
   auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
@@ -89,7 +89,7 @@ bool extractSurface(const SurfaceExtractionOptions & options )
   auto surface = binaryMaskToSurface->GetOutput();
 
   // write polydata to the file
-  if (!writeVTKPolydata(surface, options.outputFile)) {
+  if (!writeVTKPolydata(surface, options.GetOutputFileName())) {
     return false;
   }
 
@@ -130,14 +130,14 @@ bool extractSurface(const SurfaceExtractionOptions & options )
     std::cerr << excep << std::endl;
     return false;
   }
+
   metrics->PrintReport(std::cout);
 
   // write report to *.csv file
-  if (options.reportFile!="") {
-    std::cout << "print report to the file: " << options.reportFile << std::endl; 
-    std::cout << std::endl;
-    metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.outputFile));
-  }
+  std::cout << "write report to the file: " << options.GetReportFile() << std::endl;
+  std::cout << std::endl;
+
+  metrics->PrintReportToFile(options.GetReportFile(), getBaseNameFromPath(options.GetOutputFileName()));
 
   return true;
 }
