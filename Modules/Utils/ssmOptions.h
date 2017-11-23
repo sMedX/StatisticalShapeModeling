@@ -32,6 +32,31 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=
   return;
 }
 
+bool checkParesedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree, std::string & key)
+{
+  if (ptreeOfRequireds.empty()) {
+    return true;
+  }
+
+  for (const auto & it : ptreeOfRequireds) {
+    const auto &name = it.first;
+    const auto &tree = it.second;
+
+    if ( !tree.empty() ) {
+      key = key + "." + name;
+      return checkParesedTree(ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key);
+    }
+    else{
+      if (ptreeOfRequireds.get<bool>(name) ) {
+        if (parsedPtree.find(name) == parsedPtree.not_found()) {
+          key = key + "." + name;
+          return false;
+        }
+      }
+    }
+  }
+}
+
 std::string AddQuotes(std::string str)
 {
   return "'" + str + "'";
@@ -82,23 +107,32 @@ public:
       pt::ini_parser::read_ini(config, parsedPtree);
     }
     catch (const pt::ptree_error &e) {
-      std::cerr << "An exception occurred while parsing the config file:" << config << std::endl;
+      std::cerr << "An exception occurred while parsing the config file:" << AddQuotes(config) << std::endl;
       std::cout << e.what() << endl;
       return false;
     }
 
     if (parsedPtree.find(group) == parsedPtree.not_found()) {
-      std::cerr << "The group " << group << " is not found in the config file: " << config << std::endl;
+      std::cerr << "The group " << group << " is not found in the config file: " << AddQuotes(config) << std::endl;
       return false;
     }
 
     parsedPtree = parsedPtree.get_child(group);
+    
+    // check parsed ptree
+    std::string key = group;
+    if (!checkParesedTree(ptreeOfRequireds, parsedPtree, key)) {
+      std::cerr << "The key " << AddQuotes(key) << " is not found in the config file: " << AddQuotes(config) << std::endl;
+      return false;
+    }
+
+    return true;
   }
 
   void PrintConfig()
   {
     std::cout << std::endl;
-    std::cout << "Config options for group " << group << std::endl;
+    std::cout << "Config options for group " << AddQuotes(group) << std::endl;
     printTree(parsedPtree, std::cout, 0);
     std::cout << std::endl;
   };
@@ -135,6 +169,9 @@ protected:
   {
     ptreeOfRequireds.put(str, required);
     ptreeOfDefaultValues.put(str, value);
+    if (!required) {
+      parsedPtree.put(Path(str), value);
+    }
   };
 
   std::string Path(const std::string & str) const
