@@ -74,35 +74,35 @@ public:
 
   const bool & ConfigIsEnabled() const
   {
-    return configIsEnabled;
+    return m_ConfigIsEnabled;
   }
 
   bool ParseCommandLine(int argc, char** argv)
   {
     try {
-      po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(description).run();
-      po::store(parsedOptions, vm);
-      po::notify(vm);
+      po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(m_Description).run();
+      po::store(parsedOptions, m_Vm);
+      po::notify(m_Vm);
     }
     catch (const po::error& e) {
-      cerr << "An exception occurred while parsing the command line." << endl;
-      cerr << e.what() << endl;
-      cout << description << endl;
+      std::cerr << "An exception occurred while parsing the command line." << std::endl;
+      std::cerr << e.what() << endl;
+      std::cout << m_Description << std::endl;
       return false;
     }
-    if (help) {
-      cout << description << endl;
+    if (m_Help) {
+      std::cout << m_Description << std::endl;
       return false;
     }
 
-    configIsEnabled = !vm["config"].empty();
+    m_ConfigIsEnabled = !m_Vm["config"].empty();
     return true;
   }
 
   bool ReadConfigFile()
   {
     try {
-      pt::ini_parser::read_ini(config, parsedPtree);
+      pt::ini_parser::read_ini(config, m_ParsedPtree);
     }
     catch (const pt::ptree_error &e) {
       std::cerr << "An exception occurred while parsing the config file:" << AddQuotes(config) << std::endl;
@@ -110,16 +110,16 @@ public:
       return false;
     }
 
-    if (parsedPtree.find(group) == parsedPtree.not_found()) {
+    if (m_ParsedPtree.find(group) == m_ParsedPtree.not_found()) {
       std::cerr << "The group " << AddQuotes(group) << " is not found in the config file: " << AddQuotes(config) << std::endl;
       return false;
     }
 
-    parsedPtree = parsedPtree.get_child(group);
+    m_ParsedPtree = m_ParsedPtree.get_child(group);
 
     // check parsed ptree
     std::vector<std::string> listOfKeys;
-    checkParsedTree(ptreeOfRequireds, parsedPtree, group, listOfKeys);
+    checkParsedTree(m_PtreeOfRequireds, m_ParsedPtree, group, listOfKeys);
 
     if (listOfKeys.size() > 0) {
       std::cerr << "The keys are not found in the config file: " << AddQuotes(config) << std::endl;
@@ -136,35 +136,39 @@ public:
   {
     std::cout << std::endl;
     std::cout << "Config options for group " << AddQuotes(group) << std::endl;
-    printTree(parsedPtree, std::cout, 0);
+    printTree(m_ParsedPtree, std::cout, 0);
     std::cout << std::endl;
   };
 
   template <typename T>
   T GetDefaultValue(const std::string & str) const
   {
-    return ptreeOfDefaultValues.get<T>(str);
+    return m_PtreeOfDefaultValues.get<T>(str);
   };
 
   template <typename T>
   T Get(const std::string & str) const
   {
-    return parsedPtree.get<T>(str);
+    return m_ParsedPtree.get<T>(str);
   };
+
+private:
+  bool m_Help;
+  bool m_ConfigIsEnabled;
 
 protected:
   OptionsBase()
   {
-    help = false;
-    configIsEnabled = false;
+    m_Help = false;
+    m_ConfigIsEnabled = false;
 
     po::options_description configOptions("Optional config options");
     configOptions.add_options()("config,c", po::value<std::string>(&config), "The path to the config file.");
 
     po::options_description helpOptions("Optional help options");
-    helpOptions.add_options()("help,h", po::bool_switch(&help)->default_value(help), "Display this help message");
+    helpOptions.add_options()("help,h", po::bool_switch(&m_Help)->default_value(m_Help), "Display this help message");
 
-    description.add(configOptions).add(helpOptions);
+    m_Description.add(configOptions).add(helpOptions);
   }
 
   void SetNameOfGroup(const std::string & str)
@@ -175,10 +179,10 @@ protected:
   template <typename T>
   void Put(const std::string & str, const T & value, const bool & required = true)
   {
-    ptreeOfRequireds.put(str, required);
-    ptreeOfDefaultValues.put(str, value);
+    m_PtreeOfRequireds.put(str, required);
+    m_PtreeOfDefaultValues.put(str, value);
     if (!required) {
-      parsedPtree.put(Path(str), value);
+      m_ParsedPtree.put(Path(str), value);
     }
   };
 
@@ -187,15 +191,13 @@ protected:
     return group + "." + str;
   }
 
-  bool help;
   std::string config;
   std::string group;
-  bool configIsEnabled;
 
-  po::variables_map vm;
-  po::options_description description;
-  pt::ptree parsedPtree;
-  pt::ptree ptreeOfRequireds;
-  pt::ptree ptreeOfDefaultValues;
+  po::variables_map m_Vm;
+  po::options_description m_Description;
+  pt::ptree m_ParsedPtree;
+  pt::ptree m_PtreeOfRequireds;
+  pt::ptree m_PtreeOfDefaultValues;
 };
 }

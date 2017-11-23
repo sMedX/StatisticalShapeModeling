@@ -13,37 +13,37 @@ public:
 
   std::string GetInputList() const
   {
-    return parsedPtree.get<std::string>("inplist");
+    return m_ParsedPtree.get<std::string>("inplist");
   }
 
   std::string GetOutputList() const
   {
-    return parsedPtree.get<std::string>("outlist");
+    return m_ParsedPtree.get<std::string>("outlist");
   }
 
   std::string GetReportFile() const
   {
-    return parsedPtree.get<std::string>("report");
+    return m_ParsedPtree.get<std::string>("report");
   }
 
   std::string GetReferenceFileName() const
   {
-    return parsedPtree.get<std::string>("reference");
+    return m_ParsedPtree.get<std::string>("reference");
   }
 
   size_t GetNumberOfStages() const
   {
-    return parsedPtree.get<size_t>("stages");
+    return m_ParsedPtree.get<size_t>("stages");
   }
 
   size_t GetNumberOfIterations() const
   {
-    return parsedPtree.get<size_t>("iterations");
+    return m_ParsedPtree.get<size_t>("iterations");
   }
 
   size_t GetTransform() const
   {
-    return parsedPtree.get<size_t>("transform");
+    return m_ParsedPtree.get<size_t>("transform");
   }
 
   std::string FormatOutput(const std::string & fileName)
@@ -76,7 +76,7 @@ public:
   };
 
 private:
-  std::string inputFileName;
-  std::string outputFileName;
+  std::string m_InputFileName;
+  std::string m_OutputFileName;
 };
 }

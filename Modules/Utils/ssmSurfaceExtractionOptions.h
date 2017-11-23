@@ -13,77 +13,77 @@ public:
 
   void SetInputFileName(const std::string & str)
   {
-    inputFileName = str;
+    m_InputFileName = str;
   }
 
   const std::string & GetInputFileName() const
   {
-    return inputFileName;
+    return m_InputFileName;
   }
 
   void SetOutputFileName(const std::string & str)
   {
-    outputFileName = str;
+    m_OutputFileName = str;
   }
 
   const std::string & GetOutputFileName() const
   {
-    return outputFileName;
+    return m_OutputFileName;
   }
 
   std::string GetInputList() const
   {
-    return parsedPtree.get<std::string>("inplist");
+    return m_ParsedPtree.get<std::string>("inplist");
   }
 
   std::string GetOutputList() const
   {
-    return parsedPtree.get<std::string>("outlist");
+    return m_ParsedPtree.get<std::string>("outlist");
   }
 
   std::string GetReportFile() const
   {
     const std::string name = "report";
-    if (configIsEnabled)
-      return parsedPtree.get<std::string>(name);
+    if (ConfigIsEnabled())
+      return m_ParsedPtree.get<std::string>(name);
     else
-      return vm[name].as<std::string>();
+      return m_Vm[name].as<std::string>();
   }
 
   double GetSigma() const
   {
     const std::string name = "sigma";
-    if (configIsEnabled)
+    if (ConfigIsEnabled())
       return Get<double>(name);
     else
-      return vm[name].as<double>();
+      return m_Vm[name].as<double>();
   }
 
   double GetFactor() const
   {
     const std::string name = "factor";
-    if (configIsEnabled)
+    if (ConfigIsEnabled())
       return Get<double>(name);
     else
-      return vm[name].as<double>();
+      return m_Vm[name].as<double>();
   }
 
   size_t GetNumberOfPoints() const
   {
     const std::string name = "points";
-    if (configIsEnabled)
+    if (ConfigIsEnabled())
       return Get<size_t>(name);
     else
-      return vm[name].as<size_t>();
+      return m_Vm[name].as<size_t>();
   }
 
   size_t GetNumberOfIterations() const
   {
     const std::string name = "iterations";
-    if (configIsEnabled)
+    if (ConfigIsEnabled())
       return Get<size_t>(name);
     else
-      return vm[name].as<size_t>();
+      return m_Vm[name].as<size_t>();
   }
 
   std::string FormatOutput(const std::string & fileName)
@@ -117,8 +117,8 @@ public:
     // initialize description
     po::options_description mandatoryOptions("Mandatory options");
     mandatoryOptions.add_options()
-      ("input,i", po::value<std::string>(&inputFileName), "The path to the input image file.")
-      ("output,o", po::value<std::string>(&outputFileName), "The path for the output surface file.")
+      ("input,i", po::value<std::string>(&m_InputFileName), "The path to the input image file.")
+      ("output,o", po::value<std::string>(&m_OutputFileName), "The path for the output surface file.")
       ;
 
     po::options_description inputOptions("Optional input options");
@@ -134,11 +134,11 @@ public:
       ("report,r", po::value<std::string>(), "The path for the file to print report.")
       ;
 
-    description.add(mandatoryOptions).add(inputOptions).add(reportOptions);
+    m_Description.add(mandatoryOptions).add(inputOptions).add(reportOptions);
   };
 
 private:
-  std::string inputFileName;
-  std::string outputFileName;
+  std::string m_InputFileName;
+  std::string m_OutputFileName;
 };
 }
