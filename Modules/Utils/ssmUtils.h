@@ -48,6 +48,17 @@ void printImageInfo(const TImage* image, const std::string &info = "")
   std::cout << "direction" << std::endl << image->GetDirection() << std::endl;
 }
 
+//! print information about mesh
+template <typename TMesh>
+void printMeshInfo(const TMesh* surface, const std::string &info = "")
+{
+  if (info.size() > 0) {
+    std::cout << "surface " << info << std::endl;
+  }
+  std::cout << "number of cells  " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
+}
+
 //! Writes a templated image to a file via ITK ImageFileWriter
 template <typename TImage>
 bool writeImage(const TImage* image, const std::string& fileName)
