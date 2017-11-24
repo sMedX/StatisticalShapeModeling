@@ -142,6 +142,8 @@ int main(int argc, char** argv)
   itk::TimeProbe clock;
   clock.Start();
 
+  StringVector listOfOutputFiles;
+
   for (size_t stage = 0; stage < options.stages; ++stage) {
     std::cout << "establish correspondence stage (" << stage + 1 << " / " << options.stages << ")" << std::endl;
 
@@ -201,10 +203,10 @@ int main(int argc, char** argv)
         metrics->PrintReportToFile(options1.GetReportFileName(), getBaseNameFromPath(listOfInputFiles[count]));
 
         // write output surface to file
-        typedef boost::filesystem::path fp;
-        fp path = fp(options.surfaceFile).parent_path() / fp(fp(listOfInputFiles[count]).stem().string() + "-" + fp(options.surfaceFile).filename().string());
-        std::string fileName = path.string();
-        std::cout << "write surface to file " << fileName << std::endl;
+        auto fileName = options1.FormatOutput(listOfInputFiles[count]);
+        listOfOutputFiles.push_back(fileName);
+
+        printMeshInfo<MeshType>(output, fileName);
         if (!writeMesh<MeshType>(output, fileName)) {
           EXIT_FAILURE;
         }
