@@ -77,6 +77,11 @@ public:
     return m_ConfigIsEnabled;
   }
 
+  void SetConfigFileName(const std::string & fileName)
+  {
+    m_Config = fileName;
+  }
+
   bool ParseCommandLine(int argc, char** argv)
   {
     try {

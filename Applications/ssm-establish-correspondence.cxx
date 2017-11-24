@@ -1,22 +1,19 @@
-﻿#include <fstream>
-
-#include <boost/program_options.hpp>
-
-#include <itkImageMomentsCalculator.h>
+﻿#include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
-#include <utils/statismo-build-models-utils.h>
 
 #include "ssmTypes.h"
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmShapeModelToImageRegistrationMethod.h"
 #include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmCorrespondenceOptions.h"
 
 struct ProgramOptions
 {
   bool help;
+  std::string config;
   std::string listFile;
   std::string surfaceFile;
   std::string reportFile;
@@ -45,6 +42,16 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 
 int main(int argc, char** argv)
 {
+  ssm::CorrespondenceOptions options1;
+  options1.SetConfigFileName("config.ini");
+
+  // read options from config file
+  if (!options1.ReadConfigFile()) {
+    return EXIT_FAILURE;
+  }
+  options1.PrintConfig();
+
+
   ProgramOptions options;
   po::options_description description = initializeProgramOptions(options);
   po::variables_map vm;
@@ -99,19 +106,16 @@ int main(int argc, char** argv)
   //----------------------------------------------------------------------------
   // read the reference surface
   MeshType::Pointer reference = MeshType::New();
-  if (!readMesh<MeshType>(reference, options.referenceFile)) {
+  if (!readMesh<MeshType>(reference, options1.GetReferenceFileName())) {
     return EXIT_FAILURE;
   }
-  std::cout << "reference surface " << options.referenceFile << std::endl;
-  std::cout << "number of cells " << reference->GetNumberOfCells() << std::endl;
-  std::cout << "number of points " << reference->GetNumberOfPoints() << std::endl;
-  std::cout << std::endl;
+  printMeshInfo<MeshType>(reference, options1.GetReferenceFileName());
 
   //----------------------------------------------------------------------------
   // read list of files
-  StringList listOfFiles;
+  StringVector listOfInputFiles;
   try {
-    listOfFiles = getFileList(options.listFile);
+    listOfInputFiles = readListFromFile(options1.GetInputList());
   }
   catch (ifstream::failure & e) {
     cerr << "could not read the data-list: " << e.what() << endl;
@@ -119,21 +123,16 @@ int main(int argc, char** argv)
   }
 
   std::vector<MeshType::Pointer> vectorOfSurfaces;
-  std::vector<std::string> vectorOfFiles;
 
-  for (const auto & fileName : listOfFiles) {
+  for (const auto & fileName : listOfInputFiles) {
     MeshType::Pointer surface = MeshType::New();
 
     if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
-    vectorOfSurfaces.push_back(surface);
-    vectorOfFiles.push_back(fileName);
 
-    std::cout << "surface " << fileName << std::endl;
-    std::cout << "number of cells   " << surface->GetNumberOfCells() << std::endl;
-    std::cout << "number of points  " << surface->GetNumberOfPoints() << std::endl;
-    std::cout << std::endl;
+    vectorOfSurfaces.push_back(surface);
+    printMeshInfo<MeshType>(surface, fileName);
   }
 
   size_t numberOfSurfaces = vectorOfSurfaces.size();
@@ -197,14 +196,13 @@ int main(int argc, char** argv)
         metrics->PrintReport(std::cout);
 
         // print report to *.csv file
-        if (options.reportFile != "") {
-          std::cout << "print report to file " << options.reportFile << std::endl;
-          metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(vectorOfFiles[count]));
-        }
+        std::cout << "print report to the file: " << options1.GetReportFileName() << std::endl;
+        std::cout << std::endl;
+        metrics->PrintReportToFile(options1.GetReportFileName(), getBaseNameFromPath(listOfInputFiles[count]));
 
         // write output surface to file
         typedef boost::filesystem::path fp;
-        fp path = fp(options.surfaceFile).parent_path() / fp(fp(vectorOfFiles[count]).stem().string() + "-" + fp(options.surfaceFile).filename().string());
+        fp path = fp(options.surfaceFile).parent_path() / fp(fp(listOfInputFiles[count]).stem().string() + "-" + fp(options.surfaceFile).filename().string());
         std::string fileName = path.string();
         std::cout << "write surface to file " << fileName << std::endl;
         if (!writeMesh<MeshType>(output, fileName)) {
@@ -214,11 +212,9 @@ int main(int argc, char** argv)
     }
 
     // write the reference surface to the file
-    if (options.outputReferenceFile != "") {
-      std::string fileName = addFileNameSuffix(options.outputReferenceFile, "-" + std::to_string(stage + 1));
-      if (!writeMesh<MeshType>(reference, fileName)) {
-        EXIT_FAILURE;
-      }
+    std::string fileName = addFileNameSuffix(options1.GetReferenceFileName(), "-" + std::to_string(stage + 1));
+    if (!writeMesh<MeshType>(reference, fileName)) {
+      EXIT_FAILURE;
     }
   }
 
@@ -389,6 +385,7 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 {
   po::options_description mandatory("Mandatory options");
   mandatory.add_options()
+    ("config", po::value<std::string>(&options.config), "The path to the file with list of surfaces to establish correspondence.")
     ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to establish correspondence.")
     ("reference,r", po::value<std::string>(&options.referenceFile), "The path to the input reference surface.")
     ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surfaces.")
