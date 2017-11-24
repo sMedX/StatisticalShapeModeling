@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   options.PrintConfig();
 
   // read list of files
-  StringList listOfInputFiles;
+  StringVector listOfInputFiles;
   try {
     listOfInputFiles = readListFromFile(options.GetInputList());
   }
@@ -247,7 +247,7 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write aligned surfaces
-  StringList listOfOutputFiles;
+  StringVector listOfOutputFiles;
 
   for (size_t count = 0; count < vectorOfSurfaces.size(); ++count) {
     const auto & fileName = options.FormatOutput(vectorOfFiles[count]);

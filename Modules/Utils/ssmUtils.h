@@ -209,9 +209,9 @@ std::string getBaseNameFromPath(const std::string& fileName)
   return path.stem().string();
 }
 
-StringList readListFromFile(const std::string& fileName)
+StringVector readListFromFile(const std::string& fileName)
 {
-  StringList list;
+  StringVector list;
 
   std::ifstream file;
   try {
@@ -237,7 +237,7 @@ StringList readListFromFile(const std::string& fileName)
   return list;
 }
 
-void writeListToFile(const std::string & fileName, const StringList & list)
+void writeListToFile(const std::string & fileName, const StringVector & list)
 {
   std::ofstream file(fileName, std::ofstream::out);
   if (!file.is_open()) {

@@ -33,7 +33,7 @@ int main(int argc, char** argv)
   options.PrintConfig();
 
   // read list of files
-  StringList listOfInputFiles;
+  StringVector listOfInputFiles;
   try {
     listOfInputFiles = readListFromFile(options.GetInputList());
   }
@@ -43,7 +43,7 @@ int main(int argc, char** argv)
   }
 
   // extract surfaces
-  StringList listOfOutputFiles;
+  StringVector listOfOutputFiles;
 
   for (const auto & inputFile : listOfInputFiles) {
     options.SetInputFileName(inputFile);

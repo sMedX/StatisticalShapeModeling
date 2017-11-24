@@ -8,5 +8,5 @@ typedef itk::Image<unsigned char, Dimension> BinaryImageType;
 typedef itk::Image<float, Dimension> FloatImageType;
 typedef itk::Mesh<float, Dimension> MeshType;
 
-typedef std::list<std::string> StringList;
+typedef std::vector<std::string> StringVector;
 
