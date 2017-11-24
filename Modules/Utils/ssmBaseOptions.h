@@ -152,18 +152,41 @@ public:
     return m_ParsedPtree.get<T>(str);
   };
 
+  template<typename T>
+  bool GetAsVector(const std::string & key, std::vector<T> & v)
+  {
+    std::stringstream stream(Get<std::string>(key));
+    std::string item;
+
+    while (std::getline(stream, item, m_Dlm)) {
+      try {
+        std::cout << item << std::endl;
+        v.push_back(std::stod(item));
+      }
+      catch (...) {
+        std::cout << "error " << item << std::endl;
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+
 private:
 
   bool m_Help;
   bool m_ConfigIsEnabled;
   std::string m_Config;
   std::string m_NameOfGroup;
+  char m_Dlm;
 
 protected:
   OptionsBase()
   {
     m_Help = false;
     m_ConfigIsEnabled = false;
+    m_Dlm = ' ';
 
     po::options_description configOptions("Optional config options");
     configOptions.add_options()("config,c", po::value<std::string>(&m_Config), "The path to the config file.");
