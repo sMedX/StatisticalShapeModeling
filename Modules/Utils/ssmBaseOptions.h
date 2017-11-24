@@ -21,7 +21,7 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=
 
     for (const auto & it : tree) {
       std::string name = it.first;
-      name.resize(12);
+      name.resize(16);
       os << indent << name << " ";
 
       printTree(it.second, os, level + 1);
