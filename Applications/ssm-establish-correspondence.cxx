@@ -47,17 +47,14 @@ int main(int argc, char** argv)
   }
 
   std::vector<MeshType::Pointer> vectorOfSurfaces;
-  std::vector<std::string> vectorOfFiles;
 
   for (const auto & fileName : listOfInputFiles) {
     auto surface = MeshType::New();
-
     if (!readMesh<MeshType>(surface, fileName)) {
       return EXIT_FAILURE;
     }
-    vectorOfSurfaces.push_back(surface);
-    vectorOfFiles.push_back(fileName);
 
+    vectorOfSurfaces.push_back(surface);
     printMeshInfo<MeshType>(surface, fileName);
   }
 
@@ -100,8 +97,6 @@ int main(int argc, char** argv)
       if (stage + 1 == options.GetNumberOfStages()) {
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
         auto levelset = SurfaceToLevelSetImageFilter::New();
-        levelset->SetMargin(0.10);
-        levelset->SetSpacing(1);
         levelset->SetInput(surface);
         try {
           levelset->Update();
@@ -122,13 +117,13 @@ int main(int argc, char** argv)
         // print report to *.csv file
         std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
         std::cout << std::endl;
-        metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(vectorOfFiles[count]));
+        metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(listOfInputFiles[count]));
 
         // write output surface to file
-        auto fileName = options.FormatOutput(vectorOfFiles[count]);
+        auto fileName = options.FormatOutput(listOfInputFiles[count]);
         listOfOutputFiles.push_back(fileName);
 
-        std::cout << "output file " << fileName << std::endl;
+        printMeshInfo<MeshType>(output, fileName);
         if (!writeMesh<MeshType>(output, fileName)) {
           EXIT_FAILURE;
         }
