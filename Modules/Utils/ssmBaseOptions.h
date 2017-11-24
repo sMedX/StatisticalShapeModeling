@@ -135,7 +135,7 @@ public:
   void PrintConfig()
   {
     std::cout << std::endl;
-    std::cout << "Config options for group " << AddQuotes(m_NameOfGroup) << std::endl;
+    std::cout << "Config data for group " << AddQuotes(m_NameOfGroup) << std::endl;
     printTree(m_ParsedPtree, std::cout, 0);
     std::cout << std::endl;
   };

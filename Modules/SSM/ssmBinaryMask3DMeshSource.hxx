@@ -82,7 +82,7 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
 
   // extract surface
   typedef vtkSmartPointer<vtkMarchingCubes> MarchingCubes;
-  MarchingCubes mcubes = MarchingCubes::New();
+  auto mcubes = MarchingCubes::New();
   mcubes->SetInputData(convertor->GetOutput());
   mcubes->SetValue(0, m_LevelValue);
   mcubes->Update();
@@ -91,7 +91,8 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
   // decimate surface
   if (m_NumberOfPoints > 0) {
     m_Reduction = 1 - (double) m_NumberOfPoints / (double) m_Output->GetNumberOfPoints();
-    vtkSmartPointer<vtkDecimatePro> decimate = vtkSmartPointer<vtkDecimatePro>::New();
+    typedef vtkSmartPointer<vtkDecimatePro> DecimatePolyData;
+    auto decimate = DecimatePolyData::New();
     decimate->SetInputData(m_Output);
     decimate->SetTargetReduction(m_Reduction);
     decimate->SetPreserveTopology(true);
@@ -101,14 +102,14 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
   }
 
   typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
-  SmoothPolyData smoother = SmoothPolyData::New();
+  auto smoother = SmoothPolyData::New();
   smoother->SetInputData(m_Output);
   smoother->SetNumberOfIterations(m_NumberOfIterations);
   smoother->SetRelaxationFactor(m_RelaxationFactor);
   smoother->Update();
 
   typedef vtkSmartPointer<vtkPolyDataNormals> PolyDataNormals;
-  PolyDataNormals normals = PolyDataNormals::New();
+  auto normals = PolyDataNormals::New();
   normals->SetInputData(smoother->GetOutput());
   normals->AutoOrientNormalsOn();
   normals->FlipNormalsOff();
