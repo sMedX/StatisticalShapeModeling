@@ -14,18 +14,6 @@ typedef itk::Transform<double, MeshType::PointDimension> TransformType;
 typedef std::vector<TransformType::ConstPointer> TransformVectorType;
 FloatImageType::Pointer computeLevelSetImage(FloatImageType::Pointer levelSetImage, MeshVectorType & vectorOfSurfaces, TransformVectorType & vectorOfTransform, size_t typeOfransform);
 
-struct ProgramOptions
-{
-  bool help;
-  std::string listFile;
-  std::string surfaceFile;
-  std::string levelsetFile;
-  std::string reportFile;
-  size_t transform = 1;
-  size_t stages = 1;
-  size_t iterations = 500;
-};
-
 typedef boost::filesystem::path fp;
 
 int main(int argc, char** argv) {
@@ -394,40 +382,4 @@ FloatImageType::Pointer computeLevelSetImage(FloatImageType::Pointer levelSetIma
   }
 
   return levelSetImage;
-}
-
-po::options_description initializeProgramOptions(ProgramOptions& options)
-{
-  po::options_description mandatory("Mandatory options");
-  mandatory.add_options()
-    ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to align.")
-    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surfaces.")
-    ;
-
-  po::options_description input("Optional input options");
-  input.add_options()
-    ("stages", po::value<size_t>(&options.stages)->default_value(options.stages), "The number of stages to align input surfaces.")
-    ("transform", po::value<size_t>(&options.transform)->default_value(options.transform), "The type of the used spatial transform.")
-    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
-    ;
-
-  po::options_description output("Optional output options");
-  output.add_options()
-    ("levelset", po::value<std::string>(&options.levelsetFile), "The path for the output level set image.")
-    ;
-
-  po::options_description report("Optional report options");
-  report.add_options()
-    ("report,r", po::value<std::string>(&options.reportFile), "The path for the file to print report.")
-    ;
-
-  po::options_description help("Optional options");
-  help.add_options()
-    ("help,h", po::bool_switch(&options.help), "Display this help message")
-    ;
-
-  po::options_description description;
-  description.add(mandatory).add(input).add(output).add(report).add(help);
-
-  return description;
 }
