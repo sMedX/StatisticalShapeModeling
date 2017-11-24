@@ -144,8 +144,8 @@ int main(int argc, char** argv)
 
   StringVector listOfOutputFiles;
 
-  for (size_t stage = 0; stage < options.stages; ++stage) {
-    std::cout << "establish correspondence stage (" << stage + 1 << " / " << options.stages << ")" << std::endl;
+  for (size_t stage = 0; stage < options1.GetNumberOfStages(); ++stage) {
+    std::cout << "establish correspondence stage (" << stage + 1 << " / " << options1.GetNumberOfStages() << ")" << std::endl;
 
     // build GP model for the reference surface
     StatisticalModelType::Pointer model = buildGPModel(reference, options.parameters[0], options.scale, options.components[0]);
@@ -171,13 +171,13 @@ int main(int argc, char** argv)
       }
 
       // compute metrics and write output surface to file
-      if (stage + 1 == options.stages) {
+      if (stage + 1 == options1.GetNumberOfStages()) {
         // compute metrics
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
         SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-        levelset->SetMargin(options.margin);
-        levelset->SetSpacing(options.spacing);
         levelset->SetInput(surface);
+        levelset->SetMargin(0.1);
+        levelset->SetSpacing(1);
         try {
           levelset->Update();
         }
@@ -220,6 +220,15 @@ int main(int argc, char** argv)
     }
   }
 
+  // write list of output files
+  try {
+    writeListToFile(options1.GetOutputList(), listOfOutputFiles);
+  }
+  catch (std::ofstream::failure & e) {
+    std::cout << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
+
   clock.Stop();
   std::cout << "elapsed time, sec " << clock.GetTotal() << std::endl;
 
@@ -232,9 +241,9 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
   // compute level set image
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(options.margin);
-  levelset->SetSpacing(options.spacing);
   levelset->SetInput(surface);
+  levelset->SetMargin(0.1);
+  levelset->SetSpacing(1);
   try {
     levelset->Update();
   }
