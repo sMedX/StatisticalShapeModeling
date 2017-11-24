@@ -14,27 +14,6 @@ typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions);
 MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, ssm::CorrespondenceOptions & options);
 
-template<typename T>
-std::vector<T> to_array(const std::string& str)
-{
-  std::stringstream stream(str);
-
-  std::string item;
-  std::vector<T> result;
-
-  while (std::getline(stream, item, ' ')) {
-      try {
-        result.push_back(std::stod(item));
-      }
-      catch (...) {
-        std::cout << "error " << item << std::endl;
-        return result;
-      }
-  }
-
-  return result;
-}
-
 int main(int argc, char** argv)
 {
   ssm::CorrespondenceOptions options;
@@ -133,12 +112,9 @@ int main(int argc, char** argv)
         }
 
         typedef itk::PointSet<MeshType::PixelType, MeshType::PointDimension> PointSetType;
-        auto points = PointSetType::New();
-        points->SetPoints(output->GetPoints());
-
         typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
         PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
-        metrics->SetFixedPointSet(points);
+        metrics->SetFixedPointSet(output->GetPoints());
         metrics->SetMovingImage(levelset->GetOutput());
         metrics->Compute();
         metrics->PrintReport(std::cout);

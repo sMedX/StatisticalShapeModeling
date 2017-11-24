@@ -48,7 +48,7 @@ namespace ssm
     
     void SetInfo(const InfoType& info)  { m_Info = info; }
 
-    /** Get/Set the point set as vtkPolyData.  */
+    /** Set the point set as vtkPolyData.  */
     template< typename PolyData>
     void SetPointSetAsPolyData(PolyData * surface)
     {
@@ -66,6 +66,11 @@ namespace ssm
         points->SetPoint(n, point);
       }
 
+      this->SetFixedPointSet(points);
+    }
+
+    void SetFixedPointSet(typename FixedPointSetType::PointsContainer::ConstPointer points)
+    {
       this->SetFixedPointSet(points);
     }
 
