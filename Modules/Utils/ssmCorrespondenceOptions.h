@@ -125,8 +125,10 @@ public:
     Put<size_t>("transform", 3);
     Put<size_t>("stages", 1);
     Put<size_t>("iterations", 100);
+    Put<double>("regularization", 0.10);
 
-    Put<size_t>("scale", 50);
+    Put<double>("scale", 50);
+    Put<double>("parameters", 50);
     Put<size_t>("components", 100);
   };
 
