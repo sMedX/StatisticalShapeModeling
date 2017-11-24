@@ -9,6 +9,9 @@ target_link_libraries(ssm-extract-surface ${Boost_PROGRAM_OPTIONS_LIBRARY} ${sta
 add_executable(ssm-align-surfaces ssm-align-surfaces.cxx)
 target_link_libraries(ssm-align-surfaces ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
+add_executable(ssm-build-reference ssm-build-reference.cxx)
+target_link_libraries(ssm-build-reference ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+
 add_executable(ssm-establish-correspondence ssm-establish-correspondence.cxx)
 target_link_libraries(ssm-establish-correspondence ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
