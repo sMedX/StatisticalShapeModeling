@@ -27,6 +27,10 @@ namespace ssm
     /** Run-time type information (and related methods). */
     itkTypeMacro(PointSetToImageMetrics, Object);
 
+    /** Constants for the image dimensions */
+    itkStaticConstMacro(Dimension, unsigned int, TFixedPointSet::PointDimension);
+    static_assert(TFixedPointSet::PointDimension == TMovingImage::ImageDimension, "Invalid dimensions of the input data.");
+
     /** Types transferred from the base class */
     typedef double                                       MeasureType;
     typedef TFixedPointSet                               FixedPointSetType;
@@ -42,9 +46,27 @@ namespace ssm
     typedef std::pair<std::string, std::string> PairType;
     typedef std::vector<PairType> InfoType;
     
-    void SetInfo(InfoType& info)
+    void SetInfo(const InfoType& info)  { m_Info = info; }
+
+    /** Get/Set the point set as vtkPolyData.  */
+    template< typename PolyData>
+    void SetSurfaceAsPolyData(PolyData * surface)
     {
-      m_Info = info;
+      if (Dimension != 3) {
+        itkExceptionMacro(<<"For the method SetSurfaceAsPolyData dimension 3 is supproted.")
+      }
+
+      auto points = FixedPointSetType::New();
+      FixedPointType point;
+
+      for (size_t n = 0; n < surface->GetPoints()->GetNumberOfPoints(); ++n) {
+        for (size_t i = 0; i < Dimension; ++i) {
+          point[i] = surface->GetPoints()->GetPoint(n)[i];
+        }
+        points->SetPoint(n, point);
+      }
+
+      this->SetFixedPointSet(points);
     }
 
     /** Get/Set the fixed point set.  */
