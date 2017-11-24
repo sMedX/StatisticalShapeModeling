@@ -5,6 +5,7 @@ set(HEADER
     ssmBaseOptions.h
     ssmSurfaceExtractionOptions.h
     ssmAlignmentOptions.h
+	ssmReferenceOptions.h
 )
 
 add_custom_target(Utils ALL SOURCES ${HEADER})
