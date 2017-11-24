@@ -107,9 +107,12 @@ int main(int argc, char** argv)
         }
 
         typedef itk::PointSet<MeshType::PixelType, MeshType::PointDimension> PointSetType;
+        auto points = PointSetType::New();
+        points->SetPoints(output->GetPoints());
+
         typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
         PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
-        metrics->SetFixedPointSet(output->GetPoints());
+        metrics->SetFixedPointSet(points);
         metrics->SetMovingImage(levelset->GetOutput());
         metrics->Compute();
         metrics->PrintReport(std::cout);

@@ -36,6 +36,7 @@ namespace ssm
     typedef TFixedPointSet                               FixedPointSetType;
     typedef typename FixedPointSetType::PointType        FixedPointType;
     typedef typename FixedPointSetType::ConstPointer     FixedPointSetConstPointer;
+    typedef typename FixedPointSetType::PointsContainer  PointsContainerType;
     typedef TMovingImage                                 MovingImageType;
     typedef typename MovingImageType::ConstPointer       MovingImageConstPointer;
 
@@ -69,7 +70,7 @@ namespace ssm
       this->SetFixedPointSet(points);
     }
 
-    void SetFixedPointSet(typename FixedPointSetType::PointsContainer::ConstPointer points)
+    void SetFixedPointSet(const PointsContainerType * points)
     {
       this->SetFixedPointSet(points);
     }

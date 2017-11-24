@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   std::cout << ptree.get<std::string>("FILES.list") << std::endl;
 
   // read list of files
-  StringList listOfFiles;
+  StringVector listOfFiles;
   try {
     listOfFiles = readListFromFile(ptree.get<std::string>("FILES.list"));
   }
