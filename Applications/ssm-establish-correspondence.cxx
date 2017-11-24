@@ -1,6 +1,4 @@
-﻿#include <fstream>
-
-#include <itkImageMomentsCalculator.h>
+﻿#include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
@@ -11,33 +9,6 @@
 #include "ssmShapeModelToImageRegistrationMethod.h"
 #include "ssmSurfaceToLevelSetImageFilter.h"
 #include "ssmCorrespondenceOptions.h"
-
-/*
-struct ProgramOptions
-{
-  bool help;
-  std::string listFile;
-  std::string surfaceFile;
-  std::string reportFile;
-  std::string referenceFile;
-  std::string outputReferenceFile;
-
-  std::vector<size_t> components;
-  double scale = 100;
-  std::vector<double> parameters;
-  std::vector<double> regularization;
-  size_t stages = 1;
-  size_t transform = 1;
-  size_t iterations = 500;
-  size_t degree=2;
-  double margin = 0.10;
-  double spacing = 1.0;
-};
-*/
-
-//typedef boost::filesystem::path fp;
-//namespace po = boost::program_options;
-//po::options_description initializeProgramOptions(ProgramOptions& poParameters);
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions);
@@ -66,22 +37,6 @@ std::vector<T> to_array(const std::string& str)
 
 int main(int argc, char** argv)
 {
-  /*
-  boost::property_tree::ptree pt;
-  boost::property_tree::read_ini("config.ini", pt);
-  ssm::printTree(pt, std::cout, 0);
-
-  auto x = to_array<double>(pt.get<std::string>("CORRESPONDENCE.parameters"));
-  std::cout << "size " << x.size() << std::endl;
-
-  for (auto i : x) {
-    std::cout << i << ' ';
-  }
-  std::cout << '\n';
-
-
-  return 0;
-  */
   ssm::CorrespondenceOptions options;
   if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
@@ -92,43 +47,7 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
   options.PrintConfig();
-  /*
-  auto parameters = options.GetParameters();
-  auto components = options.GetNumberOfComponents();
-  auto regularization = options.GetRegularization();
 
-  if (parameters.size() == 0 || components.size() == 0 || regularization.size() == 0 ) {
-    std::cout << "parameters, components and regularization factors must be specified" << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  for (size_t n = components.size(); n < parameters.size(); ++n) {
-    components.push_back(components.back());
-  }
-
-  for (size_t n = regularization.size(); n < parameters.size(); ++n) {
-    regularization.push_back(regularization.back());
-  }
-
-  std::cout << "    parameters ";
-  for (auto value : parameters) {
-    std::cout << value << " ";
-  }
-  std::cout << std::endl;
-
-  std::cout << "    components ";
-  for (auto value : components) {
-    std::cout << value << " ";
-  }
-  std::cout << std::endl;
-
-  std::cout << "regularization ";
-  for (auto value : regularization) {
-    std::cout << value << " ";
-  }
-  std::cout << std::endl;
-  std::cout << std::endl;
-  */
   //----------------------------------------------------------------------------
   // read the reference surface
   auto reference = MeshType::New();
@@ -139,7 +58,7 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // read list of files
-  StringList listOfInputFiles;
+  StringVector listOfInputFiles;
   try {
     listOfInputFiles = readListFromFile(options.GetInputList());
   }
@@ -170,7 +89,7 @@ int main(int argc, char** argv)
   itk::TimeProbe time;
   time.Start();
 
-  StringList listOfOutputFiles;
+  StringVector listOfOutputFiles;
 
   for (size_t stage = 0; stage < options.GetNumberOfStages(); ++stage) {
     std::cout << "correspondence stage (" << stage + 1 << " / " << options.GetNumberOfStages() << ")" << std::endl;
@@ -417,46 +336,3 @@ StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double par
 
   return model;
 }
-/*
-po::options_description initializeProgramOptions(ProgramOptions& options)
-{
-  po::options_description mandatory("Mandatory options");
-  mandatory.add_options()
-    ("list,l", po::value<std::string>(&options.listFile), "The path to the file with list of surfaces to establish correspondence.")
-    ("reference,r", po::value<std::string>(&options.referenceFile), "The path to the input reference surface.")
-    ("surface,s", po::value<std::string>(&options.surfaceFile), "The path for the output surfaces.")
-    ;
-
-  po::options_description input("Optional input options");
-  input.add_options()
-    ("components", po::value<std::vector<size_t>>(&options.components)->multitoken(), "The number of components to build GP shape model.")
-    ("scale", po::value<double>(&options.scale)->default_value(options.scale), "The scaling factor to scale the kernel.")
-    ("parameters", po::value<std::vector<double>>(&options.parameters)->multitoken(), "The parameters to build GP shape model.")
-    ("regularization", po::value<std::vector<double>>(&options.regularization)->multitoken(), "The regularization factor.")
-    ("stages", po::value<size_t>(&options.stages)->default_value(options.stages), "The number of stages to establish correspondence.")
-    ("transform", po::value<size_t>(&options.transform)->default_value(options.transform), "The type of the used spatial transform.")
-    ("iterations", po::value<size_t>(&options.iterations)->default_value(options.iterations), "The number of iterations.")
-    ("degree", po::value<size_t>(&options.degree)->default_value(options.degree), "The degree of residuals to compute shape model to image metric.")
-    ;
-
-  po::options_description output("Optional output options");
-  output.add_options()
-    ("output-reference", po::value<std::string>(&options.outputReferenceFile), "The path for the output updated reference surfaces.")
-    ;
-
-  po::options_description report("Optional report options");
-  report.add_options()
-    ("report,r", po::value<std::string>(&options.reportFile), "The path for the file to print report.")
-    ;
-
-  po::options_description help("Optional options");
-  help.add_options()
-    ("help,h", po::bool_switch(&options.help), "Display this help message")
-    ;
-
-  po::options_description description;
-  description.add(mandatory).add(input).add(output).add(report).add(help);
-
-  return description;
-}
-*/
