@@ -65,7 +65,7 @@ namespace ssm
 
     typename TOutputImage::SizeType m_Size;
     bool m_UseSize;
-    double m_Margin = 0.25;
+    double m_Margin;
 
     float m_BackgroundValue;
     float m_ForegroundValue;

@@ -15,6 +15,8 @@ namespace ssm
   {
     m_UseOrigin = false;
     m_UseSize = false;
+
+    double m_Margin = 0.10;
     m_Spacing.Fill(1);
   }
 
