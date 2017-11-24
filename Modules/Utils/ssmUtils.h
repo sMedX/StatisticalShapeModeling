@@ -53,10 +53,11 @@ template <typename TMesh>
 void printMeshInfo(const TMesh* surface, const std::string &info = "")
 {
   if (info.size() > 0) {
-    std::cout << "surface " << info << std::endl;
+    std::cout << info << std::endl;
   }
   std::cout << "number of cells  " << surface->GetNumberOfCells() << std::endl;
   std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
+  std::cout << std::endl;
 }
 
 //! Writes a templated image to a file via ITK ImageFileWriter
