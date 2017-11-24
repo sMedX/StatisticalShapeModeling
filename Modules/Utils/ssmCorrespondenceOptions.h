@@ -13,12 +13,12 @@ public:
 
   std::string GetInputList() const
   {
-    return m_ParsedPtree.get<std::string>("inplist");
+    return this->Get<std::string>("inplist");
   }
 
   std::string GetOutputList() const
   {
-    return m_ParsedPtree.get<std::string>("outlist");
+    return this->Get<std::string>("outlist");
   }
 
   std::string GetReportFileName() const
@@ -28,27 +28,27 @@ public:
 
   std::string GetReferenceFileName() const
   {
-    return m_ParsedPtree.get<std::string>("reference");
+    return this->Get<std::string>("reference");
   }
 
   size_t GetNumberOfStages() const
   {
-    return m_ParsedPtree.get<size_t>("stages");
+    return this->Get<size_t>("stages");
   }
 
   size_t GetNumberOfIterations() const
   {
-    return m_ParsedPtree.get<size_t>("iterations");
+    return this->Get<size_t>("iterations");
   }
 
   size_t GetTransform() const
   {
-    return m_ParsedPtree.get<size_t>("transform");
+    return this->Get<size_t>("transform");
   }
 
   double GetScale() const
   {
-    return m_ParsedPtree.get<double>("scale");
+    return this->Get<double>("scale");
   }
 
   std::vector<double> GetParameters() const
