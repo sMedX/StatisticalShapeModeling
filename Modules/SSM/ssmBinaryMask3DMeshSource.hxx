@@ -21,6 +21,8 @@ BinaryMask3DMeshSource< TInputImage, TOutputMesh>::BinaryMask3DMeshSource()
   m_NumberOfIterations = 100;
   m_RelaxationFactor = 0.2;
   m_NumberOfPoints = 0;
+
+  m_ComputeLevelValue = true;
 }
 
 
@@ -47,14 +49,16 @@ template< typename TInputImage, typename TOutputMesh >
 void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
 {
 // compute the minimum and the maximum intensity values of label
-  typedef itk::MinimumMaximumImageCalculator <InputImageType> MinimumMaximumImageCalculatorType;
-  MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
-  labelValues->SetImage(this->GetInput());
-  labelValues->Compute();
-  m_LevelValue = 0.5*(labelValues->GetMinimum() + labelValues->GetMaximum());
+  if (m_ComputeLevelValue) {
+    typedef itk::MinimumMaximumImageCalculator <InputImageType> MinimumMaximumImageCalculatorType;
+    auto labelValues = MinimumMaximumImageCalculatorType::New();
+    labelValues->SetImage(this->GetInput());
+    labelValues->Compute();
+    m_LevelValue = 0.5 * (labelValues->GetMinimum() + labelValues->GetMaximum());
+  }
 
   // smoothing
-  if (m_Sigma < itk::NumericTraits<double>::epsilon()) {
+  if (std::abs(m_Sigma) < itk::NumericTraits<double>::epsilon()) {
     m_Sigma = this->GetInput()->GetSpacing().GetVnlVector().max_value();
   }
 
@@ -65,7 +69,7 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
 
   // fill holes after smoothing
   typedef itk::GrayscaleFillholeImageFilter<FloatImageType, FloatImageType> GrayscaleFillholeImageFilterType;
-  GrayscaleFillholeImageFilterType::Pointer fillholes = GrayscaleFillholeImageFilterType::New();
+  auto fillholes = GrayscaleFillholeImageFilterType::New();
   fillholes->SetInput(gaussian->GetOutput());
   fillholes->SetFullyConnected(true);
   fillholes->Update();

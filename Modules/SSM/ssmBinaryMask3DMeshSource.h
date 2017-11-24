@@ -39,8 +39,12 @@ public:
   OutputMeshType * GetOutput();
   void Update() { this->GenerateData(); };
 
+  itkSetMacro(LevelValue, double);
   itkGetMacro(LevelValue, double);
-  
+
+  itkSetMacro(ComputeLevelValue, bool);
+  itkGetMacro(ComputeLevelValue, bool);
+
   itkSetMacro(Sigma, double);
   itkGetMacro(Sigma, double);
 
@@ -71,8 +75,8 @@ private:
   void CreateMesh();
 
   vtkSmartPointer<OutputMeshType> m_Output;
-  InputPixelType m_ObjectValue;
   double m_LevelValue;
+  bool m_ComputeLevelValue;
 
   /** temporary variables used in CreateMesh to avoid thousands of
    *  calls to GetInput() and GetOutput()
