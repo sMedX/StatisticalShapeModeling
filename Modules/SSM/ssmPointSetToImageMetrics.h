@@ -50,7 +50,7 @@ namespace ssm
 
     /** Get/Set the point set as vtkPolyData.  */
     template< typename PolyData>
-    void SetSurfaceAsPolyData(PolyData * surface)
+    void SetPointSetAsPolyData(PolyData * surface)
     {
       if (Dimension != 3) {
         itkExceptionMacro(<<"For the method SetSurfaceAsPolyData dimension 3 is supproted.")

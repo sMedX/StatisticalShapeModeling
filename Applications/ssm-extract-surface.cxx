@@ -1,7 +1,6 @@
 #include <vtkPolyData.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
-#include <itkTransform.h>
 
 #include "ssmTypes.h"
 #include "ssmUtils.h"
@@ -112,20 +111,12 @@ bool extractSurface(const ssm::SurfaceExtractionOptions & options )
   auto binaryImageToLevelset = BinaryImageToLevelSetImageType::New();
   binaryImageToLevelset->SetInput(image);
 
-  // setup point set
-  typedef itk::PointSet<float, MeshType::PointDimension> PointSetType;
-  auto pointSet = PointSetType::New();
-  for (size_t n = 0; n < surface->GetPoints()->GetNumberOfPoints(); ++n) {
-    PointSetType::PointType point;
-    point.CastFrom<double>(surface->GetPoints()->GetPoint(n));
-    pointSet->SetPoint(n, point);
-  }
-
   // compute metrics
+  typedef itk::PointSet<float, 3> PointSetType;
   typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
   auto metrics = PointSetToImageMetricsType::New();
   metrics->SetMovingImage(binaryImageToLevelset->GetOutput());
-  metrics->SetFixedPointSet(pointSet);
+  metrics->SetPointSetAsPolyData<vtkPolyData>(surface);
   metrics->SetInfo(surfaceInfo);
   try {
     metrics->Compute();
