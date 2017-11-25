@@ -80,7 +80,10 @@ public:
       ("report,r", po::value<std::string>(), "The path for the file to print report.")
       ;
 
-    m_Description.add(mandatoryOptions).add(inputOptions).add(reportOptions);
+    this->AddToDescription(mandatoryOptions);
+    this->AddToDescription(inputOptions);
+    this->AddToDescription(reportOptions);
+    //m_Description.add(mandatoryOptions).add(inputOptions).add(reportOptions);
   }
 };
 }

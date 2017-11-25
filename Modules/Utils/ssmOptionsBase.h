@@ -193,6 +193,7 @@ private:
   pt::ptree m_PtreeOfRequireds;
   pt::ptree m_PtreeOfDefaultValues;
   po::variables_map m_Vm;
+  po::options_description m_Description;
 
 protected:
   OptionsBase()
@@ -215,6 +216,11 @@ protected:
     m_NameOfGroup = str;
   }
 
+  void AddToDescription(const po::options_description & options)
+  {
+    m_Description.add(options);
+  }
+
   template <typename T>
   void Put(const std::string & str, const T & value, const bool & required = true)
   {
@@ -229,7 +235,5 @@ protected:
   {
     return m_NameOfGroup + "." + str;
   }
-
-  po::options_description m_Description;
 };
 }
