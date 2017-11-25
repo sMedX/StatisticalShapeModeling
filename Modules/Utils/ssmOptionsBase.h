@@ -110,7 +110,7 @@ public:
       pt::ini_parser::read_ini(m_Config, m_ParsedPtree);
     }
     catch (const pt::ptree_error &e) {
-      std::cerr << "An exception occurred while parsing the config file:" << AddQuotes(m_Config) << std::endl;
+      std::cerr << "An exception occurred while parsing the config file: " << AddQuotes(m_Config) << std::endl;
       std::cout << e.what() << endl;
       return false;
     }
@@ -168,11 +168,11 @@ public:
 
     while (std::getline(stream, item, m_Dlm)) {
       try {
-        std::cout << item << std::endl;
         v.push_back(std::stod(item));
       }
       catch (...) {
-        std::cout << "error " << item << std::endl;
+        std::cerr << "Error while parsing string in the method GetAsVector." << std::endl;
+        std::cout << "string: " << AddQuotes(Get<std::string>(key)) << std::endl;
         return false;
       }
     }
