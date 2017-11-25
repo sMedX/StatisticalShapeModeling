@@ -70,8 +70,11 @@ namespace ssm
       this->SetFixedPointSet(points);
     }
 
-    void SetFixedPointSet(const PointsContainerType * points)
+    template< typename MeshType>
+    void SetPointSetAsMesh(MeshType * mesh)
     {
+      auto points = FixedPointSetType::New();
+      points->SetPoints(mesh->GetPoints());
       this->SetFixedPointSet(points);
     }
 
