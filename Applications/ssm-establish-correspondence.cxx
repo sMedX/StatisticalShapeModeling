@@ -101,8 +101,6 @@ int main(int argc, char** argv)
         typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
         SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
         levelset->SetInput(surface);
-        levelset->SetMargin(0.1);
-        levelset->SetSpacing(1.0);
         try {
           levelset->Update();
         }
@@ -167,8 +165,6 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
   typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
   levelset->SetInput(surface);
-  levelset->SetMargin(0.1);
-  levelset->SetSpacing(1.0);
   try {
     levelset->Update();
   }
