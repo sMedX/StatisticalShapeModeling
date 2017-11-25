@@ -1,6 +1,3 @@
-#include <boost/algorithm/string.hpp>
-#include <boost/program_options.hpp>
-
 #include <itkDataManager.h>
 #include <itkDirectory.h>
 #include <itkImage.h>
@@ -13,115 +10,55 @@
 #include <itkStandardMeshRepresenter.h>
 #include <itkStatisticalModel.h>
 #include <itkTransformMeshFilter.h>
-
 #include "utils/statismo-build-models-utils.h"
 
+#include "ssmTypes.h"
+#include "ssmUtils.h"
+#include "ssmModelBuildingOptions.h"
 
-namespace po = boost::program_options;
-using namespace std;
+typedef std::vector<MeshType::Pointer> MeshVectorType;
 
-struct programOptions
-{
-  bool bDisplayHelp;
-  string strDataListFile;
-  string strProcrustesMode;
-  string strProcrustesReferenceFile;
-  string strOutputFileName;
-  float fNoiseVariance;
-};
-
-po::options_description initializeProgramOptions(programOptions& poParameters);
-bool isOptionsConflictPresent(programOptions& opt);
-void buildAndSaveShapeModel(programOptions opt);
-
-
+void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBuildingOptions & options);
 
 int main(int argc, char** argv)
 {
-  programOptions poParameters;
+  // read options from config file
+  ssm::ModelBuildingOptions options;
+  if (!options.ParseCommandLine(argc, argv)) {
+    return EXIT_FAILURE;
+  }
 
-  po::positional_options_description optPositional;
-  optPositional.add("output-file", 1);
-  po::options_description optAllOptions = initializeProgramOptions(poParameters);
+  if (!options.ParseConfigFile()) {
+    return EXIT_FAILURE;
+  }
+  options.PrintConfig();
 
-
-  po::variables_map vm;
+  //----------------------------------------------------------------------------
+  // read list of files
+  StringVector listOfFiles;
   try {
-    po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(optAllOptions).positional(optPositional).run();
-    po::store(parsedOptions, vm);
-    po::notify(vm);
+    listOfFiles = readListFromFile(options.GetInputFileName());
   }
-  catch (po::error& e) {
-    cerr << "An exception occurred while parsing the Command line:" << endl;
-    cerr << e.what() << endl;
+  catch (std::ifstream::failure & e) {
+    std::cout << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 
-  if (poParameters.bDisplayHelp == true) {
-    cout << optAllOptions << endl;
-    return EXIT_SUCCESS;
-  }
-  if (isOptionsConflictPresent(poParameters) == true) {
-    cerr << "A conflict in the options exists or insufficient options were set." << endl;
-    cout << optAllOptions << endl;
-    return EXIT_FAILURE;
-  }
-
+  //----------------------------------------------------------------------------
+  // build shape model
   try {
-    buildAndSaveShapeModel(poParameters);
-  }
-  catch (ifstream::failure & e) {
-    cerr << "Could not read the data-list:" << endl;
-    cerr << e.what() << endl;
-    return EXIT_FAILURE;
+    buildAndSaveShapeModel(listOfFiles, options);
   }
   catch (itk::ExceptionObject & e) {
-    cerr << "Could not build the model:" << endl;
-    cerr << e.what() << endl;
+    std::cerr << "Could not build the model:" << std::endl;
+    std::cout << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 
   return EXIT_SUCCESS;
 }
 
-bool isOptionsConflictPresent(programOptions& opt)
-{
-  boost::algorithm::to_lower(opt.strProcrustesMode);
-
-  if (opt.strProcrustesMode != "reference" && opt.strProcrustesMode != "gpa") {
-    return true;
-  }
-
-  if (opt.strProcrustesMode == "reference" && opt.strProcrustesReferenceFile == "") {
-    return true;
-  }
-
-  if (opt.strProcrustesMode == "gpa" && opt.strProcrustesReferenceFile != "") {
-    return true;
-  }
-
-  if (opt.strDataListFile == "" || opt.strOutputFileName == "") {
-    return true;
-  }
-
-  if (opt.strDataListFile == opt.strOutputFileName) {
-    return true;
-  }
-
-  if (opt.strProcrustesMode == "reference") {
-    if (opt.strDataListFile == opt.strProcrustesReferenceFile || opt.strOutputFileName == opt.strProcrustesReferenceFile) {
-      return true;
-    }
-  }
-
-  if (opt.fNoiseVariance < 0) {
-    return true;
-  }
-
-  return false;
-}
-
-void buildAndSaveShapeModel(programOptions opt)
+void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBuildingOptions & options)
 {
   const unsigned Dimensions = 3;
 
@@ -132,52 +69,51 @@ void buildAndSaveShapeModel(programOptions opt)
   typedef itk::DataManager<MeshType> DataManagerType;
   DataManagerType::Pointer dataManager = DataManagerType::New();
 
-  StringList fileNames = getFileList(opt.strDataListFile);
-
   typedef itk::MeshFileReader<MeshType> MeshReaderType;
-  typedef vector<MeshReaderType::Pointer> MeshReaderList;
-  MeshReaderList meshes;
-  meshes.reserve(fileNames.size());
-  for (StringList::const_iterator it = fileNames.begin(); it != fileNames.end(); ++it) {
+  typedef std::vector<MeshReaderType::Pointer> MeshReaderVector;
+  MeshReaderVector meshes;
+
+  for (const auto & fileName : listOfFiles) {
     MeshReaderType::Pointer reader = MeshReaderType::New();
-    reader->SetFileName(it->c_str());
+    reader->SetFileName(fileName);
     reader->Update();
-    //itk::PCAModelBuilder is not a Filter in the ITK world, so the pipeline would not get executed if its main method is called. So the pipeline before calling itk::PCAModelBuilder must be executed by the means of calls to Update() (at least for last elements needed by itk::PCAModelBuilder).
     meshes.push_back(reader);
   }
 
   if (meshes.size() == 0) {
-    itkGenericExceptionMacro(<< "The specified data-list is empty.");
+    itkGenericExceptionMacro(<< "The specified list of surfaces is empty.");
   }
 
-  if (opt.strProcrustesMode == "reference") {
-    MeshReaderType::Pointer refReader = MeshReaderType::New();
-    refReader->SetFileName(opt.strProcrustesReferenceFile);
-    refReader->Update();
-    representer->SetReference(refReader->GetOutput());
+  if (options.GetAlignmentMode() == "reference") {
+    typedef itk::MeshFileReader<MeshType> MeshReaderType;
+    MeshReaderType::Pointer reader = MeshReaderType::New();
+    reader->SetFileName(options.GetReferenceFileName());
+    reader->Update();
+    representer->SetReference(reader->GetOutput());
   }
   else {
-    vector<MeshType::Pointer> originalMeshes;
-    for (MeshReaderList::iterator it = meshes.begin(); it != meshes.end(); ++it) {
+    std::vector<MeshType::Pointer> originalMeshes;
+
+    for (MeshReaderVector::iterator it = meshes.begin(); it != meshes.end(); ++it) {
       MeshReaderType::Pointer reader = *it;
       originalMeshes.push_back(reader->GetOutput());
     }
 
-    const unsigned uMaxGPAIterations = 20;
-    const unsigned uNumberOfPoints = 100;
-    const float fBreakIfChangeBelow = 0.001f;
+    const size_t numberOfGPAIterations = 20;
+    const size_t numberOfPoints = 100;
+    const double breakIfChangeBelow = 0.001;
 
     typedef itk::VersorRigid3DTransform< float > Rigid3DTransformType;
     typedef itk::Image<float, Dimensions> ImageType;
     typedef itk::LandmarkBasedTransformInitializer<Rigid3DTransformType, ImageType, ImageType> LandmarkBasedTransformInitializerType;
     typedef itk::TransformMeshFilter< MeshType, MeshType, Rigid3DTransformType > FilterType;
-    MeshType::Pointer referenceMesh = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, FilterType>(originalMeshes, uMaxGPAIterations, uNumberOfPoints, fBreakIfChangeBelow);
-    representer->SetReference(referenceMesh);
+    MeshType::Pointer reference = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, FilterType>(originalMeshes, numberOfGPAIterations, numberOfPoints, breakIfChangeBelow);
+    representer->SetReference(reference);
   }
 
   dataManager->SetRepresenter(representer);
 
-  for (MeshReaderList::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
+  for (MeshReaderVector::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
     MeshReaderType::Pointer reader = *it;
     dataManager->AddDataset(reader->GetOutput(), reader->GetFileName());
   }
@@ -186,26 +122,12 @@ void buildAndSaveShapeModel(programOptions opt)
   StatisticalModelType::Pointer model;
   typedef itk::PCAModelBuilder<MeshType> PCAModelBuilder;
   PCAModelBuilder::Pointer pcaModelBuilder = PCAModelBuilder::New();
-  model = pcaModelBuilder->BuildNewModel(dataManager->GetData(), opt.fNoiseVariance);
-  model->Save(opt.strOutputFileName.c_str());
-}
+  model = pcaModelBuilder->BuildNewModel(dataManager->GetData(), options.GetNoise());
 
-po::options_description initializeProgramOptions(programOptions& poParameters)
-{
-  po::options_description optMandatory("Mandatory options");
-  optMandatory.add_options()
-    ("data-list,l", po::value<string>(&poParameters.strDataListFile), "File containing a list of meshes to build shape model from")
-    ("output-file,o", po::value<string>(&poParameters.strOutputFileName), "Name of the output file")
-    ;
-  po::options_description optAdditional("Optional options");
-  optAdditional.add_options()
-    ("procrustes,p", po::value<string>(&poParameters.strProcrustesMode)->default_value("GPA"), "Specify how the data is aligned: REFERENCE aligns all datasets rigidly to the reference and GPA alignes all datasets to the population mean.")
-    ("reference,r", po::value<string>(&poParameters.strProcrustesReferenceFile), "Specify the reference used for model building. This is needed if --procrustes is REFERENCE")
-    ("noise,n", po::value<float>(&poParameters.fNoiseVariance)->default_value(0), "Noise variance of the PPCA model")
-    ("help,h", po::bool_switch(&poParameters.bDisplayHelp), "Display this help message")
-    ;
+  std::cout << "shape model saved to the file " << options.GetOutputFileName() << std::endl;
+  std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
+  std::cout << "number of cells      " << model->GetRepresenter()->GetReference()->GetNumberOfCells() << std::endl;
+  std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
 
-  po::options_description optAllOptions;
-  optAllOptions.add(optMandatory).add(optAdditional);
-  return optAllOptions;
+  model->Save(options.GetOutputFileName().c_str());
 }
