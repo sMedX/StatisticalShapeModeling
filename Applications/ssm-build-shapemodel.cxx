@@ -16,8 +16,6 @@
 #include "ssmUtils.h"
 #include "ssmModelBuildingOptions.h"
 
-typedef std::vector<MeshType::Pointer> MeshVectorType;
-
 void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBuildingOptions & options);
 
 int main(int argc, char** argv)
@@ -99,8 +97,8 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
       originalMeshes.push_back(reader->GetOutput());
     }
 
-    const size_t numberOfGPAIterations = 20;
-    const size_t numberOfPoints = 100;
+    const size_t numberOfGPAIterations = 100;
+    const size_t numberOfPoints = 1000;
     const double breakIfChangeBelow = 0.001;
 
     typedef itk::VersorRigid3DTransform< float > Rigid3DTransformType;
