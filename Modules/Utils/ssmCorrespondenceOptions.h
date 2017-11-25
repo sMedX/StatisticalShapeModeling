@@ -79,9 +79,9 @@ public:
     }
   };
 
-  bool ReadConfigFile()
+  bool ParseConfigFile()
   {
-    if (!OptionsBase::ReadConfigFile()) {
+    if (!OptionsBase::ParseConfigFile()) {
       return false;
     }
 

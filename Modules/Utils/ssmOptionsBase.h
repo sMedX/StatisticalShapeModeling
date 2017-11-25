@@ -104,7 +104,7 @@ public:
     return true;
   }
 
-  bool ReadConfigFile()
+  bool ParseConfigFile()
   {
     try {
       pt::ini_parser::read_ini(m_Config, m_ParsedPtree);
