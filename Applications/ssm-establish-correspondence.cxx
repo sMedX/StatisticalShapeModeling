@@ -51,7 +51,6 @@ int main(int argc, char** argv)
   }
   options1.PrintConfig();
 
-
   ProgramOptions options;
   po::options_description description = initializeProgramOptions(options);
   po::variables_map vm;
@@ -148,7 +147,7 @@ int main(int argc, char** argv)
     std::cout << "establish correspondence stage (" << stage + 1 << " / " << options1.GetNumberOfStages() << ")" << std::endl;
 
     // build GP model for the reference surface
-    StatisticalModelType::Pointer model = buildGPModel(reference, options.parameters[0], options.scale, options.components[0]);
+    StatisticalModelType::Pointer model = buildGPModel(reference, options1.GetParameters()[0], options1.GetScale(), options1.GetNumberOfComponents()[0]);
 
     // initialize reference by zero
     for (MeshType::PointsContainerIterator iter = reference->GetPoints()->Begin(); iter != reference->GetPoints()->End(); ++iter) {
@@ -177,7 +176,7 @@ int main(int argc, char** argv)
         SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
         levelset->SetInput(surface);
         levelset->SetMargin(0.1);
-        levelset->SetSpacing(1);
+        levelset->SetSpacing(1.0);
         try {
           levelset->Update();
         }
@@ -243,7 +242,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
   SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
   levelset->SetInput(surface);
   levelset->SetMargin(0.1);
-  levelset->SetSpacing(1);
+  levelset->SetSpacing(1.0);
   try {
     levelset->Update();
   }
