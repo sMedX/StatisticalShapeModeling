@@ -2,117 +2,120 @@
 
 #include <itkTriangleMeshToBinaryImageFilter.h>
 #include <itkSignedMaurerDistanceMapImageFilter.h>
-#include <itkMinimumMaximumImageCalculator.h>
 #include <itkAddImageFilter.h>
 #include <itkMultiplyImageFilter.h>
+#include <itkNumericTraits.h>
 
 #include "ssmSurfaceToLevelSetImageFilter.h"
 
 namespace ssm
 {
-  template <typename TInputMesh, typename TOutputImage>
-  SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SurfaceToLevelSetImageFilter()
-  {
-    m_UseOrigin = false;
-    m_UseSize = false;
+template <typename TInputMesh, typename TOutputImage>
+SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SurfaceToLevelSetImageFilter()
+{
+  this->SetNumberOfRequiredInputs(1);
 
-    double m_Margin = 0.10;
-    m_Spacing.Fill(1);
+  m_UseOrigin = false;
+  m_UseSize = false;
+
+  m_Margin = 0.10;
+  m_Spacing.Fill(1);
+
+  m_ForegroundValue = itk::NumericTraits< BinaryPixelype >::OneValue();
+  m_BackgroundValue = itk::NumericTraits< BinaryPixelype >::ZeroValue();
+}
+
+/** Set the Input Mesh */
+template< typename TInputMesh, typename TOutputImage >
+void SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::SetInput(TInputMesh *input)
+{
+  this->ProcessObject::SetNthInput(0, input);
+}
+
+/** Get the input Mesh */
+template< typename TInputMesh, typename TOutputImage >
+typename SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
+SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(void)
+{
+  return static_cast<TInputMesh *> (this->ProcessObject::GetInput(0));
+}
+
+/** Get the input Mesh */
+template< typename TInputMesh, typename TOutputImage >
+typename SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
+SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(unsigned int idx)
+{
+  return static_cast< TInputMesh * >(this->ProcessObject::GetInput(idx));
+}
+
+template <typename TInputMesh, typename TOutputImage>
+void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SetOrigin(const ImagePointType & point)
+{
+  m_Origin = point;
+  m_UseOrigin = true;
+}
+
+template <typename TInputMesh, typename TOutputImage>
+void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SetSize(const SizeType & size)
+{
+  m_Size = size;
+  m_UseSize = true;
+}
+
+template <typename TInputMesh, typename TOutputImage>
+void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::GenerateData()
+{
+  auto bbox = this->GetInput()->GetBoundingBox();
+  auto diff = bbox->GetMaximum() - bbox->GetMinimum();
+
+  // compute origin and size
+  for (size_t i = 0; i < Dimension; ++i) {
+    if (!m_UseOrigin) {
+      m_Origin[i] = bbox->GetMinimum()[i] - m_Margin * diff[i];
+    }
+
+    if (!m_UseSize) {
+      m_Size[i] = diff[i] * (1 + 2 * m_Margin) / m_Spacing[i];
+    }
   }
 
-  template <typename TInputMesh, typename TOutputImage>
-  void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SetOrigin(typename TOutputImage::PointType origin)
-  {
-    m_Origin = origin;
-    m_UseOrigin = true;
-  }
+  typedef itk::TriangleMeshToBinaryImageFilter<TInputMesh, BinaryImageType> TriangleMeshToBinaryImageFilterType;
+  auto surfaceToImage = TriangleMeshToBinaryImageFilterType::New();
+  surfaceToImage->SetInput(this->GetInput());
+  surfaceToImage->SetInsideValue(m_ForegroundValue);
+  surfaceToImage->SetOutsideValue(m_BackgroundValue);
+  surfaceToImage->SetSize(m_Size);
+  surfaceToImage->SetSpacing(m_Spacing);
+  surfaceToImage->SetOrigin(m_Origin);
+  surfaceToImage->Update();
+  m_Mask = surfaceToImage->GetOutput();
 
-  template <typename TInputMesh, typename TOutputImage>
-  void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SetSize(typename TOutputImage::SizeType size)
-  {
-    m_Size = size;
-    m_UseSize = true;
-  }
+  // compute level set image
+  typedef itk::SignedMaurerDistanceMapImageFilter<BinaryImageType, TOutputImage> DistanceFilterType;
+  auto distanceToForeground = DistanceFilterType::New();
+  distanceToForeground->SetInput(surfaceToImage->GetOutput());
+  distanceToForeground->SetUseImageSpacing(true);
+  distanceToForeground->SetBackgroundValue(m_BackgroundValue);
+  distanceToForeground->SetInsideIsPositive(false);
 
-  template <typename TInputMesh, typename TOutputImage>
-  void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::GenerateData()
-  {
-    m_BoundingBox = m_Input->GetBoundingBox();
-    typename MaskImageType::SpacingType diff = m_BoundingBox->GetMaximum() - m_BoundingBox->GetMinimum();
+  typename DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
+  distanceToBackground->SetInput(surfaceToImage->GetOutput());
+  distanceToBackground->SetUseImageSpacing(true);
+  distanceToBackground->SetBackgroundValue(m_ForegroundValue);
+  distanceToBackground->SetInsideIsPositive(true);
 
-    for (unsigned i = 0; i < Dimension; ++i) {
-      //compute origin
-      if (!m_UseOrigin) {
-        double margin = m_Margin * diff[i];
-        m_Origin[i] = m_BoundingBox->GetMinimum()[i] - margin;
-      }
+  typedef itk::AddImageFilter <TOutputImage> AddImageFilterType;
+  auto add = AddImageFilterType::New();
+  add->SetInput1(distanceToForeground->GetOutput());
+  add->SetInput2(distanceToBackground->GetOutput());
 
-      //compute size
-      if (!m_UseSize) {
-        double margin = m_BoundingBox->GetMinimum()[i] - m_Origin[i];
-        m_Size[i] = (diff[i] + 2 * margin) / m_Spacing[i];
-      }
-    }
+  typedef itk::MultiplyImageFilter <TOutputImage> FilterType;
+  auto multiply = FilterType::New();
+  multiply->SetInput(add->GetOutput());
+  multiply->SetConstant(0.5);
+  multiply->Update();
 
-    typedef itk::TriangleMeshToBinaryImageFilter<TInputMesh, MaskImageType> TriangleMeshToBinaryImageFilterType;
-    typename TriangleMeshToBinaryImageFilterType::Pointer surfaceToImage = TriangleMeshToBinaryImageFilterType::New();
-    surfaceToImage->SetInput(m_Input);
-    surfaceToImage->SetInsideValue(1);
-    surfaceToImage->SetSize(m_Size);
-    surfaceToImage->SetSpacing(m_Spacing);
-    surfaceToImage->SetOrigin(m_Origin);
-    try {
-      surfaceToImage->Update();
-    }
-    catch (itk::ExceptionObject& excep) {
-      std::cerr << excep << std::endl;
-      itkExceptionMacro(<< excep);
-    }
-    m_Mask = surfaceToImage->GetOutput();
-
-    // compute minimum and maximum values
-    typedef itk::MinimumMaximumImageCalculator <MaskImageType> MinimumMaximumImageCalculatorType;
-    typename MinimumMaximumImageCalculatorType::Pointer labelValues = MinimumMaximumImageCalculatorType::New();
-    labelValues->SetImage(surfaceToImage->GetOutput());
-    labelValues->Compute();
-    if (labelValues->GetMaximum() < surfaceToImage->GetInsideValue()) {
-      itkExceptionMacro(<< "warning: there is no region of interest in image");
-    }
-
-    m_BackgroundValue = labelValues->GetMinimum();
-    m_ForegroundValue = labelValues->GetMaximum();
-
-    // compute level set image
-    typedef itk::SignedMaurerDistanceMapImageFilter<MaskImageType, TOutputImage> DistanceFilterType;
-    typename DistanceFilterType::Pointer distanceToForeground = DistanceFilterType::New();
-    distanceToForeground->SetInput(m_Mask);
-    distanceToForeground->SetUseImageSpacing(true);
-    distanceToForeground->SetBackgroundValue(m_BackgroundValue);
-    distanceToForeground->SetInsideIsPositive(false);
-
-    typename DistanceFilterType::Pointer distanceToBackground = DistanceFilterType::New();
-    distanceToBackground->SetInput(m_Mask);
-    distanceToBackground->SetUseImageSpacing(true);
-    distanceToBackground->SetBackgroundValue(m_ForegroundValue);
-    distanceToBackground->SetInsideIsPositive(true);
-
-    typedef itk::AddImageFilter <TOutputImage> AddImageFilterType;
-    typename AddImageFilterType::Pointer add = AddImageFilterType::New();
-    add->SetInput1(distanceToForeground->GetOutput());
-    add->SetInput2(distanceToBackground->GetOutput());
-
-    typedef itk::MultiplyImageFilter <TOutputImage> FilterType;
-    typename FilterType::Pointer multiply = FilterType::New();
-    multiply->SetInput(add->GetOutput());
-    multiply->SetConstant(0.5);
-    try {
-      multiply->Update();
-    }
-    catch (itk::ExceptionObject& excep) {
-      std::cerr << excep << std::endl;
-      itkExceptionMacro(<< excep);
-    }
-
-    m_Output = multiply->GetOutput();
-  }
+  auto output = this->GetOutput();
+  output->Graft(multiply->GetOutput());
+}
 }
