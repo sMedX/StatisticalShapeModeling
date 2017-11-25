@@ -1,13 +1,13 @@
 #pragma once
 
-#include "ssmBaseOptions.h"
+#include "ssmOptionsBase.h"
 
 namespace ssm
 {
 //=========================================================================
 // Surface extraction options
 //=========================================================================
-class SurfaceExtractionOptions : public OptionsBase
+class ExtractionOptions : public OptionsBase
 {
 public:
 
@@ -33,62 +33,42 @@ public:
 
   std::string GetInputList() const
   {
-    return m_ParsedPtree.get<std::string>("inplist");
+    return this->Get<std::string>("inplist");
   }
 
   std::string GetOutputList() const
   {
-    return m_ParsedPtree.get<std::string>("outlist");
+    return this->Get<std::string>("outlist");
   }
 
   std::string GetReportFile() const
   {
-    const std::string name = "report";
-    if (ConfigIsEnabled())
-      return m_ParsedPtree.get<std::string>(name);
-    else
-      return m_Vm[name].as<std::string>();
+    return this->Get<std::string>("report");
   }
 
   double GetSigma() const
   {
-    const std::string name = "sigma";
-    if (ConfigIsEnabled())
-      return Get<double>(name);
-    else
-      return m_Vm[name].as<double>();
+    return this->Get<double>("sigma");
   }
 
   double GetFactor() const
   {
-    const std::string name = "factor";
-    if (ConfigIsEnabled())
-      return Get<double>(name);
-    else
-      return m_Vm[name].as<double>();
+    return this->Get<double>("factor");
   }
 
   size_t GetNumberOfPoints() const
   {
-    const std::string name = "points";
-    if (ConfigIsEnabled())
-      return Get<size_t>(name);
-    else
-      return m_Vm[name].as<size_t>();
+    return this->Get<size_t>("points");
   }
 
   size_t GetNumberOfIterations() const
   {
-    const std::string name = "iterations";
-    if (ConfigIsEnabled())
-      return Get<size_t>(name);
-    else
-      return m_Vm[name].as<size_t>();
+    return this->Get<size_t>("iterations");
   }
 
   std::string FormatOutput(const std::string & fileName)
   {
-    const auto & format = Get<std::string>("output");
+    const auto & format = this->Get<std::string>("output");
     try {
       return (boost::format(format) % getBaseNameFromPath(fileName)).str();
     }
@@ -99,7 +79,7 @@ public:
     }
   };
 
-  SurfaceExtractionOptions()
+  ExtractionOptions()
   {
     SetNameOfGroup("EXTRACTION");
 

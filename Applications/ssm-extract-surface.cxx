@@ -7,15 +7,15 @@
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmBinaryImageToLevelSetImageFilter.h"
 #include "ssmBinaryMask3DMeshSource.h"
-#include "ssmSurfaceExtractionOptions.h"
+#include "ssmExtractionOptions.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
-bool extractSurface(const ssm::SurfaceExtractionOptions & options);
+bool extractSurface(const ssm::ExtractionOptions & options);
 
 int main(int argc, char** argv)
 {
-  ssm::SurfaceExtractionOptions options;
+  ssm::ExtractionOptions options;
 
   if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-bool extractSurface(const ssm::SurfaceExtractionOptions & options )
+bool extractSurface(const ssm::ExtractionOptions & options )
 {
   // read image
   auto image = BinaryImageType::New();

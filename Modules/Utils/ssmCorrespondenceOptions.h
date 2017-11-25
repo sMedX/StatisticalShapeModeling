@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ssmBaseOptions.h"
+#include "ssmOptionsBase.h"
 
 namespace ssm
 {
@@ -23,7 +23,7 @@ public:
 
   std::string GetReportFileName() const
   {
-    return m_ParsedPtree.get<std::string>("report");
+    return this->Get<std::string>("report");
   }
 
   std::string GetReferenceFileName() const

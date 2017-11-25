@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ssmBaseOptions.h"
+#include "ssmOptionsBase.h"
 
 namespace ssm
 {
@@ -13,37 +13,37 @@ public:
 
   std::string GetInputList() const
   {
-    return m_ParsedPtree.get<std::string>("inplist");
+    return this->Get<std::string>("inplist");
   }
 
   std::string GetOutputList() const
   {
-    return m_ParsedPtree.get<std::string>("outlist");
+    return this->Get<std::string>("outlist");
   }
 
   std::string GetReportFile() const
   {
-    return m_ParsedPtree.get<std::string>("report");
+    return this->Get<std::string>("report");
   }
 
   std::string GetReferenceFileName() const
   {
-    return m_ParsedPtree.get<std::string>("reference");
+    return this->Get<std::string>("reference");
   }
 
   size_t GetNumberOfStages() const
   {
-    return m_ParsedPtree.get<size_t>("stages");
+    return this->Get<size_t>("stages");
   }
 
   size_t GetNumberOfIterations() const
   {
-    return m_ParsedPtree.get<size_t>("iterations");
+    return this->Get<size_t>("iterations");
   }
 
   size_t GetTransform() const
   {
-    return m_ParsedPtree.get<size_t>("transform");
+    return this->Get<size_t>("transform");
   }
 
   std::string FormatOutput(const std::string & fileName)

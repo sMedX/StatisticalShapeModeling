@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ssmBaseOptions.h"
+#include "ssmOptionsBase.h"
 
 namespace ssm
 {
@@ -13,65 +13,37 @@ public:
 
   std::string GetInputFileName() const
   {
-    const std::string name = "input";
-    if (this->ConfigIsEnabled())
-      return this->m_ParsedPtree.get<std::string>(name);
-    else
-      return this->m_Vm[name].as<std::string>();
+    return this->Get<std::string>("input");
   }
 
   std::string GetOutputFileName() const
   {
-    const std::string name = "output";
-    if (this->ConfigIsEnabled())
-      return this->m_ParsedPtree.get<std::string>(name);
-    else
-      return this->m_Vm[name].as<std::string>();
+    return this->Get<std::string>("output");
   }
 
   std::string GetReportFileName() const
   {
-    const std::string name = "report";
-    if (this->ConfigIsEnabled())
-      return this->m_ParsedPtree.get<std::string>(name);
-    else
-      return this->m_Vm[name].as<std::string>();
+    return this->Get<std::string>("report");
   }
 
   double GetSigma() const
   {
-    const std::string name = "sigma";
-    if (this->ConfigIsEnabled())
-      return this->Get<double>(name);
-    else
-      return this->m_Vm[name].as<double>();
+    return this->Get<double>("sigma");
   }
 
   double GetFactor() const
   {
-    const std::string name = "factor";
-    if (this->ConfigIsEnabled())
-      return this->Get<double>(name);
-    else
-      return this->m_Vm[name].as<double>();
+    return this->Get<double>("factor");
   }
 
   size_t GetNumberOfPoints() const
   {
-    const std::string name = "points";
-    if (this->ConfigIsEnabled())
-      return Get<size_t>(name);
-    else
-      return this->m_Vm[name].as<size_t>();
+    return this->Get<size_t>("points");
   }
 
   size_t GetNumberOfIterations() const
   {
-    const std::string name = "iterations";
-    if (this->ConfigIsEnabled())
-      return this->Get<size_t>(name);
-    else
-      return this->m_Vm[name].as<size_t>();
+    return this->Get<size_t>("iterations");
   }
 
   ReferenceOptions()

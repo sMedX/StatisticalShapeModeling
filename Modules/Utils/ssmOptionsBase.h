@@ -152,9 +152,12 @@ public:
   };
 
   template <typename T>
-  T Get(const std::string & str) const
+  T Get(const std::string & name) const
   {
-    return m_ParsedPtree.get<T>(str);
+    if (m_ConfigIsEnabled)
+      return m_ParsedPtree.get<T>(name);
+    else
+      return m_Vm[name].as<T>();
   };
 
   template<typename T>
@@ -185,6 +188,11 @@ private:
   std::string m_Config;
   std::string m_NameOfGroup;
   char m_Dlm;
+
+  pt::ptree m_ParsedPtree;
+  pt::ptree m_PtreeOfRequireds;
+  pt::ptree m_PtreeOfDefaultValues;
+  po::variables_map m_Vm;
 
 protected:
   OptionsBase()
@@ -222,10 +230,6 @@ protected:
     return m_NameOfGroup + "." + str;
   }
 
-  po::variables_map m_Vm;
   po::options_description m_Description;
-  pt::ptree m_ParsedPtree;
-  pt::ptree m_PtreeOfRequireds;
-  pt::ptree m_PtreeOfDefaultValues;
 };
 }

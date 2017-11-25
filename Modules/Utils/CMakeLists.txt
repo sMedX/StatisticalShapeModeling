@@ -2,8 +2,8 @@ project(Utils)
 
 set(HEADER
     ssmUtils.h
-    ssmBaseOptions.h
-    ssmSurfaceExtractionOptions.h
+    ssmOptionsBase.h
+    ssmExtractionOptions.h
     ssmAlignmentOptions.h
 	ssmReferenceOptions.h
 )
