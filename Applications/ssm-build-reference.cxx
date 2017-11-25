@@ -80,8 +80,8 @@ bool extractSurface(const ssm::ReferenceOptions & options )
   typedef itk::PointSet<float, 3> PointSetType;
   typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
   auto metrics = PointSetToImageMetricsType::New();
-  metrics->SetMovingImage(image);
   metrics->SetPointSetAsPolyData<vtkPolyData>(surface);
+  metrics->SetImage(image);
   metrics->SetInfo(surfaceInfo);
   try {
     metrics->Compute();

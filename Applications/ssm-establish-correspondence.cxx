@@ -113,7 +113,7 @@ int main(int argc, char** argv)
         typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
         PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
         metrics->SetPointSetAsMesh<MeshType>(output);
-        metrics->SetMovingImage(levelset->GetOutput());
+        metrics->SetImage(levelset->GetOutput());
         metrics->Compute();
         metrics->PrintReport(std::cout);
 

@@ -181,8 +181,8 @@ int main(int argc, char** argv)
 
   typedef ssm::PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
-  metrics->SetFixedPointSet(points);
-  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
+  metrics->SetPointSet(points);
+  metrics->SetImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
   metrics->SetInfo(info);
   metrics->Compute();
   metrics->PrintReport(std::cout);
