@@ -1,5 +1,8 @@
 project(SSM)
 
+add_executable(ssm-build-shapemodel ssm-build-shapemodel.cxx)
+target_link_libraries(ssm-build-shapemodel ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
+
 add_executable(ssm-extract-surface ssm-extract-surface.cxx)
 target_link_libraries(ssm-extract-surface ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES} ${VTK_LIBRARIES})
 
