@@ -192,7 +192,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
     }
 
     typedef itk::TriangleMeshToBinaryImageFilter<MeshType, BinaryImageType> ShapeToBinaryImageFilterType;
-    ShapeToBinaryImageFilterType::Pointer shapeToImage = ShapeToBinaryImageFilterType::New();
+    auto shapeToImage = ShapeToBinaryImageFilterType::New();
     shapeToImage->SetInput(model->DrawMean());
     shapeToImage->SetSize(size);
     shapeToImage->SetOrigin(origin);
@@ -209,11 +209,11 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 
     // moment calculators
     typedef itk::ImageMomentsCalculator<BinaryImageType>  ImageCalculatorType;
-    ImageCalculatorType::Pointer movingCalculator = ImageCalculatorType::New();
+    auto movingCalculator = ImageCalculatorType::New();
     movingCalculator->SetImage(shapeToImage->GetOutput());
     movingCalculator->Compute();
 
-    ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
+    auto fixedCalculator = ImageCalculatorType::New();
     fixedCalculator->SetImage(levelset->GetMask());
     fixedCalculator->Compute();
 
@@ -237,8 +237,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 
     // perform registration
     typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
-    ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
-    shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
+    auto shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
     shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
     shapeModelToSurfaceRegistration->SetNumberOfIterations(options.GetNumberOfIterations());
