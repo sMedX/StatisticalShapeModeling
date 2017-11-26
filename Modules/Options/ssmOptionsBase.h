@@ -134,6 +134,10 @@ public:
       return false;
     }
 
+
+    // clear map of variables from command line
+    m_Vm.clear();
+
     return true;
   }
 
