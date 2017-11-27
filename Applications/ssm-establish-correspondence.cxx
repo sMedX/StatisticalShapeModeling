@@ -7,7 +7,7 @@
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmShapeModelToImageRegistrationMethod.h"
-#include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmMeshToLevelSetImageFilter.h"
 #include "ssmInitializeSpatialTransform.h"
 #include "ssmCorrespondenceOptions.h"
 
@@ -98,8 +98,8 @@ int main(int argc, char** argv)
       // compute metrics and write output surface to file
       if (stage + 1 == options.GetNumberOfStages()) {
         // compute metrics
-        typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
-        SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
+        typedef ssm::MeshToLevelSetImageFilter<MeshType, FloatImageType> MeshToLevelSetImageFilter;
+        MeshToLevelSetImageFilter::Pointer levelset = MeshToLevelSetImageFilter::New();
         levelset->SetInput(surface);
         try {
           levelset->Update();
@@ -159,8 +159,8 @@ int main(int argc, char** argv)
 MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer initialModel, const ssm::CorrespondenceOptions & options)
 {
   // compute level set image
-  typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
-  SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
+  typedef ssm::MeshToLevelSetImageFilter<MeshType, FloatImageType> MeshToLevelSetImageFilter;
+  MeshToLevelSetImageFilter::Pointer levelset = MeshToLevelSetImageFilter::New();
   levelset->SetInput(surface);
   try {
     levelset->Update();

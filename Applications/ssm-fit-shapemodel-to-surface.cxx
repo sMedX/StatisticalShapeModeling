@@ -8,7 +8,7 @@
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmShapeModelToImageRegistrationMethod.h"
-#include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmMeshToLevelSetImageFilter.h"
 #include "ssmInitializeSpatialTransform.h"
 
 struct ProgramOptions

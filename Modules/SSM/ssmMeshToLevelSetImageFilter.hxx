@@ -6,12 +6,12 @@
 #include <itkMultiplyImageFilter.h>
 #include <itkNumericTraits.h>
 
-#include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmMeshToLevelSetImageFilter.h"
 
 namespace ssm
 {
 template <typename TInputMesh, typename TOutputImage>
-SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SurfaceToLevelSetImageFilter()
+MeshToLevelSetImageFilter<TInputMesh, TOutputImage>::MeshToLevelSetImageFilter()
 {
   this->SetNumberOfRequiredInputs(1);
 
@@ -27,43 +27,43 @@ SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SurfaceToLevelSetImageFi
 
 /** Set the Input Mesh */
 template< typename TInputMesh, typename TOutputImage >
-void SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::SetInput(TInputMesh *input)
+void MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::SetInput(TInputMesh *input)
 {
   this->ProcessObject::SetNthInput(0, input);
 }
 
 /** Get the input Mesh */
 template< typename TInputMesh, typename TOutputImage >
-typename SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
-SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(void)
+typename MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
+MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(void)
 {
   return static_cast<TInputMesh *> (this->ProcessObject::GetInput(0));
 }
 
 /** Get the input Mesh */
 template< typename TInputMesh, typename TOutputImage >
-typename SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
-SurfaceToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(unsigned int idx)
+typename MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
+MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(unsigned int idx)
 {
   return static_cast< TInputMesh * >(this->ProcessObject::GetInput(idx));
 }
 
 template <typename TInputMesh, typename TOutputImage>
-void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SetOrigin(const ImagePointType & point)
+void MeshToLevelSetImageFilter<TInputMesh, TOutputImage>::SetOrigin(const ImagePointType & point)
 {
   m_Origin = point;
   m_UseOrigin = true;
 }
 
 template <typename TInputMesh, typename TOutputImage>
-void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::SetSize(const SizeType & size)
+void MeshToLevelSetImageFilter<TInputMesh, TOutputImage>::SetSize(const SizeType & size)
 {
   m_Size = size;
   m_UseSize = true;
 }
 
 template <typename TInputMesh, typename TOutputImage>
-void SurfaceToLevelSetImageFilter<TInputMesh, TOutputImage>::GenerateData()
+void MeshToLevelSetImageFilter<TInputMesh, TOutputImage>::GenerateData()
 {
   auto bbox = this->GetInput()->GetBoundingBox();
   auto diff = bbox->GetMaximum() - bbox->GetMinimum();

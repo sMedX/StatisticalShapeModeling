@@ -7,8 +7,8 @@ set(HEADER
     ssmInitializeSpatialTransform.h
 	ssmShapeModelMultiTransform.h
 	ssmShapeModelMultiTransform.hxx
-    ssmSurfaceToLevelSetImageFilter.h
-    ssmSurfaceToLevelSetImageFilter.hxx
+    ssmMeshToLevelSetImageFilter.h
+    ssmMeshToLevelSetImageFilter.hxx
     ssmSurfaceToImageRegistrationMethod.h
     ssmSurfaceToImageRegistrationMethod.hxx
     ssmShapeModelRegistrationMethodBase.h

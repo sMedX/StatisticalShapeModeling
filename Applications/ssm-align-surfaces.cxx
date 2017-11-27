@@ -4,7 +4,7 @@
 #include "ssmTypes.h"
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
-#include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmMeshToLevelSetImageFilter.h"
 #include "ssmSurfaceToImageRegistrationMethod.h"
 #include "ssmMeshPropertiesCalculator.h"
 #include "ssmAlignmentOptions.h"
@@ -168,8 +168,8 @@ int main(int argc, char** argv) {
     vectorOfSurfaces[count] = transformSurface->GetOutput();
 
     // compute level-set image for the n-th surface
-    typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
-    auto surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
+    typedef ssm::MeshToLevelSetImageFilter<MeshType, FloatImageType> MeshToLevelSetImageFilterType;
+    auto surfaceToLevelSetImage = MeshToLevelSetImageFilterType::New();
     surfaceToLevelSetImage->SetInput(vectorOfSurfaces[count]);
     surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
     surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());
@@ -343,8 +343,8 @@ FloatImageType::Pointer computeLevelSetImage(FloatImageType::Pointer levelSetIma
     vectorOfSurfaces[count] = transformMeshFilter->GetOutput();
 
     // compute level-set image
-    typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilterType;
-    auto surfaceToLevelSetImage = SurfaceToLevelSetImageFilterType::New();
+    typedef ssm::MeshToLevelSetImageFilter<MeshType, FloatImageType> MeshToLevelSetImageFilterType;
+    auto surfaceToLevelSetImage = MeshToLevelSetImageFilterType::New();
     surfaceToLevelSetImage->SetInput(vectorOfSurfaces[count]);
     surfaceToLevelSetImage->SetOrigin(levelSetImage->GetOrigin());
     surfaceToLevelSetImage->SetSpacing(levelSetImage->GetSpacing());

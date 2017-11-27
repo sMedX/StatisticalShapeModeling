@@ -9,16 +9,16 @@
 namespace ssm
 {
   template <typename TInputMesh, typename TOutputImage>
-  class SurfaceToLevelSetImageFilter : public itk::ImageSource<TOutputImage>
+  class MeshToLevelSetImageFilter : public itk::ImageSource<TOutputImage>
   {
   public:
-    typedef SurfaceToLevelSetImageFilter    Self;
+    typedef MeshToLevelSetImageFilter    Self;
     typedef itk::ImageSource<TOutputImage>  Superclass;
     typedef itk::SmartPointer<Self>         Pointer;
     typedef itk::SmartPointer<const Self>   ConstPointer;
 
     itkNewMacro(Self);
-    itkTypeMacro(SurfaceToLevelSetImageFilter, itk::ImageSource);
+    itkTypeMacro(MeshToLevelSetImageFilter, itk::ImageSource);
 
     /** Constants for the image dimensions */
     itkStaticConstMacro(Dimension, unsigned int, 3U);
@@ -63,8 +63,8 @@ namespace ssm
     itkGetMacro(BackgroundValue, BinaryPixelype);
 
   protected:
-    SurfaceToLevelSetImageFilter();
-    virtual ~SurfaceToLevelSetImageFilter() {};
+    MeshToLevelSetImageFilter();
+    virtual ~MeshToLevelSetImageFilter() {};
 
     virtual void GenerateOutputInformation() ITK_OVERRIDE {} // do nothing
     virtual void GenerateData() ITK_OVERRIDE;
@@ -85,11 +85,11 @@ namespace ssm
     BinaryPixelype m_ForegroundValue;
 
   private:
-    SurfaceToLevelSetImageFilter(const Self&);
+    MeshToLevelSetImageFilter(const Self&);
     void operator=(const Self&);
   };
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ssmSurfaceToLevelSetImageFilter.hxx"
+#include "ssmMeshToLevelSetImageFilter.hxx"
 #endif
