@@ -6,7 +6,6 @@
 #include <itkLBFGSOptimizer.h>
 
 #include "ssmShapeModelRegistrationMethodBase.h"
-#include "ssmStatisticalShapeModelMultiTransform.h"
 #include "ssmShapeModelToLevelSetImageMetric.h"
 
 namespace ssm

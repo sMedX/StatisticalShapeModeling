@@ -8,7 +8,7 @@
 #include <itkLogger.h>
 #include <itkSingleValuedCostFunction.h>
 
-#include "ssmStatisticalShapeModelMultiTransform.h"
+#include "ssmShapeModelMultiTransform.h"
 #include "ssmShapeModelToLevelSetImageMetric.h"
 
 namespace ssm
@@ -42,7 +42,7 @@ namespace ssm
     typedef itk::SingleValuedCostFunction MetricType;
     typedef typename itk::Optimizer::ScalesType ScalesType;
     typedef itk::Transform<double, PointDimension, PointDimension> SpatialTransformType;
-    typedef StatisticalShapeModelMultiTransform<DatasetType, double> ShapeModelMultiTransformType;
+    typedef ShapeModelMultiTransform<DatasetType, double> ShapeModelMultiTransformType;
 
     /** Returns the transform resulting from the registration process  */
     const OutputMeshType* GetOutput() const;

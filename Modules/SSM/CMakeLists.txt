@@ -5,6 +5,8 @@ set(HEADER
 	ssmBinaryMask3DMeshSource.h
 	ssmBinaryMask3DMeshSource.hxx
     ssmInitializeSpatialTransform.h
+	ssmShapeModelMultiTransform.h
+	ssmShapeModelMultiTransform.hxx
     ssmSurfaceToLevelSetImageFilter.h
     ssmSurfaceToLevelSetImageFilter.hxx
     ssmSurfaceToImageRegistrationMethod.h

@@ -6,11 +6,11 @@
 namespace ssm
 {
 template<typename TDataset, typename TParametersValueType = double>
-class StatisticalShapeModelMultiTransform : public itk::Transform<TParametersValueType, TDataset::PointDimension>
+class ShapeModelMultiTransform : public itk::Transform<TParametersValueType, TDataset::PointDimension>
 {
 public:
   /** Standard class typedefs. */
-  typedef StatisticalShapeModelMultiTransform                            Self;
+  typedef ShapeModelMultiTransform                            Self;
   typedef itk::Transform<TParametersValueType, TDataset::PointDimension> Superclass;
   typedef itk::SmartPointer<Self>                                        Pointer;
   typedef itk::SmartPointer<const Self>                                  ConstPointer;
@@ -19,7 +19,7 @@ public:
   itkNewMacro(Self);
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(StatisticalShapeModelMultiTransform, Transform);
+  itkTypeMacro(ShapeModelMultiTransform, Transform);
 
   /** Dimension of the domain space. */
   itkStaticConstMacro(Dimension, unsigned int, TDataset::PointDimension);
@@ -131,13 +131,13 @@ public:
   }
 
 protected:
-  StatisticalShapeModelMultiTransform();
-  ~StatisticalShapeModelMultiTransform() {};
+  ShapeModelMultiTransform();
+  ~ShapeModelMultiTransform() {};
   /** Print contents of an TranslationTransform. */
   virtual void PrintSelf(std::ostream & os, itk::Indent indent) const ITK_OVERRIDE;
 
 private:
-  StatisticalShapeModelMultiTransform(const Self &) ITK_DELETE_FUNCTION;
+  ShapeModelMultiTransform(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 
   typename ShapeModelType::ConstPointer m_ShapeModel;
@@ -151,5 +151,5 @@ private:
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ssmStatisticalShapeModelMultiTransform.hxx"
+#include "ssmShapeModelMultiTransform.hxx"
 #endif

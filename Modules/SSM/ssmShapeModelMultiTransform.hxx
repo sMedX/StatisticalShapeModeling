@@ -2,14 +2,14 @@
 
 #include <itkIdentityTransform.h>
 
-#include "ssmStatisticalShapeModelMultiTransform.h"
+#include "ssmShapeModelMultiTransform.h"
 
 namespace ssm
 {
 
 template<typename TDataset, typename TParametersValueType>
-StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>
-::StatisticalShapeModelMultiTransform():Superclass(0)
+ShapeModelMultiTransform<TDataset, TParametersValueType>
+::ShapeModelMultiTransform():Superclass(0)
 {
   m_ShapeModel = nullptr;
   m_SpatialTransform = itk::IdentityTransform<TParametersValueType, Dimension>::New();
@@ -20,7 +20,7 @@ StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>
 }
 
 template<typename TDataset, typename TParametersValueType>
-void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::SetParameters(const ParametersType & parameters)
+void ShapeModelMultiTransform<TDataset, TParametersValueType>::SetParameters(const ParametersType & parameters)
 {
   /* Verify proper input size. */
   if (parameters.Size() != this->GetNumberOfParameters()) {
@@ -44,8 +44,8 @@ void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::SetPar
 
 
 template<typename TDataset, typename TParametersValueType>
-const typename StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::ParametersType &
-StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::GetParameters() const
+const typename ShapeModelMultiTransform<TDataset, TParametersValueType>::ParametersType &
+ShapeModelMultiTransform<TDataset, TParametersValueType>::GetParameters() const
 {
   this->m_Parameters.SetSize(this->GetNumberOfParameters());
 
@@ -65,14 +65,14 @@ StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::GetParamete
 
 
 template<typename TDataset, typename TParametersValueType>
-void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::PrintSelf(std::ostream & os, itk::Indent indent) const
+void ShapeModelMultiTransform<TDataset, TParametersValueType>::PrintSelf(std::ostream & os, itk::Indent indent) const
 {
   Superclass::PrintSelf(os, indent);
 }
 
 template<typename TDataset, typename TParametersValueType>
-typename StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::OutputPointType
-StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::TransformPoint(const size_t & index) const
+typename ShapeModelMultiTransform<TDataset, TParametersValueType>::OutputPointType
+ShapeModelMultiTransform<TDataset, TParametersValueType>::TransformPoint(const size_t & index) const
 {
   try {
     return m_SpatialTransform->TransformPoint(m_ShapeModel->DrawSampleAtPoint(m_ShapeModelParameters, index));
@@ -84,8 +84,8 @@ StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::TransformPo
 }
 
 template<typename TDataset, typename TParametersValueType>
-typename StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::OutputPointType
-StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::TransformPoint(const InputPointType & p) const
+typename ShapeModelMultiTransform<TDataset, TParametersValueType>::OutputPointType
+ShapeModelMultiTransform<TDataset, TParametersValueType>::TransformPoint(const InputPointType & p) const
 {
   try {
     return m_SpatialTransform->TransformPoint(m_ShapeModel->DrawSampleAtPoint(m_ShapeModelParameters, p));
@@ -98,7 +98,7 @@ StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>::TransformPo
 
 
 template<typename TDataset, typename TParametersValueType>
-void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>
+void ShapeModelMultiTransform<TDataset, TParametersValueType>
 ::ComputeJacobianWithRespectToParameters( const InputPointType & p, JacobianType & outJacobian) const
 {
   /* Returns a concatenated MxN array, holding the Jacobian of each sub
@@ -111,7 +111,7 @@ void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>
 }
 
 template<typename TDataset, typename TParametersValueType>
-void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>
+void ShapeModelMultiTransform<TDataset, TParametersValueType>
 ::ComputeJacobianWithRespectToParametersCachedTemporaries(const InputPointType & p, JacobianType & outJacobian, JacobianType & jacobianWithRespectToPosition) const
 {
   outJacobian.set_size(Dimension, m_NumberOfParameters);
@@ -124,7 +124,7 @@ void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>
 }
 
 template<typename TDataset, typename TParametersValueType>
-void StatisticalShapeModelMultiTransform<TDataset, TParametersValueType>
+void ShapeModelMultiTransform<TDataset, TParametersValueType>
 ::ComputeJacobianWithRespectToParametersCachedTemporaries(const size_t & index, JacobianType & outJacobian, JacobianType & modelJacobian, JacobianType & spatialJacobian, JacobianType & jacobianWithRespectToPosition) const
 {
   const auto & jacobian = m_ShapeModel->GetJacobian(index);
