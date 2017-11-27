@@ -66,10 +66,10 @@ namespace ssm
     }
 
     template< typename MeshType>
-    void SetPointSetAsMesh(MeshType * mesh)
+    void SetPointSetAsMesh(const MeshType * mesh)
     {
       auto points = PointSetType::New();
-      points->SetPoints(mesh->GetPoints());
+      points->SetPoints(const_cast <typename PointSetType::PointsContainer*> (mesh->GetPoints()));
       this->SetPointSet(points);
     }
 

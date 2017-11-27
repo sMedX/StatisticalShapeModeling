@@ -7,7 +7,7 @@
 #include <itkPointSet.h>
 #include <itkPointSetToImageMetric.h>
 
-#include "ssmTransformInitializer.h"
+#include "ssmInitializeSpatialTransform.h"
 
 namespace ssm
 {
@@ -29,14 +29,15 @@ namespace ssm
     typedef typename itk::Image<float, TInputMesh::PointDimension> LevelsetImageType;
     typedef typename itk::PointSetToImageMetric<PointSetType, LevelsetImageType> MetricType;
     typedef typename itk::LinearInterpolateImageFunction<LevelsetImageType, double> InterpolatorType;
+    typedef InitializeSpatialTransform<double> InitializeTransformType;
 
     itkNewMacro(Self);
     itkTypeMacro(SurfaceToImageRegistrationMethod, itk::MeshToMeshFilter);
 
     // set type of transform
-    itkSetEnumMacro(TypeOfTransform, EnumTransform);
-    itkGetEnumMacro(TypeOfTransform, EnumTransform);
-    void SetTypeOfTransform(size_t transform) { m_TypeOfTransform = static_cast<EnumTransform>(transform); }
+    itkSetEnumMacro(TypeOfTransform, InitializeTransformType::Transform);
+    itkGetEnumMacro(TypeOfTransform, InitializeTransformType::Transform);
+    void SetTypeOfTransform(size_t transform) { m_TypeOfTransform = static_cast<InitializeTransformType::Transform>(transform); }
 
     //Set/Get PotentialImage
     itkGetConstObjectMacro(LevelsetImage, LevelsetImageType);
@@ -81,7 +82,7 @@ namespace ssm
     typename CompositeTransformType::Pointer m_CompositeTransform;
     typename InterpolatorType::Pointer m_Interpolator;
 
-    EnumTransform m_TypeOfTransform = EnumTransform::Euler3D;
+    InitializeTransformType::Transform m_TypeOfTransform = InitializeTransformType::Transform::Euler3D;
     size_t m_NumberOfIterations = 500;
     double m_LineSearchAccuracy = 0.1;
     double m_DefaultStepLength = 0.1;

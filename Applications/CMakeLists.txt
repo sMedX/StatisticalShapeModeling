@@ -23,9 +23,8 @@ target_link_libraries(ssm-cross-validation ${Boost_PROGRAM_OPTIONS_LIBRARY} ${st
 
 add_executable(ssm-fit-shapemodel-to-surface ssm-fit-shapemodel-to-surface.cxx)
 target_link_libraries(ssm-fit-shapemodel-to-surface ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
+add_executable(ssm-specificity ssm-specificity.cxx)
+target_link_libraries(ssm-specificity ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
 
 add_executable(ssm-fit-shapemodel-to-image ssm-fit-shapemodel-to-image.cxx)
 target_link_libraries(ssm-fit-shapemodel-to-image ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})
-
-add_executable(ssm-specificity ssm-specificity.cxx)
-target_link_libraries(ssm-specificity ${Boost_PROGRAM_OPTIONS_LIBRARY} ${statismo_LIBRARIES} ${ITK_LIBRARIES})

@@ -154,13 +154,12 @@ namespace ssm
     typename TransformType::OutputVectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
     // initialize spatial transform
-    typedef ssm::TransformInitializer<double> TransformInitializerType;
-    TransformInitializerType::Pointer initializer = TransformInitializerType::New();
-    initializer->SetTypeOfTransform(m_TypeOfTransform);
+    InitializeTransformType::Pointer initializer = InitializeTransformType::New();
+    initializer->SetTransformType(m_TypeOfTransform);
     initializer->SetCenter(center);
     initializer->SetTranslation(translation);
     try {
-      initializer->Update();
+      initializer->Initialize();
     }
     catch (itk::ExceptionObject& excep) {
       std::cout << excep << std::endl;

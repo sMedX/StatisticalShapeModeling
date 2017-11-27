@@ -8,8 +8,8 @@
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmShapeModelToImageRegistrationMethod.h"
 #include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmInitializeSpatialTransform.h"
 #include "ssmCorrespondenceOptions.h"
-#include "itkTriangleMeshToBinaryImageFilter.h"
 
 typedef itk::StatisticalModel<MeshType> StatisticalModelType;
 StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions);
@@ -221,29 +221,31 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
     VectorType center = movingCalculator->GetCenterOfGravity();
     VectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
-    typedef ssm::TransformInitializer<double> TransformInitializerType;
+    typedef ssm::InitializeSpatialTransform<double> TransformInitializerType;
     TransformInitializerType::Pointer initializer = TransformInitializerType::New();
-    initializer->SetTypeOfTransform(options.GetTransform());
+    initializer->SetTransformType(options.GetTransform());
     initializer->SetCenter(center);
     initializer->SetTranslation(translation);
     try {
-      initializer->Update();
+      initializer->Initialize();
     }
     catch (itk::ExceptionObject& excep) {
       std::cout << excep << std::endl;
       throw;
     }
-    initializer->PrintReport(std::cout);
+    initializer->PrintReport();
 
     // perform registration
-    typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
+    typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, FloatImageType, MeshType> ShapeModelRegistrationMethod;
     auto shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
-    shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
+    shapeModelToSurfaceRegistration->SetImage(levelset->GetOutput());
     shapeModelToSurfaceRegistration->SetNumberOfIterations(options.GetNumberOfIterations());
-    shapeModelToSurfaceRegistration->SetRegularizationParameter(options.GetRegularization()[stage]);
-    shapeModelToSurfaceRegistration->SetDegree(2);
-    shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
+    shapeModelToSurfaceRegistration->SetSpatialTransform(initializer->GetTransform());
+    shapeModelToSurfaceRegistration->SetSpatialScales(initializer->GetScales());
+    shapeModelToSurfaceRegistration->GetMetric()->SetRegularizationParameter(options.GetRegularization()[stage]);
+    shapeModelToSurfaceRegistration->GetMetric()->SetDegree(2);
+
     try {
       shapeModelToSurfaceRegistration->Update();
     }
@@ -251,7 +253,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
       std::cerr << excep << std::endl;
       throw;
     }
-    shapeModelToSurfaceRegistration->PrintReport(std::cout);
+    shapeModelToSurfaceRegistration->PrintReport();
 
     surface = const_cast<MeshType*> (shapeModelToSurfaceRegistration->GetOutput());
   }

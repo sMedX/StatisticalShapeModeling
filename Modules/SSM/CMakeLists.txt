@@ -4,15 +4,17 @@ set(HEADER
     ssmTypes.h
 	ssmBinaryMask3DMeshSource.h
 	ssmBinaryMask3DMeshSource.hxx
-    ssmTransformInitializer.h
+    ssmInitializeSpatialTransform.h
     ssmSurfaceToLevelSetImageFilter.h
     ssmSurfaceToLevelSetImageFilter.hxx
     ssmSurfaceToImageRegistrationMethod.h
     ssmSurfaceToImageRegistrationMethod.hxx
+    ssmShapeModelRegistrationMethodBase.h
+    ssmShapeModelRegistrationMethodBase.hxx
     ssmShapeModelToImageRegistrationMethod.h
     ssmShapeModelToImageRegistrationMethod.hxx
-    ssmShapeModelToImageMetric.h
-    ssmShapeModelToImageMetric.hxx
+    ssmShapeModelToLevelSetImageMetric.h
+    ssmShapeModelToLevelSetImageMetric.hxx
     ssmPointSetToPointSetMetrics.h
     ssmPointSetToImageMetrics.h
     ssmMeshPropertiesCalculator.h
