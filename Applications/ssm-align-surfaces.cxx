@@ -5,7 +5,7 @@
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmMeshToLevelSetImageFilter.h"
-#include "ssmSurfaceToImageRegistrationMethod.h"
+#include "ssmMeshToImageRegistrationMethod.h"
 #include "ssmMeshPropertiesCalculator.h"
 #include "ssmAlignmentOptions.h"
 
@@ -212,8 +212,8 @@ int main(int argc, char** argv) {
       std::cout << "stage " << stage + 1 << "/" << options.GetNumberOfStages() << ", surface " << count + 1 << "/" << vectorOfSurfaces.size() << ", " << vectorOfFiles[count] << std::endl;
 
       // perform surface to image registration
-      typedef ssm::SurfaceToImageRegistrationMethod<MeshType> SurfaceToImageRegistrationMethodType;
-      auto surfaceToImageRegistration = SurfaceToImageRegistrationMethodType::New();
+      typedef ssm::MeshToImageRegistrationMethod<MeshType> MeshToImageRegistrationMethodType;
+      auto surfaceToImageRegistration = MeshToImageRegistrationMethodType::New();
       surfaceToImageRegistration->SetInput(vectorOfSurfaces[count]);
       surfaceToImageRegistration->SetNumberOfIterations(options.GetNumberOfIterations());
       surfaceToImageRegistration->SetTypeOfTransform(options.GetTransform());

@@ -11,11 +11,11 @@
 namespace ssm
 {
   template <typename TInputMesh, typename TOutputMesh = TInputMesh>
-  class SurfaceToImageRegistrationMethod : public itk::MeshToMeshFilter < TInputMesh, TOutputMesh >
+  class MeshToImageRegistrationMethod : public itk::MeshToMeshFilter < TInputMesh, TOutputMesh >
   {
   public:
     // Standard typedefs
-    typedef SurfaceToImageRegistrationMethod Self;
+    typedef MeshToImageRegistrationMethod Self;
     typedef typename itk::MeshToMeshFilter<TInputMesh, TOutputMesh> Superclass;
     typedef typename itk::SmartPointer<Self> Pointer;
     typedef typename itk::SmartPointer<const Self> ConstPointer;
@@ -30,7 +30,7 @@ namespace ssm
     typedef InitializeSpatialTransform<double> InitializeTransformType;
 
     itkNewMacro(Self);
-    itkTypeMacro(SurfaceToImageRegistrationMethod, itk::MeshToMeshFilter);
+    itkTypeMacro(MeshToImageRegistrationMethod, itk::MeshToMeshFilter);
 
     // set type of transform
     itkSetEnumMacro(TypeOfTransform, InitializeTransformType::Transform);
@@ -59,8 +59,8 @@ namespace ssm
     void PrintReport(std::ostream& os) const;
 
   protected:
-    SurfaceToImageRegistrationMethod();
-    ~SurfaceToImageRegistrationMethod() {}
+    MeshToImageRegistrationMethod();
+    ~MeshToImageRegistrationMethod() {}
 
     virtual void GenerateData() override;
     void InitializeTransform();
@@ -89,5 +89,5 @@ namespace ssm
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ssmSurfaceToImageRegistrationMethod.hxx"
+#include "ssmMeshToImageRegistrationMethod.hxx"
 #endif
