@@ -13,9 +13,9 @@
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkMeanSquaresPointSetToImageMetric.h>
 #include <itkBinaryThresholdImageFilter.h>
-#include <limits>
-#include <type_traits>
-#include <algorithm>
+//#include <limits>
+//#include <type_traits>
+//#include <algorithm>
 
 #include "ssmSurfaceToImageRegistrationMethod.h"
 

@@ -3,7 +3,6 @@
 #include <itkImage.h>
 #include <itkMeshToMeshFilter.h>
 #include <itkLBFGSOptimizer.h>
-#include <itkCompositeTransform.h>
 #include <itkPointSet.h>
 #include <itkPointSetToImageMetric.h>
 
@@ -23,7 +22,6 @@ namespace ssm
     typedef itk::LBFGSOptimizer OptimizerType;
     typedef typename itk::Optimizer::ScalesType ScalesType;
     typedef typename itk::Transform<double, TInputMesh::PointDimension> TransformType;
-    typedef typename itk::CompositeTransform<double, TInputMesh::PointDimension> CompositeTransformType;
     typedef typename itk::PointSet<float, TInputMesh::PointDimension> PointSetType;
     typedef typename itk::Image<unsigned char, TInputMesh::PointDimension> BinaryImageType;
     typedef typename itk::Image<float, TInputMesh::PointDimension> LevelsetImageType;
@@ -79,7 +77,6 @@ namespace ssm
     typename LevelsetImageType::ConstPointer m_LevelsetImage;
     typename MetricType::Pointer m_Metric;
     typename TransformType::Pointer m_Transform;
-    typename CompositeTransformType::Pointer m_CompositeTransform;
     typename InterpolatorType::Pointer m_Interpolator;
 
     InitializeTransformType::Transform m_TypeOfTransform = InitializeTransformType::Transform::Euler3D;
