@@ -35,7 +35,7 @@ int main(int argc, char** argv)
   // read list of files
   StringVector listOfFiles;
   try {
-    listOfFiles = readListFromFile(options.GetInputFileName());
+    listOfFiles = readListFromFile(options.GetInputList());
   }
   catch (std::ifstream::failure & e) {
     std::cout << e.what() << std::endl;

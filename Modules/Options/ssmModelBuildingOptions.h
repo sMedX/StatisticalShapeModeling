@@ -11,9 +11,9 @@ class ModelBuildingOptions : public OptionsBase
 {
 public:
 
-  std::string GetInputFileName() const
+  std::string GetInputList() const
   {
-    return this->Get<std::string>("input");
+    return this->Get<std::string>("inplist");
   }
 
   std::string GetOutputFileName() const
@@ -41,7 +41,7 @@ public:
     SetNameOfGroup("MODELBUILDING");
 
     // initialize ptree
-    Put<std::string>("input", "");
+    Put<std::string>("inplist", "");
     Put<std::string>("output", "");
 
     Put<std::string>("alignment", "GPA", 0);
@@ -51,7 +51,7 @@ public:
     // initialize description
     po::options_description mandatoryOptions("Mandatory options");
     mandatoryOptions.add_options()
-      ("input,i", po::value<std::string>(), "File containing a list of meshes to build shape model from")
+      ("inplist,i", po::value<std::string>(), "File containing a list of meshes to build shape model from")
       ("output,o", po::value<std::string>(), "Name of the output file")
       ;
 
