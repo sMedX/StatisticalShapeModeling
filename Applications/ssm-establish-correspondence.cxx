@@ -240,12 +240,12 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
     auto shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
     shapeModelToSurfaceRegistration->SetImage(levelset->GetOutput());
+    shapeModelToSurfaceRegistration->SetComputeLevelSetImage(false);
     shapeModelToSurfaceRegistration->SetNumberOfIterations(options.GetNumberOfIterations());
     shapeModelToSurfaceRegistration->SetSpatialTransform(initializer->GetTransform());
     shapeModelToSurfaceRegistration->SetSpatialScales(initializer->GetScales());
     shapeModelToSurfaceRegistration->GetMetric()->SetRegularizationParameter(options.GetRegularization()[stage]);
     shapeModelToSurfaceRegistration->GetMetric()->SetDegree(2);
-
     try {
       shapeModelToSurfaceRegistration->Update();
     }

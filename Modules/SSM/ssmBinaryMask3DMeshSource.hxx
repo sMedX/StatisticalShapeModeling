@@ -90,7 +90,7 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
 
   // decimate surface
   if (m_NumberOfPoints > 0) {
-    m_Reduction = 1 - (double) m_NumberOfPoints / (double) m_Output->GetNumberOfPoints();
+    m_Reduction = (m_Output->GetNumberOfPoints() - m_NumberOfPoints) / (double) m_Output->GetNumberOfPoints();
     typedef vtkSmartPointer<vtkDecimatePro> DecimatePolyData;
     auto decimate = DecimatePolyData::New();
     decimate->SetInputData(m_Output);
