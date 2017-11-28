@@ -47,7 +47,7 @@ bool extractSurface(const ssm::ReferenceOptions & options )
   auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
   binaryMaskToSurface->SetInput(image);
   binaryMaskToSurface->SetSigma(options.GetSigma());
-  binaryMaskToSurface->SetLevelValue(0);
+  binaryMaskToSurface->SetLevelValue(options.GetLevelValue());
   binaryMaskToSurface->SetComputeLevelValue(false);
   binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
   binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
