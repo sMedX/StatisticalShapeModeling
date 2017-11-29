@@ -1,6 +1,7 @@
 #include <vtkPolyData.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
+#include <itkMultiplyImageFilter.h>
 
 #include "ssmTypes.h"
 #include "ssmUtils.h"
@@ -10,7 +11,6 @@
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
-bool extractSurface(const ssm::ReferenceOptions & options);
 
 int main(int argc, char** argv)
 {
@@ -28,14 +28,6 @@ int main(int argc, char** argv)
     options.PrintConfig();
   }
 
-  // build reference
-  extractSurface(options);
-
-  return EXIT_SUCCESS;
-}
-
-bool extractSurface(const ssm::ReferenceOptions & options )
-{
   // read image
   auto image = FloatImageType::New();
   if (!readImage<FloatImageType>(image, options.GetInputFileName())) {
@@ -43,11 +35,18 @@ bool extractSurface(const ssm::ReferenceOptions & options )
   }
   printImageInfo<FloatImageType>(image, options.GetInputFileName());
 
+  typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
+  auto multiply = FilterType::New();
+  multiply->SetInput(image);
+  multiply->SetConstant(-1);
+  multiply->Update();
+  image = multiply->GetOutput();
+
   typedef ssm::BinaryMask3DMeshSource<FloatImageType, vtkPolyData> BinaryMask3DMeshSourceType;
   auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
   binaryMaskToSurface->SetInput(image);
   binaryMaskToSurface->SetSigma(options.GetSigma());
-  binaryMaskToSurface->SetLevelValue(options.GetLevelValue());
+  binaryMaskToSurface->SetLevelValue((-1) * options.GetLevelValue());
   binaryMaskToSurface->SetComputeLevelValue(false);
   binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
   binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
@@ -88,7 +87,7 @@ bool extractSurface(const ssm::ReferenceOptions & options )
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    return false;
+    return EXIT_FAILURE;
   }
 
   metrics->PrintReport();
@@ -99,7 +98,7 @@ bool extractSurface(const ssm::ReferenceOptions & options )
 
   metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(options.GetOutputFileName()));
 
-  return true;
+  return EXIT_SUCCESS;
 }
 
 double averageLengthOfEdges(vtkPolyData*poly)
