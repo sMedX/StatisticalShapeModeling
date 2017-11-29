@@ -171,7 +171,7 @@ int main(int argc, char** argv)
   metrics->SetImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
   metrics->SetInfo(info);
   metrics->Compute();
-  metrics->PrintReport(std::cout);
+  metrics->PrintReport();
 
   // write report to *.csv file
   std::cout << "print report to the file: " << options.reportFile << std::endl;

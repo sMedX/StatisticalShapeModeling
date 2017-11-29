@@ -91,7 +91,7 @@ bool extractSurface(const ssm::ReferenceOptions & options )
     return false;
   }
 
-  metrics->PrintReport(std::cout);
+  metrics->PrintReport();
 
   // write report to *.csv file
   std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;

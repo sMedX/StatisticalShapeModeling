@@ -235,15 +235,10 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
-  auto multiply = FilterType::New();
-  multiply->SetInput(levelSetImage);
-  multiply->SetConstant(-1);
-
-  if (!writeImage<FloatImageType>(multiply->GetOutput(), options.GetReferenceFileName())) {
+  if (!writeImage<FloatImageType>(levelSetImage, options.GetReferenceFileName())) {
     return EXIT_FAILURE;
   }
-  printImageInfo<FloatImageType>(multiply->GetOutput(), options.GetReferenceFileName());
+  printImageInfo<FloatImageType>(levelSetImage, options.GetReferenceFileName());
 
   //----------------------------------------------------------------------------
   // write aligned surfaces
@@ -264,8 +259,14 @@ int main(int argc, char** argv) {
     auto metrics = PointSetToImageMetricsType::New();
     metrics->SetPointSetAsMesh<MeshType>(vectorOfSurfaces[count]);
     metrics->SetImage(levelSetImage);
-    metrics->Compute();
-    metrics->PrintReport(std::cout);
+    try {
+      metrics->Compute();
+    }
+    catch (itk::ExceptionObject& excep) {
+      std::cerr << excep << std::endl;
+      return EXIT_FAILURE;
+    }
+    metrics->PrintReport();
 
     // print report to *.csv file
     std::cout << "print report to the file: " << options.GetReportFile() << std::endl;

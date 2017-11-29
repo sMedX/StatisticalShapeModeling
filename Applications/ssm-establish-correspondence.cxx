@@ -115,7 +115,7 @@ int main(int argc, char** argv)
         metrics->SetPointSetAsMesh<MeshType>(output);
         metrics->SetImage(levelset->GetOutput());
         metrics->Compute();
-        metrics->PrintReport(std::cout);
+        metrics->PrintReport();
 
         // print report to *.csv file
         std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;

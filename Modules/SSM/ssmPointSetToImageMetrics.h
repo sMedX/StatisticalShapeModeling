@@ -94,22 +94,20 @@ namespace ssm
     itkGetMacro(QuantileValue, double);
     itkGetMacro(MaximalValue, double);
 
-    void PrintReport(std::ostream& os) const
+    void PrintReport() const
     {
-      std::string indent = "    ";
-
       std::cout << "Information" << std::endl;
       for (const auto & pair : m_Info) {
         std::cout << pair.first << " " << pair.second << std::endl;
       }
-      os << std::endl;
+      std::cout << std::endl;
 
-      os << "Metric values" << std::endl;
-      os << indent << "    Mean = " << m_MeanValue << std::endl;
-      os << indent << "    RMSE = " << m_RMSEValue << std::endl;
-      os << indent << "Quantile = " << m_QuantileValue << ", level = " << m_LevelOfQuantile << std::endl;
-      os << indent << " Maximal = " << m_MaximalValue << std::endl;
-      os << std::endl;
+      std::cout << "Metric values" << std::endl;
+      std::cout << "Mean     " << m_MeanValue << std::endl;
+      std::cout << "RMSE     " << m_RMSEValue << std::endl;
+      std::cout << "Quantile " << m_QuantileValue << ", level = " << m_LevelOfQuantile << std::endl;
+      std::cout << "Maximal  " << m_MaximalValue << std::endl;
+      std::cout << std::endl;
     }
 
     void PrintReportToFile(const std::string & fileName, const std::string & datasetURI) const
