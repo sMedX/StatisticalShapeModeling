@@ -6,7 +6,7 @@
 #include "ssmTypes.h"
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
-#include "ssmBinaryMask3DMeshSource.h"
+#include "ssmImage3DMeshSource.h"
 #include "ssmReferenceOptions.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
@@ -42,8 +42,8 @@ int main(int argc, char** argv)
   multiply->Update();
   image = multiply->GetOutput();
 
-  typedef ssm::BinaryMask3DMeshSource<FloatImageType, vtkPolyData> BinaryMask3DMeshSourceType;
-  auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
+  typedef ssm::Image3DMeshSource<FloatImageType, vtkPolyData> Image3DMeshSourceType;
+  auto binaryMaskToSurface = Image3DMeshSourceType::New();
   binaryMaskToSurface->SetInput(image);
   binaryMaskToSurface->SetSigma(options.GetSigma());
   binaryMaskToSurface->SetLevelValue((-1) * options.GetLevelValue());

@@ -6,7 +6,7 @@
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmBinaryImageToLevelSetImageFilter.h"
-#include "ssmBinaryMask3DMeshSource.h"
+#include "ssmImage3DMeshSource.h"
 #include "ssmExtractionOptions.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
@@ -75,8 +75,8 @@ bool extractSurface(const ssm::ExtractionOptions & options )
   }
   printImageInfo<BinaryImageType>(image, options.GetInputFileName());
 
-  typedef ssm::BinaryMask3DMeshSource<BinaryImageType, vtkPolyData> BinaryMask3DMeshSourceType;
-  auto binaryMaskToSurface = BinaryMask3DMeshSourceType::New();
+  typedef ssm::Image3DMeshSource<BinaryImageType, vtkPolyData> Image3DMeshSourceType;
+  auto binaryMaskToSurface = Image3DMeshSourceType::New();
   binaryMaskToSurface->SetInput(image);
   binaryMaskToSurface->SetSigma(options.GetSigma());
   binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());

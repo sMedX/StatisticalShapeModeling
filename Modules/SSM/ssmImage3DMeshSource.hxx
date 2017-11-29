@@ -10,12 +10,12 @@
 #include <vtkPolyDataNormals.h>
 #include <vtkDecimatePro.h>
 
-#include "ssmBinaryMask3DMeshSource.h"
+#include "ssmImage3DMeshSource.h"
 
 namespace ssm
 {
 template< typename TInputImage, typename TOutputMesh >
-BinaryMask3DMeshSource< TInputImage, TOutputMesh>::BinaryMask3DMeshSource()
+Image3DMeshSource< TInputImage, TOutputMesh>::Image3DMeshSource()
 {
   m_Sigma = 0;
   m_NumberOfIterations = 100;
@@ -27,26 +27,26 @@ BinaryMask3DMeshSource< TInputImage, TOutputMesh>::BinaryMask3DMeshSource()
 
 
 template< typename TInputImage, typename TOutputMesh >
-void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::SetInput(const TInputImage *image)
+void Image3DMeshSource< TInputImage, TOutputMesh >::SetInput(const TInputImage *image)
 {
   this->ProcessObject::SetNthInput( 0, const_cast< InputImageType * >( image ) );
 }
 
 template< typename TInputImage, typename TOutputMesh >
-typename TInputImage::ConstPointer BinaryMask3DMeshSource<TInputImage, TOutputMesh>::GetInput()
+typename TInputImage::ConstPointer Image3DMeshSource<TInputImage, TOutputMesh>::GetInput()
 {
   return static_cast<const TInputImage*>(this->ProcessObject::GetInput(0));
 }
 
 template< typename TInputImage, typename TOutputMesh >
-TOutputMesh* BinaryMask3DMeshSource<TInputImage, TOutputMesh>::GetOutput()
+TOutputMesh* Image3DMeshSource<TInputImage, TOutputMesh>::GetOutput()
 {
   return m_Output;
 }
 
 /** Generate the data */
 template< typename TInputImage, typename TOutputMesh >
-void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
+void Image3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
 {
 // compute the minimum and the maximum intensity values of label
   if (m_ComputeLevelValue) {
@@ -123,7 +123,7 @@ void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
 
 /** Print report */
 template< typename TInputImage, typename TOutputMesh >
-void BinaryMask3DMeshSource< TInputImage, TOutputMesh >::PrintReport() const
+void Image3DMeshSource< TInputImage, TOutputMesh >::PrintReport() const
 {
 
 }

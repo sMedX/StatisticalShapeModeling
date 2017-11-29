@@ -6,11 +6,11 @@
 namespace ssm
 {
 template< typename TInputImage, typename TOutputMesh >
-class BinaryMask3DMeshSource:public itk::ProcessObject
+class Image3DMeshSource:public itk::ProcessObject
 {
 public:
   /** Standard "Self" typedef. */
-  typedef BinaryMask3DMeshSource            Self;
+  typedef Image3DMeshSource                 Self;
   typedef itk::ProcessObject                Superclass;
   typedef itk::SmartPointer< Self >         Pointer;
   typedef itk::SmartPointer< const Self >   ConstPointer;
@@ -19,7 +19,7 @@ public:
   itkNewMacro(Self);
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(BinaryMask3DMeshSource, itk::ProcessObject);
+  itkTypeMacro(Image3DMeshSource, itk::ProcessObject);
 
   /** Hold on to the type information specified by the template parameters. */
   typedef TOutputMesh                   OutputMeshType;
@@ -60,14 +60,14 @@ public:
   void PrintReport() const;
 
 protected:
-  BinaryMask3DMeshSource();
-  ~BinaryMask3DMeshSource() {};
+  Image3DMeshSource();
+  ~Image3DMeshSource() {};
 
   void GenerateData() ITK_OVERRIDE;
   typename TInputImage::ConstPointer GetInput();
 
 private:
-  BinaryMask3DMeshSource(const Self &) ITK_DELETE_FUNCTION;
+  Image3DMeshSource(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 
   typedef typename InputImageType::SizeType InputImageSizeType;
@@ -92,5 +92,5 @@ private:
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ssmBinaryMask3DMeshSource.hxx"
+#include "ssmImage3DMeshSource.hxx"
 #endif
