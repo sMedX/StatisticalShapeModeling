@@ -43,22 +43,24 @@ int main(int argc, char** argv)
   image = multiply->GetOutput();
 
   typedef ssm::Image3DMeshSource<FloatImageType, vtkPolyData> Image3DMeshSourceType;
-  auto binaryMaskToSurface = Image3DMeshSourceType::New();
-  binaryMaskToSurface->SetInput(image);
-  binaryMaskToSurface->SetSigma(options.GetSigma());
-  binaryMaskToSurface->SetLevelValue((-1) * options.GetLevelValue());
-  binaryMaskToSurface->SetComputeLevelValue(false);
-  binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
-  binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
-  binaryMaskToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
+  auto imageToSurface = Image3DMeshSourceType::New();
+  imageToSurface->SetInput(image);
+  imageToSurface->SetSigma(options.GetSigma());
+  imageToSurface->SetLevelValue((-1) * options.GetLevelValue());
+  imageToSurface->SetComputeLevelValue(false);
+  imageToSurface->SetSmoothing(options.GetSmoothing());
+  imageToSurface->SetRelaxationFactor(options.GetRelaxationFactor());
+  imageToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
+  imageToSurface->SetDecimation(options.GetDecimation());
+  imageToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
   try {
-    binaryMaskToSurface->Update();
+    imageToSurface->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
     return false;
   }
-  auto surface = binaryMaskToSurface->GetOutput();
+  auto surface = imageToSurface->GetOutput();
 
   // write polydata to the file
   if (!writeVTKPolydata(surface, options.GetOutputFileName())) {
