@@ -35,9 +35,33 @@ public:
   typedef typename InputImageType::RegionType   RegionType;
   typedef typename InputImageType::SizeType     SizeType;
 
+  /** Set/Get input and output data */
   void SetInput(const TInputImage *image);
   OutputMeshType * GetOutput();
-  void Update() { this->GenerateData(); };
+
+  /** Decimation */
+  enum class Decimation
+  {
+    None,
+    QuadricDecimation,
+    DecimatePro
+  };
+
+  itkSetEnumMacro(Decimation, Decimation);
+  itkGetEnumMacro(Decimation, Decimation);
+  void SetDecimation(const int & decimation) { this->SetDecimation(static_cast<Decimation>(decimation)); }
+
+  /** Smoothing */
+  enum class Smoothing
+  {
+    None,
+    WindowedSinc,
+    Laplacian
+  };
+
+  itkSetEnumMacro(Smoothing, Smoothing);
+  itkGetEnumMacro(Smoothing, Smoothing);
+  void SetSmoothing(const int & smoothing) { this->SetSmoothing(static_cast<Smoothing>(smoothing)); }
 
   itkSetMacro(LevelValue, double);
   itkGetMacro(LevelValue, double);
@@ -57,6 +81,7 @@ public:
   itkSetMacro(RelaxationFactor, double);
   itkGetMacro(RelaxationFactor, double);
 
+  void Update() { this->GenerateData(); };
   void PrintReport() const;
 
 protected:
@@ -64,6 +89,8 @@ protected:
   ~Image3DMeshSource() {};
 
   void GenerateData() ITK_OVERRIDE;
+  void SurfaceDecimation();
+  void SurfaceSmoothing();
   typename TInputImage::ConstPointer GetInput();
 
 private:
@@ -84,8 +111,14 @@ private:
   OutputMeshPointer m_OutputMesh;
 
   double m_Sigma;
+
+  Smoothing m_Smoothing;
   size_t m_NumberOfIterations;
   double m_RelaxationFactor;
+  double m_FeatureAngle;
+  double m_PassBand;
+
+  Decimation m_Decimation;
   double m_Reduction;
   size_t m_NumberOfPoints;
 };

@@ -7,8 +7,10 @@
 
 #include <vtkMarchingCubes.h>
 #include <vtkSmoothPolyDataFilter.h>
+#include <vtkWindowedSincPolyDataFilter.h>
 #include <vtkPolyDataNormals.h>
 #include <vtkDecimatePro.h>
+#include <vtkQuadricDecimation.h>
 
 #include "ssmImage3DMeshSource.h"
 
@@ -18,8 +20,14 @@ template< typename TInputImage, typename TOutputMesh >
 Image3DMeshSource< TInputImage, TOutputMesh>::Image3DMeshSource()
 {
   m_Sigma = 0;
+
+  m_Smoothing = Smoothing::WindowedSinc;
   m_NumberOfIterations = 100;
   m_RelaxationFactor = 0.2;
+  m_FeatureAngle = 60.0;
+  m_PassBand = 0.001;
+
+  m_Decimation = Decimation::None;
   m_NumberOfPoints = 0;
 
   m_ComputeLevelValue = true;
@@ -89,28 +97,15 @@ void Image3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
   m_Output = mcubes->GetOutput();
 
   // decimate surface
-  if (m_NumberOfPoints > 0) {
-    m_Reduction = (m_Output->GetNumberOfPoints() - m_NumberOfPoints) / (double) m_Output->GetNumberOfPoints();
-    typedef vtkSmartPointer<vtkDecimatePro> DecimatePolyData;
-    auto decimate = DecimatePolyData::New();
-    decimate->SetInputData(m_Output);
-    decimate->SetTargetReduction(m_Reduction);
-    decimate->SetPreserveTopology(true);
-    decimate->SetSplitting(false);
-    decimate->Update();
-    m_Output = decimate->GetOutput();
-  }
+  this->SurfaceDecimation();
 
-  typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
-  auto smoother = SmoothPolyData::New();
-  smoother->SetInputData(m_Output);
-  smoother->SetNumberOfIterations(m_NumberOfIterations);
-  smoother->SetRelaxationFactor(m_RelaxationFactor);
-  smoother->Update();
+  // smoothing surface
+  this->SurfaceSmoothing();
 
+  // compute normals
   typedef vtkSmartPointer<vtkPolyDataNormals> PolyDataNormals;
   auto normals = PolyDataNormals::New();
-  normals->SetInputData(smoother->GetOutput());
+  normals->SetInputData(m_Output);
   normals->AutoOrientNormalsOn();
   normals->FlipNormalsOff();
   normals->ConsistencyOn();
@@ -119,6 +114,85 @@ void Image3DMeshSource< TInputImage, TOutputMesh >::GenerateData()
   normals->Update();
 
   m_Output = normals->GetOutput();
+}
+
+/** Decimate surface */
+template< typename TInputImage, typename TOutputMesh >
+void Image3DMeshSource< TInputImage, TOutputMesh >::SurfaceDecimation()
+{
+  // decimation
+  if (m_Decimation==Decimation::None || m_NumberOfPoints == 0) {
+    return;
+  }
+
+  m_Reduction = (m_Output->GetNumberOfPoints() - m_NumberOfPoints) / (double)m_Output->GetNumberOfPoints();
+
+  switch (m_Decimation) {
+  case Decimation::DecimatePro: {
+    typedef vtkSmartPointer<vtkDecimatePro> Decimate;
+    auto decimate = Decimate::New();
+    decimate->SetInputData(m_Output);
+    decimate->SetSplitting(false);
+    decimate->SetErrorIsAbsolute(5);
+    decimate->SetFeatureAngle(m_FeatureAngle);
+    decimate->SetPreserveTopology(true);
+    decimate->SetBoundaryVertexDeletion(false);
+    decimate->SetDegree(10); // std-value is 25!
+    decimate->SetTargetReduction(m_Reduction);
+    decimate->SetMaximumError(0.002);
+    decimate->Update();
+    m_Output = decimate->GetOutput();
+    break;
+  }
+  case Decimation::QuadricDecimation: {
+    typedef vtkSmartPointer<vtkQuadricDecimation> Decimation;
+    auto decimate = Decimation::New();
+    decimate->SetInputData(m_Output);
+    decimate->SetTargetReduction(m_Reduction);
+    decimate->Update();
+    m_Output = decimate->GetOutput();
+    break;
+  }
+  }
+}
+
+/** Decimate surface */
+template< typename TInputImage, typename TOutputMesh >
+void Image3DMeshSource< TInputImage, TOutputMesh >::SurfaceSmoothing()
+{
+  // smoothing
+  switch (m_Smoothing) {
+  case Smoothing::Laplacian: {
+    typedef vtkSmartPointer<vtkSmoothPolyDataFilter> SmoothPolyData;
+    auto smoother = SmoothPolyData::New();
+    smoother->SetInputData(m_Output);
+    smoother->SetNumberOfIterations(m_NumberOfIterations);
+    smoother->SetRelaxationFactor(m_RelaxationFactor);
+    smoother->SetFeatureAngle(m_FeatureAngle);
+    smoother->SetConvergence(0);
+    smoother->SetBoundarySmoothing(false);
+    smoother->SetFeatureEdgeSmoothing(false);
+    smoother->Update();
+    m_Output = smoother->GetOutput();
+    break;
+  }
+  case Smoothing::WindowedSinc: {
+    typedef vtkSmartPointer<vtkWindowedSincPolyDataFilter> SmoothPolyData;
+    auto smoother = SmoothPolyData::New();
+    smoother->SetInputData(m_Output);
+    smoother->SetNumberOfIterations(m_NumberOfIterations);
+    smoother->SetFeatureEdgeSmoothing(false);
+    smoother->SetFeatureAngle(m_FeatureAngle);
+    smoother->SetPassBand(m_PassBand);
+    smoother->SetNonManifoldSmoothing(true);
+    smoother->SetNormalizeCoordinates(true);
+    smoother->SetBoundarySmoothing(false);
+    smoother->Update();
+    m_Output = smoother->GetOutput();
+    break;
+  }
+  }
+
 }
 
 /** Print report */
