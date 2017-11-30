@@ -96,11 +96,13 @@ namespace ssm
 
     void PrintReport() const
     {
-      std::cout << "Information" << std::endl;
-      for (const auto & pair : m_Info) {
-        std::cout << pair.first << " " << pair.second << std::endl;
+      if (!m_Info.empty()) {
+        std::cout << "Information" << std::endl;
+        for (const auto & pair : m_Info) {
+          std::cout << pair.first << " " << pair.second << std::endl;
+        }
+        std::cout << std::endl;
       }
-      std::cout << std::endl;
 
       std::cout << "Metric values" << std::endl;
       std::cout << "Mean     " << m_MeanValue << std::endl;
@@ -139,6 +141,9 @@ namespace ssm
 
       bool exist = boost::filesystem::exists(fileName);
       std::ofstream file(fileName, std::ofstream::out | std::ofstream::app);
+      if (!file.is_open()) {
+        throw std::ofstream::failure("Failed to write to the file : " + fileName);
+      }
 
       if (!exist) {
         file << header << std::endl;
