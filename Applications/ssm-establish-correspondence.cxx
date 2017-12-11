@@ -1,4 +1,6 @@
-﻿#include <itkImageMomentsCalculator.h>
+﻿#include <boost/lexical_cast.hpp>
+
+#include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
