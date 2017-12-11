@@ -40,7 +40,7 @@ void ShapeModelToImageRegistrationMethod<TShapeModel, TInputImage, TOutputMesh>:
   // compute level set image
   if (m_ComputeLevelSetImage) {
     typedef ssm::BinaryImageToLevelSetImageFilter<InputImageType, FloatImageType> BinaryImageToLevelSetImageType;
-    BinaryImageToLevelSetImageType::Pointer levelset = BinaryImageToLevelSetImageType::New();
+    auto levelset = BinaryImageToLevelSetImageType::New();
     levelset->SetInput(m_Image);
     levelset->Update();
     m_LevelSetImage = levelset->GetOutput();

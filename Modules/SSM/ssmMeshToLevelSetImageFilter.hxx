@@ -29,7 +29,7 @@ MeshToLevelSetImageFilter<TInputMesh, TOutputImage>::MeshToLevelSetImageFilter()
 template< typename TInputMesh, typename TOutputImage >
 void MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::SetInput(TInputMesh *input)
 {
-  this->ProcessObject::SetNthInput(0, input);
+  this->itk::ProcessObject::SetNthInput(0, input);
 }
 
 /** Get the input Mesh */
@@ -37,7 +37,7 @@ template< typename TInputMesh, typename TOutputImage >
 typename MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
 MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(void)
 {
-  return static_cast<TInputMesh *> (this->ProcessObject::GetInput(0));
+  return static_cast<TInputMesh *> (this->itk::ProcessObject::GetInput(0));
 }
 
 /** Get the input Mesh */
@@ -45,7 +45,7 @@ template< typename TInputMesh, typename TOutputImage >
 typename MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::InputMeshType *
 MeshToLevelSetImageFilter< TInputMesh, TOutputImage >::GetInput(unsigned int idx)
 {
-  return static_cast< TInputMesh * >(this->ProcessObject::GetInput(idx));
+  return static_cast< TInputMesh * >(this->itk::ProcessObject::GetInput(idx));
 }
 
 template <typename TInputMesh, typename TOutputImage>
