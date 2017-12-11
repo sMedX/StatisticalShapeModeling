@@ -10,7 +10,7 @@
 
 namespace ssm
 {
-  template< typename TFixedPointSet, typename TMovingImage >
+  template< typename TPointSet, typename TImage >
   class PointSetToImageMetrics : public itk::Object
   {
   public:
@@ -27,33 +27,59 @@ namespace ssm
     /** Run-time type information (and related methods). */
     itkTypeMacro(PointSetToImageMetrics, Object);
 
-    /** Types transferred from the base class */
-    typedef double                                       MeasureType;
-    typedef TFixedPointSet                               FixedPointSetType;
-    typedef typename FixedPointSetType::PointType        FixedPointType;
-    typedef typename FixedPointSetType::ConstPointer     FixedPointSetConstPointer;
-    typedef TMovingImage                                 MovingImageType;
-    typedef typename MovingImageType::ConstPointer       MovingImageConstPointer;
+    /** Constants for the image dimensions */
+    itkStaticConstMacro(Dimension, unsigned int, TPointSet::PointDimension);
+    static_assert(TPointSet::PointDimension == TImage::ImageDimension, "Invalid dimensions of the input data.");
 
-    typedef typename FixedPointSetType::PointsContainerConstIterator     PointIterator;
-    typedef itk::LinearInterpolateImageFunction<TMovingImage, double>    InterpolatorType;
+    /** Types transferred from the base class */
+    typedef TPointSet                                             PointSetType;
+    typedef typename PointSetType::PointType                      PointType;
+    typedef TImage                                                ImageType;
+    typedef typename PointSetType::PointsContainerConstIterator   PointIterator;
+    typedef itk::LinearInterpolateImageFunction<TImage, double>   InterpolatorType;
 
     /**  Type of the additional information. */
     typedef std::pair<std::string, std::string> PairType;
     typedef std::vector<PairType> InfoType;
     
-    void SetInfo(InfoType& info)
+    void SetInfo(const InfoType& info)  { m_Info = info; }
+
+    /** Set the point set as vtkPolyData.  */
+    template< typename PolyData>
+    void SetPointSetAsPolyData(PolyData * surface)
     {
-      m_Info = info;
+      if (Dimension != 3) {
+        itkExceptionMacro(<<"For the method SetSurfaceAsPolyData dimension 3 is supproted.")
+      }
+
+      auto points = PointSetType::New();
+      PointType point;
+
+      for (size_t n = 0; n < surface->GetPoints()->GetNumberOfPoints(); ++n) {
+        for (size_t i = 0; i < Dimension; ++i) {
+          point[i] = surface->GetPoints()->GetPoint(n)[i];
+        }
+        points->SetPoint(n, point);
+      }
+
+      this->SetPointSet(points);
+    }
+
+    template< typename MeshType>
+    void SetPointSetAsMesh(const MeshType * mesh)
+    {
+      auto points = PointSetType::New();
+      points->SetPoints(const_cast <typename PointSetType::PointsContainer*> (mesh->GetPoints()));
+      this->SetPointSet(points);
     }
 
     /** Get/Set the fixed point set.  */
-    itkSetConstObjectMacro(FixedPointSet, FixedPointSetType);
-    itkGetConstObjectMacro(FixedPointSet, FixedPointSetType);
+    itkSetConstObjectMacro(PointSet, PointSetType);
+    itkGetConstObjectMacro(PointSet, PointSetType);
 
     /** Get/Set the moving image.  */
-    itkSetConstObjectMacro(MovingImage, MovingImageType);
-    itkGetConstObjectMacro(MovingImage, MovingImageType);
+    itkSetConstObjectMacro(Image, ImageType);
+    itkGetConstObjectMacro(Image, ImageType);
 
     /*Get/Set values to compute quantile. */
     itkSetMacro(LevelOfQuantile, double);
@@ -63,21 +89,27 @@ namespace ssm
     itkGetMacro(HistogramSize, size_t);
 
     /*Get metrics values. */
-    itkGetMacro(MeanValue, MeasureType);
-    itkGetMacro(RMSEValue, MeasureType);
-    itkGetMacro(QuantileValue, MeasureType);
-    itkGetMacro(MaximalValue, MeasureType);
+    itkGetMacro(MeanValue, double);
+    itkGetMacro(RMSEValue, double);
+    itkGetMacro(QuantileValue, double);
+    itkGetMacro(MaximalValue, double);
 
-    void PrintReport(std::ostream& os) const
+    void PrintReport() const
     {
-      std::string indent = "    ";
+      if (!m_Info.empty()) {
+        std::cout << "Information" << std::endl;
+        for (const auto & pair : m_Info) {
+          std::cout << pair.first << " " << pair.second << std::endl;
+        }
+        std::cout << std::endl;
+      }
 
-      os << "Metric values:" << std::endl;
-      os << indent << "    Mean = " << m_MeanValue << std::endl;
-      os << indent << "    RMSE = " << m_RMSEValue << std::endl;
-      os << indent << "Quantile = " << m_QuantileValue << ", level = " << m_LevelOfQuantile << std::endl;
-      os << indent << " Maximal = " << m_MaximalValue << std::endl;
-      os << std::endl;
+      std::cout << "Metric values" << std::endl;
+      std::cout << "Mean     " << m_MeanValue << std::endl;
+      std::cout << "RMSE     " << m_RMSEValue << std::endl;
+      std::cout << "Quantile " << m_QuantileValue << ", level = " << m_LevelOfQuantile << std::endl;
+      std::cout << "Maximal  " << m_MaximalValue << std::endl;
+      std::cout << std::endl;
     }
 
     void PrintReportToFile(const std::string & fileName, const std::string & datasetURI) const
@@ -109,6 +141,9 @@ namespace ssm
 
       bool exist = boost::filesystem::exists(fileName);
       std::ofstream file(fileName, std::ofstream::out | std::ofstream::app);
+      if (!file.is_open()) {
+        throw std::ofstream::failure("Failed to write to the file : " + fileName);
+      }
 
       if (!exist) {
         file << header << std::endl;
@@ -121,31 +156,35 @@ namespace ssm
     /**  Compute values. */
     void Compute()
     {
-      if (!m_FixedPointSet) {
+      if (!m_PointSet) {
         itkExceptionMacro(<< "Fixed point set has not been assigned");
       }
 
-      if (!m_MovingImage) {
+      if (!m_Image) {
         itkExceptionMacro(<< "Moving image has not been assigned");
       }
+      if (m_Image->GetSource()) {
+        m_Image->GetSource()->Update();
+      }
+
       m_Interpolator = InterpolatorType::New();
-      m_Interpolator->SetInputImage(m_MovingImage);
+      m_Interpolator->SetInputImage(m_Image);
 
-      m_MeanValue = itk::NumericTraits<MeasureType>::Zero;
-      m_RMSEValue = itk::NumericTraits<MeasureType>::Zero;
-      m_MaximalValue = itk::NumericTraits<MeasureType>::Zero;
+      m_MeanValue = 0;
+      m_RMSEValue = 0;
+      m_MaximalValue = 0;
 
-      typedef itk::Vector<MeasureType, 1> VectorType;
+      typedef itk::Vector<double, 1> VectorType;
       typedef itk::Statistics::ListSample<VectorType> ListSampleType;
       ListSampleType::Pointer sample = ListSampleType::New();
 
       m_NumberOfPixelsCounted = 0;
 
-      for (PointIterator it = m_FixedPointSet->GetPoints()->Begin(); it != m_FixedPointSet->GetPoints()->End(); ++it) {
-        FixedPointType point = it.Value();
+      for (PointIterator it = m_PointSet->GetPoints()->Begin(); it != m_PointSet->GetPoints()->End(); ++it) {
+        PointType point = it.Value();
 
         if (m_Interpolator->IsInsideBuffer(point)) {
-          const MeasureType value = std::abs(m_Interpolator->Evaluate(point));
+          const double value = std::abs(m_Interpolator->Evaluate(point));
           sample->PushBack(value);
 
           m_MeanValue += value;
@@ -160,7 +199,7 @@ namespace ssm
         itkExceptionMacro(<< "All the points mapped to outside of the moving image");
       }
 
-      typedef typename itk::Statistics::Histogram<MeasureType, itk::Statistics::DenseFrequencyContainer2> HistogramType;
+      typedef typename itk::Statistics::Histogram<double, itk::Statistics::DenseFrequencyContainer2> HistogramType;
       typename HistogramType::SizeType size(1);
       size.Fill(m_HistogramSize);
 
@@ -193,14 +232,15 @@ namespace ssm
 
     double m_LevelOfQuantile = 0.95;
     size_t m_HistogramSize = 1000;
-    MeasureType m_MeanValue;
-    MeasureType m_RMSEValue;
-    MeasureType m_QuantileValue;
-    MeasureType m_MaximalValue;
-    InfoType m_Info;
     size_t m_NumberOfPixelsCounted;
 
-    typename FixedPointSetType::ConstPointer m_FixedPointSet;
-    typename MovingImageType::ConstPointer m_MovingImage;
+    double m_MeanValue;
+    double m_RMSEValue;
+    double m_QuantileValue;
+    double m_MaximalValue;
+    InfoType m_Info;
+
+    typename PointSetType::ConstPointer m_PointSet;
+    typename ImageType::ConstPointer m_Image;
   };
 }

@@ -13,17 +13,14 @@
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkMeanSquaresPointSetToImageMetric.h>
 #include <itkBinaryThresholdImageFilter.h>
-#include <limits>
-#include <type_traits>
-#include <algorithm>
 
-#include "ssmSurfaceToImageRegistrationMethod.h"
+#include "ssmMeshToImageRegistrationMethod.h"
 
 namespace ssm
 {
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::SurfaceToImageRegistrationMethod()
+  MeshToImageRegistrationMethod<TInputMesh, TOutputMesh>::MeshToImageRegistrationMethod()
   {
     this->SetNumberOfRequiredInputs(1);
     this->SetNumberOfRequiredOutputs(1);
@@ -31,7 +28,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::GenerateData()
+  void MeshToImageRegistrationMethod<TInputMesh, TOutputMesh>::GenerateData()
   {
     m_Surface = const_cast <TInputMesh*> (this->GetInput());
 
@@ -89,7 +86,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::ComputeLabelImage()
+  void MeshToImageRegistrationMethod<TInputMesh, TOutputMesh>::ComputeLabelImage()
   {
     typedef itk::BinaryThresholdImageFilter <LevelsetImageType, BinaryImageType> BinaryThresholdImageFilterType;
     typename BinaryThresholdImageFilterType::Pointer threshold = BinaryThresholdImageFilterType::New();
@@ -105,7 +102,7 @@ namespace ssm
 
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::InitializeTransform()
+  void MeshToImageRegistrationMethod<TInputMesh, TOutputMesh>::InitializeTransform()
   {
     // compute label of the input level set image to initialize transform
     this->ComputeLabelImage();
@@ -154,13 +151,12 @@ namespace ssm
     typename TransformType::OutputVectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
     // initialize spatial transform
-    typedef ssm::TransformInitializer<double> TransformInitializerType;
-    TransformInitializerType::Pointer initializer = TransformInitializerType::New();
-    initializer->SetTypeOfTransform(m_TypeOfTransform);
+    InitializeTransformType::Pointer initializer = InitializeTransformType::New();
+    initializer->SetTransformType(m_TypeOfTransform);
     initializer->SetCenter(center);
     initializer->SetTranslation(translation);
     try {
-      initializer->Update();
+      initializer->Initialize();
     }
     catch (itk::ExceptionObject& excep) {
       std::cout << excep << std::endl;
@@ -175,7 +171,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::GenerateOutputData()
+  void MeshToImageRegistrationMethod<TInputMesh, TOutputMesh>::GenerateOutputData()
   {
     //compute moved output
     typedef itk::TransformMeshFilter<TOutputMesh, TOutputMesh, TransformType> TransformFilterType;
@@ -194,7 +190,7 @@ namespace ssm
   }
   //----------------------------------------------------------------------------
   template <typename TInputMesh, typename TOutputMesh>
-  void SurfaceToImageRegistrationMethod<TInputMesh, TOutputMesh>::PrintReport(std::ostream& os) const
+  void MeshToImageRegistrationMethod<TInputMesh, TOutputMesh>::PrintReport(std::ostream& os) const
   {
     os << this->GetNameOfClass() << std::endl;
     os << std::endl;

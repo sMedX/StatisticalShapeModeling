@@ -7,8 +7,8 @@
 #include "ssmTypes.h"
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
+#include "ssmInitializeSpatialTransform.h"
 #include "ssmShapeModelToImageRegistrationMethod.h"
-#include "ssmBinaryImageToLevelSetImageFilter.h"
 
 struct ProgramOptions
 {
@@ -16,7 +16,6 @@ struct ProgramOptions
   std::string modelFile;
   std::string imageFile;
   std::string outputFile;
-  std::string levelsetFile;
   std::string reportFile;
   std::string transformFile;
   size_t transform = 2;
@@ -81,18 +80,6 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   //----------------------------------------------------------------------------
-  // compute level set image
-  typedef ssm::BinaryImageToLevelSetImageFilter<BinaryImageType, FloatImageType> BinaryImageToLevelSetImageType;
-  BinaryImageToLevelSetImageType::Pointer levelset = BinaryImageToLevelSetImageType::New();
-  levelset->SetInput(image);
-  try {
-    levelset->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
-  }
-
   // initialize spatial transform
   MeshType::BoundingBoxType::ConstPointer boundingBox = model->DrawMean()->GetBoundingBox();
   BinaryImageType::SpacingType spacing(1);
@@ -132,33 +119,35 @@ int main(int argc, char** argv)
   VectorType center = movingCalculator->GetCenterOfGravity();
   VectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
-  typedef ssm::TransformInitializer<double> TransformInitializerType;
-  TransformInitializerType::Pointer initializer = TransformInitializerType::New();
-  initializer->SetTypeOfTransform(options.transform);
+  // initialize spatial transform
+  typedef ssm::InitializeSpatialTransform <double> InitializeSpatialTransformType;
+  auto initializer = InitializeSpatialTransformType::New();
   initializer->SetCenter(center);
   initializer->SetTranslation(translation);
+  initializer->SetTransformType(options.transform);
   try {
-    initializer->Update();
+    initializer->Initialize();
   }
   catch (itk::ExceptionObject& excep) {
     std::cout << excep << std::endl;
     return EXIT_FAILURE;
   }
-  initializer->PrintReport(std::cout);
+  initializer->PrintReport();
 
   //----------------------------------------------------------------------------
-  // shape model to image registration
-  typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
-  ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
-
-  // perform registration
-  shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
+  // perform shape model to image registration
+  typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, BinaryImageType, MeshType> ShapeModelRegistrationMethodType;
+  auto shapeModelToSurfaceRegistration = ShapeModelRegistrationMethodType::New();
   shapeModelToSurfaceRegistration->SetShapeModel(model);
-  shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
+  shapeModelToSurfaceRegistration->SetImage(image);
+  shapeModelToSurfaceRegistration->SetComputeLevelSetImage(true);
   shapeModelToSurfaceRegistration->SetNumberOfIterations(options.iterations);
-  shapeModelToSurfaceRegistration->SetRegularizationParameter(options.regularization);
-  shapeModelToSurfaceRegistration->SetDegree(options.degree);
-  shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
+  shapeModelToSurfaceRegistration->SetSpatialTransform(initializer->GetTransform());
+  shapeModelToSurfaceRegistration->SetSpatialScales(initializer->GetScales());
+  shapeModelToSurfaceRegistration->GetMetric()->SetRegularizationParameter(options.regularization);
+  shapeModelToSurfaceRegistration->GetMetric()->SetDegree(options.degree);
+  shapeModelToSurfaceRegistration->SetModelScale(3);
+  shapeModelToSurfaceRegistration->SetNumberOfEpochs(1);
   try {
     shapeModelToSurfaceRegistration->Update();
   }
@@ -166,43 +155,32 @@ int main(int argc, char** argv)
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
-  shapeModelToSurfaceRegistration->PrintReport(std::cout);
+  shapeModelToSurfaceRegistration->PrintReport();
 
+  // perform registration
   typedef std::pair<std::string, std::string> PairType;
   std::vector<PairType> info;
   info.push_back(PairType("Metric", std::to_string(shapeModelToSurfaceRegistration->GetOptimizer()->GetValue())));
   info.push_back(PairType("Elapsed time", std::to_string(shapeModelToSurfaceRegistration->GetElapsedTime())));
 
   // compute metrics
-  typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
-  typedef ShapeModelRegistrationMethod::PointSetType PointSetType;
-  PointSetType::Pointer points = PointSetType::New();
-  points->SetPoints(const_cast<PointSetType::PointsContainer*> (shapeModelToSurfaceRegistration->GetOutput()->GetPoints()));
-
-  typedef ssm::PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
+  typedef itk::PointSet<MeshType::PointType, MeshType::PointDimension> PointSetType;
+  typedef ssm::PointSetToImageMetrics<PointSetType, ShapeModelRegistrationMethodType::LevelSetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
-  metrics->SetFixedPointSet(points);
-  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
+  metrics->SetPointSetAsMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput());
+  metrics->SetImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
   metrics->SetInfo(info);
   metrics->Compute();
-  metrics->PrintReport(std::cout);
+  metrics->PrintReport();
 
   // write report to *.csv file
-  if (options.reportFile != "") {
-    std::cout << "print report to the file: " << options.reportFile << std::endl;
-    metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.imageFile));
-  }
+  std::cout << "print report to the file: " << options.reportFile << std::endl;
+  metrics->PrintReportToFile(options.reportFile, getBaseNameFromPath(options.imageFile));
 
   // write surface
   std::cout << "write output surface to the file: " << options.outputFile << std::endl;
   if (!writeMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput(), options.outputFile)) {
     return EXIT_FAILURE;
-  }
-
-  // write levelset image
-  if (options.levelsetFile != "") {
-    std::cout << "write level set image to the file: " << options.levelsetFile << std::endl;
-    writeImage(shapeModelToSurfaceRegistration->GetLevelSetImage(), options.levelsetFile);
   }
 
   // write transform
@@ -233,7 +211,6 @@ po::options_description initializeProgramOptions(ProgramOptions& options)
 
   po::options_description output("Optional output options");
   output.add_options()
-    ("output-levelset", po::value<std::string>(&options.levelsetFile), "The path for the output level-set image.")
     ("output-transform", po::value<std::string>(&options.transformFile), "The path for the output transform file.")
     ;
 

@@ -2,15 +2,21 @@ project(SSM)
 
 set(HEADER
     ssmTypes.h
-    ssmTransformInitializer.h
-    ssmSurfaceToLevelSetImageFilter.h
-    ssmSurfaceToLevelSetImageFilter.hxx
-    ssmSurfaceToImageRegistrationMethod.h
-    ssmSurfaceToImageRegistrationMethod.hxx
+	ssmImage3DMeshSource.h
+	ssmImage3DMeshSource.hxx
+    ssmInitializeSpatialTransform.h
+	ssmShapeModelMultiTransform.h
+	ssmShapeModelMultiTransform.hxx
+    ssmMeshToLevelSetImageFilter.h
+    ssmMeshToLevelSetImageFilter.hxx
+    ssmMeshToImageRegistrationMethod.h
+    ssmMeshToImageRegistrationMethod.hxx
+    ssmShapeModelRegistrationMethodBase.h
+    ssmShapeModelRegistrationMethodBase.hxx
     ssmShapeModelToImageRegistrationMethod.h
     ssmShapeModelToImageRegistrationMethod.hxx
-    ssmShapeModelToImageMetric.h
-    ssmShapeModelToImageMetric.hxx
+    ssmShapeModelToLevelSetImageMetric.h
+    ssmShapeModelToLevelSetImageMetric.hxx
     ssmPointSetToPointSetMetrics.h
     ssmPointSetToImageMetrics.h
     ssmMeshPropertiesCalculator.h

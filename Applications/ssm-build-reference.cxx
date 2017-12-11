@@ -1,95 +1,66 @@
 #include <vtkPolyData.h>
 #include <vtkMath.h>
 #include <vtkCell.h>
+#include <itkMultiplyImageFilter.h>
 
 #include "ssmTypes.h"
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
-#include "ssmBinaryImageToLevelSetImageFilter.h"
 #include "ssmImage3DMeshSource.h"
-#include "ssmExtractionOptions.h"
+#include "ssmReferenceOptions.h"
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
-bool extractSurface(const ssm::ExtractionOptions & options);
 
 int main(int argc, char** argv)
 {
-  ssm::ExtractionOptions options;
+  ssm::ReferenceOptions options;
 
   if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
   }
 
-  if ( !options.ConfigIsEnabled() ) {
-    extractSurface(options);
-    return EXIT_SUCCESS;
-  }
-
-  // read options from config file
-  if (!options.ParseConfigFile()) {
-    return EXIT_FAILURE;
-  }
-  options.PrintConfig();
-
-  // read list of files
-  StringVector listOfInputFiles;
-  try {
-    listOfInputFiles = readListFromFile(options.GetInputList());
-  }
-  catch (std::ifstream::failure & e) {
-    std::cout << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  // extract surfaces
-  StringVector listOfOutputFiles;
-
-  for (const auto & inputFile : listOfInputFiles) {
-    options.SetInputFileName(inputFile);
-    options.SetOutputFileName(options.FormatOutput(inputFile));
-
-    if (extractSurface(options)) {
-      listOfOutputFiles.push_back(options.GetOutputFileName());
+  // if config is enabled read options from config file
+  if ( options.ConfigIsEnabled() ) {
+    if (!options.ParseConfigFile()) {
+      return EXIT_FAILURE;
     }
+    options.PrintConfig();
   }
 
-  // write list of files
-  try {
-    writeListToFile(options.GetOutputList(), listOfOutputFiles);
-  }
-  catch (std::ofstream::failure & e) {
-    std::cout << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
-}
-
-bool extractSurface(const ssm::ExtractionOptions & options )
-{
   // read image
-  auto image = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(image, options.GetInputFileName())) {
+  auto image = FloatImageType::New();
+  if (!readImage<FloatImageType>(image, options.GetInputFileName())) {
     return false;
   }
-  printImageInfo<BinaryImageType>(image, options.GetInputFileName());
+  printImageInfo<FloatImageType>(image, options.GetInputFileName());
 
-  typedef ssm::Image3DMeshSource<BinaryImageType, vtkPolyData> Image3DMeshSourceType;
-  auto binaryMaskToSurface = Image3DMeshSourceType::New();
-  binaryMaskToSurface->SetInput(image);
-  binaryMaskToSurface->SetSigma(options.GetSigma());
-  binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
-  binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
-  binaryMaskToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
+  typedef itk::MultiplyImageFilter <FloatImageType> FilterType;
+  auto multiply = FilterType::New();
+  multiply->SetInput(image);
+  multiply->SetConstant(-1);
+  multiply->Update();
+  image = multiply->GetOutput();
+
+  typedef ssm::Image3DMeshSource<FloatImageType, vtkPolyData> Image3DMeshSourceType;
+  auto imageToSurface = Image3DMeshSourceType::New();
+  imageToSurface->SetInput(image);
+  imageToSurface->SetSigma(options.GetSigma());
+  imageToSurface->SetLevelValue((-1) * options.GetLevelValue());
+  imageToSurface->SetComputeLevelValue(false);
+  imageToSurface->SetSmoothing(options.GetSmoothing());
+  imageToSurface->SetRelaxationFactor(options.GetRelaxationFactor());
+  imageToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
+  imageToSurface->SetDecimation(options.GetDecimation());
+  imageToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
   try {
-    binaryMaskToSurface->Update();
+    imageToSurface->Update();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
     return false;
   }
-  auto surface = binaryMaskToSurface->GetOutput();
+  auto surface = imageToSurface->GetOutput();
 
   // write polydata to the file
   if (!writeVTKPolydata(surface, options.GetOutputFileName())) {
@@ -106,35 +77,30 @@ bool extractSurface(const ssm::ExtractionOptions & options )
   surfaceInfo.push_back(PairType("   area of cells", std::to_string(averageAreaOfCells(surface))));
 
   //----------------------------------------------------------------------------
-  // compute level set image
-  typedef ssm::BinaryImageToLevelSetImageFilter<BinaryImageType, FloatImageType> BinaryImageToLevelSetImageType;
-  auto binaryImageToLevelset = BinaryImageToLevelSetImageType::New();
-  binaryImageToLevelset->SetInput(image);
-
   // compute metrics
   typedef itk::PointSet<float, 3> PointSetType;
   typedef ssm::PointSetToImageMetrics<PointSetType, FloatImageType> PointSetToImageMetricsType;
   auto metrics = PointSetToImageMetricsType::New();
   metrics->SetPointSetAsPolyData<vtkPolyData>(surface);
-  metrics->SetImage(binaryImageToLevelset->GetOutput());
+  metrics->SetImage(image);
   metrics->SetInfo(surfaceInfo);
   try {
     metrics->Compute();
   }
   catch (itk::ExceptionObject& excep) {
     std::cerr << excep << std::endl;
-    return false;
+    return EXIT_FAILURE;
   }
 
   metrics->PrintReport();
 
   // write report to *.csv file
-  std::cout << "print report to the file: " << options.GetReportFile() << std::endl;
+  std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
   std::cout << std::endl;
 
-  metrics->PrintReportToFile(options.GetReportFile(), getBaseNameFromPath(options.GetOutputFileName()));
+  metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(options.GetOutputFileName()));
 
-  return true;
+  return EXIT_SUCCESS;
 }
 
 double averageLengthOfEdges(vtkPolyData*poly)

@@ -8,7 +8,8 @@
 #include "ssmUtils.h"
 #include "ssmPointSetToImageMetrics.h"
 #include "ssmShapeModelToImageRegistrationMethod.h"
-#include "ssmSurfaceToLevelSetImageFilter.h"
+#include "ssmMeshToLevelSetImageFilter.h"
+#include "ssmInitializeSpatialTransform.h"
 
 struct ProgramOptions
 {
@@ -82,23 +83,9 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // compute level set image
-  double margin = 0.20;
+  double margin = 0.10;
   BinaryImageType::SpacingType spacing(1);
 
-  typedef ssm::SurfaceToLevelSetImageFilter<MeshType, FloatImageType> SurfaceToLevelSetImageFilter;
-  SurfaceToLevelSetImageFilter::Pointer levelset = SurfaceToLevelSetImageFilter::New();
-  levelset->SetMargin(margin);
-  levelset->SetSpacing(spacing);
-  levelset->SetInput(surface);
-  try {
-    levelset->Update();
-  }
-  catch (itk::ExceptionObject& excep) {
-    std::cerr << excep << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  // initialize spatial transform
   MeshType::BoundingBoxType::ConstPointer boundingBox = model->DrawMean()->GetBoundingBox();
   BinaryImageType::PointType origin = boundingBox->GetMinimum();
   BinaryImageType::SizeType size;
@@ -122,47 +109,45 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  // moment calculators
+  // initialize spatial transform
   typedef itk::ImageMomentsCalculator<BinaryImageType>  ImageCalculatorType;
   ImageCalculatorType::Pointer movingCalculator = ImageCalculatorType::New();
   movingCalculator->SetImage(shapeToImage->GetOutput());
   movingCalculator->Compute();
 
   ImageCalculatorType::Pointer fixedCalculator = ImageCalculatorType::New();
-  fixedCalculator->SetImage(levelset->GetMask());
+  fixedCalculator->SetImage(shapeToImage->GetOutput());
   fixedCalculator->Compute();
 
   typedef ImageCalculatorType::VectorType VectorType;
   VectorType center = movingCalculator->GetCenterOfGravity();
   VectorType translation = fixedCalculator->GetCenterOfGravity() - movingCalculator->GetCenterOfGravity();
 
-  typedef ssm::TransformInitializer<double> TransformInitializerType;
+  typedef ssm::InitializeSpatialTransform<double> TransformInitializerType;
   TransformInitializerType::Pointer initializer = TransformInitializerType::New();
-  initializer->SetTypeOfTransform(options.transform);
+  initializer->SetTransformType(options.transform);
   initializer->SetCenter(center);
   initializer->SetTranslation(translation);
   try {
-    initializer->Update();
+    initializer->Initialize();
   }
   catch (itk::ExceptionObject& excep) {
     std::cout << excep << std::endl;
     return EXIT_FAILURE;
   }
-  initializer->PrintReport(std::cout);
+  initializer->PrintReport();
 
   //----------------------------------------------------------------------------
-  // shape model to image registration
-  typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, MeshType> ShapeModelRegistrationMethod;
-  ShapeModelRegistrationMethod::Pointer shapeModelToSurfaceRegistration;
-
-  // perform registration
-  shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
+  // perform shape model to image registration
+  typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, BinaryImageType, MeshType> RegistrationMethodType;
+  auto shapeModelToSurfaceRegistration = RegistrationMethodType::New();
   shapeModelToSurfaceRegistration->SetShapeModel(model);
-  shapeModelToSurfaceRegistration->SetLevelSetImage(levelset->GetOutput());
+  shapeModelToSurfaceRegistration->SetImage(shapeToImage->GetOutput());
   shapeModelToSurfaceRegistration->SetNumberOfIterations(options.iterations);
-  shapeModelToSurfaceRegistration->SetRegularizationParameter(options.regularization);
-  shapeModelToSurfaceRegistration->SetDegree(options.degree);
-  shapeModelToSurfaceRegistration->SetTransformInitializer(initializer);
+  shapeModelToSurfaceRegistration->SetSpatialTransform(initializer->GetTransform());
+  shapeModelToSurfaceRegistration->SetSpatialScales(initializer->GetScales());
+  shapeModelToSurfaceRegistration->GetMetric()->SetRegularizationParameter(options.regularization);
+  shapeModelToSurfaceRegistration->GetMetric()->SetDegree(options.degree);
   try {
     shapeModelToSurfaceRegistration->Update();
   }
@@ -170,7 +155,7 @@ int main(int argc, char** argv)
     std::cerr << excep << std::endl;
     return EXIT_FAILURE;
   }
-  shapeModelToSurfaceRegistration->PrintReport(std::cout);
+  shapeModelToSurfaceRegistration->PrintReport();
 
   typedef std::pair<std::string, std::string> PairType;
   std::vector<PairType> info;
@@ -178,18 +163,14 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // compute metrics
-  typedef ShapeModelRegistrationMethod::LevelSetImageType LevelsetImageType;
-  typedef ShapeModelRegistrationMethod::PointSetType PointSetType;
-  PointSetType::Pointer points = PointSetType::New();
-  points->SetPoints(const_cast<PointSetType::PointsContainer*> (shapeModelToSurfaceRegistration->GetOutput()->GetPoints()));
-
-  typedef ssm::PointSetToImageMetrics<PointSetType, LevelsetImageType> PointSetToImageMetricsType;
+  typedef itk::PointSet<MeshType::PointType, MeshType::PointDimension> PointSetType;
+  typedef ssm::PointSetToImageMetrics<PointSetType, RegistrationMethodType::LevelSetImageType> PointSetToImageMetricsType;
   PointSetToImageMetricsType::Pointer metrics = PointSetToImageMetricsType::New();
-  metrics->SetFixedPointSet(points);
-  metrics->SetMovingImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
+  metrics->SetPointSetAsMesh<MeshType>(shapeModelToSurfaceRegistration->GetOutput());
+  metrics->SetImage(shapeModelToSurfaceRegistration->GetLevelSetImage());
   metrics->SetInfo(info);
   metrics->Compute();
-  metrics->PrintReport(std::cout);
+  metrics->PrintReport();
 
   // write report to *.csv file
   if (options.reportFile != "") {

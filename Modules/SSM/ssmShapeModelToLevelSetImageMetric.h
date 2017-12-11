@@ -5,15 +5,17 @@
 #include <itkTransform.h>
 #include <itkInterpolateImageFunction.h>
 #include <itkGradientRecursiveGaussianImageFilter.h>
+#include <itkCovariantVector.h>
+#include <itkLogger.h>
 
 namespace ssm
 {
-template <typename TShapeModel,  typename TImage>
-class ShapeModelToImageMetric:public itk::SingleValuedCostFunction
+template <typename TShapeModel,  typename TTransform, typename TImage>
+class ShapeModelToLevelSetImageMetric:public itk::SingleValuedCostFunction
 {
 public:
   /** Standard class typedefs. */
-  typedef ShapeModelToImageMetric          Self;
+  typedef ShapeModelToLevelSetImageMetric  Self;
   typedef itk::SingleValuedCostFunction    Superclass;
   typedef itk::SmartPointer<Self>          Pointer;
   typedef itk::SmartPointer<const Self>    ConstPointer;
@@ -22,7 +24,7 @@ public:
   itkNewMacro(Self);
 
   /** Run-time type information (and related methods). */
-  itkTypeMacro(ShapeModelToImageMetric, itk::Object);
+  itkTypeMacro(ShapeModelToLevelSetImageMetric, itk::Object);
 
   /** Type used for representing point components  */
   typedef Superclass::ParametersValueType CoordinateRepresentationType;
@@ -45,7 +47,7 @@ public:
   itkStaticConstMacro(PointDimension, unsigned int, TShapeModel::RepresenterType::DatasetType::PointDimension);
 
   /**  Type of the Transform Base class */
-  typedef itk::Transform< CoordinateRepresentationType, itkGetStaticConstMacro(ImageDimension), itkGetStaticConstMacro(PointDimension) > TransformType;
+  typedef TTransform                              TransformType;
   typedef typename TransformType::Pointer         TransformPointer;
   typedef typename TransformType::InputPointType  InputPointType;
   typedef typename TransformType::OutputPointType OutputPointType;
@@ -57,9 +59,8 @@ public:
 
   /** Gaussian filter to compute the gradient of the Moving Image */
   typedef typename itk::NumericTraits< ImagePixelType >::RealType RealType;
-  typedef itk::CovariantVector<RealType, itkGetStaticConstMacro(ImageDimension)> GradientPixelType;
-  typedef itk::Image<GradientPixelType, itkGetStaticConstMacro(ImageDimension)> GradientImageType;
-  typedef itk::SmartPointer<GradientImageType> GradientImagePointer;
+  typedef itk::CovariantVector<RealType, ImageDimension> GradientPixelType;
+  typedef itk::Image<GradientPixelType, ImageDimension> GradientImageType;
   typedef typename itk::GradientRecursiveGaussianImageFilter<TImage, GradientImageType> GradientImageFilterType;
   typedef typename GradientImageFilterType::Pointer GradientImageFilterPointer;
   typedef typename InterpolatorType::Pointer InterpolatorPointer;
@@ -73,19 +74,22 @@ public:
   /**  Type of the parameters. */
   typedef Superclass::ParametersType ParametersType;
 
+  // Set logger
+  itkSetObjectMacro(Logger, itk::Logger);
+
   /** Get/Set the shape model.  */
   itkSetConstObjectMacro(ShapeModel, TShapeModel);
   itkGetConstObjectMacro(ShapeModel, TShapeModel);
 
   /** Get/Set the Moving Image.  */
-  itkSetConstObjectMacro(Image, ImageType);
-  itkGetConstObjectMacro(Image, ImageType);
+  itkSetConstObjectMacro(LevelSetImage, ImageType);
+  itkGetConstObjectMacro(LevelSetImage, ImageType);
 
   /** Connect the Transform. */
-  itkSetObjectMacro(SpatialTransform, TransformType);
+  itkSetObjectMacro(Transform, TransformType);
 
   /** Get a pointer to the Transform.  */
-  itkGetModifiableObjectMacro(SpatialTransform, TransformType);
+  itkGetModifiableObjectMacro(Transform, TransformType);
 
   /** Connect the Interpolator. */
   itkSetObjectMacro(Interpolator, InterpolatorType);
@@ -99,11 +103,8 @@ public:
   /** Get the number of pixels considered in the computation. */
   itkGetConstReferenceMacro(NumberOfSamplesCounted, itk::SizeValueType);
 
-  /** Set the parameters defining the Transform. */
-  void SetTransformParameters(const ParametersType & parameters) const;
-
-  itkSetMacro(RegularizationParameter, MeasureType);
-  itkGetMacro(RegularizationParameter, MeasureType);
+  itkSetMacro(RegularizationParameter, double);
+  itkGetMacro(RegularizationParameter, double);
 
   itkSetMacro(Degree, size_t);
   itkGetMacro(Degree, size_t);
@@ -112,12 +113,12 @@ public:
   itkGetMacro(NumberOfThreads, size_t);
   itkGetMacro(MaximalNumberOfThreads, size_t);
 
-  /** Set/Get the flag for computing the image gradient.
-   *  When ON the metric derivative is computed using the Jacobian of the
-   *  transformation and the image gradient. When OFF the metric derivative
-   *  is computed by finite differences. Mode ON results in higher speed
-   *  at the price of large memory footprint. Mode OFF results in small
-   *  memory footprint at the price of large computation time */
+  itkSetMacro(NumberOfUsedPoints, size_t);
+  itkGetMacro(NumberOfUsedPoints, size_t);
+
+  itkGetMacro(IsInitialized, bool);
+
+  /** Set/Get the flag for computing the image gradient */
   itkSetMacro(ComputeGradient, bool);
   itkGetConstReferenceMacro(ComputeGradient, bool);
 
@@ -140,28 +141,26 @@ public:
   /**Compute penalty.  */
   void CalculateValueAndDerivativePenalty(const TransformParametersType & parameters, MeasureType & value, DerivativeType  & derivative) const;
 
+  void PrintReport() const;
+
 protected:
-  ShapeModelToImageMetric();
-  virtual ~ShapeModelToImageMetric() {}
-  virtual void PrintSelf(std::ostream & os, itk::Indent indent) const ITK_OVERRIDE;
+  ShapeModelToLevelSetImageMetric();
+  virtual ~ShapeModelToLevelSetImageMetric() {}
 
   mutable itk::SizeValueType m_NumberOfSamplesCounted;
   typename PointsContainerType::Pointer m_PointsContainer;
-  ImageConstPointer m_Image;
-  mutable TransformPointer m_SpatialTransform;
+  ImageConstPointer m_LevelSetImage;
+  mutable TransformPointer m_Transform;
   InterpolatorPointer m_Interpolator;
   bool m_ComputeGradient;
-  GradientImagePointer m_GradientImage;
+  typename GradientImageType::Pointer m_GradientImage;
   typename TShapeModel::ConstPointer m_ShapeModel;
-  MeasureType m_RegularizationParameter = 0.1;
-  size_t m_Degree = 2;
-  size_t m_NumberOfComponents;
-  size_t m_NumberOfSpatialParameters;
-  size_t m_NumberOfParameters;
+  double m_RegularizationParameter;
+  unsigned int m_Degree;
   mutable size_t m_NumberOfEvaluations;
-
-  mutable typename TShapeModel::VectorType m_ShapeTransform;
-  mutable TransformParametersType m_SpatialParameters;
+  bool m_IsInitialized;
+  size_t m_NumberOfUsedPoints;
+  size_t m_NumberOfParameters;
 
   // multi threading members and methods
   struct PerThreadData
@@ -182,13 +181,17 @@ protected:
 
   inline void GetValueAndDerivativeThreadProcessSample(PerThreadData & data) const;
   void MultiThreadingInitialize();
+  void SparsePoints();
+
+  itk::Logger::Pointer m_Logger;
+  mutable std::ostringstream m_Message;
 
 private:
-  ShapeModelToImageMetric(const Self &) ITK_DELETE_FUNCTION;
+  ShapeModelToLevelSetImageMetric(const Self &) ITK_DELETE_FUNCTION;
   void operator=(const Self &) ITK_DELETE_FUNCTION;
 };
 }
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "ssmShapeModelToImageMetric.hxx"
+#include "ssmShapeModelToLevelSetImageMetric.hxx"
 #endif

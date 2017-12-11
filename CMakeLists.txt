@@ -53,7 +53,9 @@ endif()
 # ------------------------------------------------------------------------------
 include_directories(${CMAKE_SOURCE_DIR}/Modules/SSM)
 include_directories(${CMAKE_SOURCE_DIR}/Modules/Utils)
+include_directories(${CMAKE_SOURCE_DIR}/Modules/Options)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/Modules/SSM)
+add_subdirectory(${CMAKE_SOURCE_DIR}/Modules/Options)
 add_subdirectory(${CMAKE_SOURCE_DIR}/Modules/Utils)
 add_subdirectory(${CMAKE_SOURCE_DIR}/Applications)

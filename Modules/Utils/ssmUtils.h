@@ -14,6 +14,8 @@
 #include <vtkPolyData.h>
 #include <itkMesh.h>
 
+#include "ssmTypes.h"
+
 //! Reads a templated image from a file via ITK ImageFileReader
 template <typename TImage>
 bool readImage(typename TImage::Pointer image, const std::string& fileName)
@@ -31,6 +33,31 @@ bool readImage(typename TImage::Pointer image, const std::string& fileName)
   }
   image->Graft(reader->GetOutput());
   return true;
+}
+
+//! print information about image
+template <typename TImage>
+void printImageInfo(const TImage* image, const std::string &info = "")
+{
+  if (info.size() > 0) {
+    std::cout << info << std::endl;
+  }
+  std::cout << "    size " << image->GetLargestPossibleRegion().GetSize() << ", " << image->GetNumberOfComponentsPerPixel() << std::endl;
+  std::cout << "  origin " << image->GetOrigin() << std::endl;
+  std::cout << "spacing  " << image->GetSpacing() << std::endl;
+  std::cout << "direction" << std::endl << image->GetDirection() << std::endl;
+}
+
+//! print information about mesh
+template <typename TMesh>
+void printMeshInfo(const TMesh* surface, const std::string &info = "")
+{
+  if (info.size() > 0) {
+    std::cout << info << std::endl;
+  }
+  std::cout << "number of cells  " << surface->GetNumberOfCells() << std::endl;
+  std::cout << "number of points " << surface->GetNumberOfPoints() << std::endl;
+  std::cout << std::endl;
 }
 
 //! Writes a templated image to a file via ITK ImageFileWriter
@@ -180,4 +207,47 @@ std::string getBaseNameFromPath(const std::string& fileName)
 {
   boost::filesystem::path path(fileName);
   return path.stem().string();
+}
+
+StringVector readListFromFile(const std::string& fileName)
+{
+  StringVector list;
+
+  std::ifstream file;
+  try {
+    file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    file.open(fileName.c_str(), std::ifstream::in);
+    std::string line;
+    while (getline(file, line)) {
+      if (line != "") {
+        //reading files with windows EOL on Linux results in the \r not being removed from the line ending
+        if (*line.rbegin() == '\r') {
+          line.erase(line.length() - 1, 1);
+        }
+        list.push_back(line);
+      }
+    }
+  }
+  catch (std::ifstream::failure e) {
+    if (file.eof() == false) {
+      throw std::ifstream::failure("Failed to read list from the file: " + fileName);
+    }
+  }
+
+  return list;
+}
+
+void writeListToFile(const std::string & fileName, const StringVector & list)
+{
+  std::ofstream file(fileName, std::ofstream::out);
+  if (!file.is_open()) {
+    throw std::ofstream::failure("Failed to write list to the file : " + fileName);
+  }
+
+  for (const auto & string : list) {
+    file << string << std::endl;
+  }
+  file.close();
+
+  return;
 }
