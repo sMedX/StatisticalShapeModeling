@@ -2,8 +2,8 @@ project(SSM)
 
 set(HEADER
     ssmTypes.h
-	ssmBinaryMask3DMeshSource.h
-	ssmBinaryMask3DMeshSource.hxx
+	ssmImage3DMeshSource.h
+	ssmImage3DMeshSource.hxx
     ssmInitializeSpatialTransform.h
 	ssmShapeModelMultiTransform.h
 	ssmShapeModelMultiTransform.hxx
