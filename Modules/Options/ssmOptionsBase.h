@@ -34,7 +34,7 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=
   return;
 }
 
-void checkParsedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree, std::string & key, std::vector<std::string> & list)
+void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree, std::string & key, std::vector<std::string> & list)
 {
   if (ptreeOfRequireds.empty()) {
     return;
@@ -46,14 +46,17 @@ void checkParsedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree
 
     if (!tree.empty()) {
       key = key + "." + name;
-      checkParsedTree(ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key, list);
+      checkParsedTree(ptreeOfDefaultValues.get_child(name), ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key, list);
       return;
     }
     else {
-      if (ptreeOfRequireds.get<bool>(name)) {
-        if (parsedPtree.find(name) == parsedPtree.not_found()) {
+      if (parsedPtree.find(name) == parsedPtree.not_found()) {
+        if (ptreeOfRequireds.get<bool>(name)) {
           list.push_back(key + "." + name);
-          continue;
+        }
+        else {
+          const auto & it = ptreeOfDefaultValues.find(name);
+          parsedPtree.put(name, it->second.data());
         }
       }
     }
@@ -124,12 +127,12 @@ public:
 
     // check parsed ptree
     std::vector<std::string> listOfKeys;
-    checkParsedTree(m_PtreeOfRequireds, m_ParsedPtree, m_NameOfGroup, listOfKeys);
+    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, m_NameOfGroup, listOfKeys);
 
     if (listOfKeys.size() > 0) {
       std::cerr << "The keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
       for (const auto & str : listOfKeys) {
-        std::cerr << AddQuotes(str) << std::endl;
+        std::cout << AddQuotes(str) << std::endl;
       }
       return false;
     }
@@ -194,7 +197,7 @@ private:
   char m_Dlm;
 
   pt::ptree m_ParsedPtree;
-  pt::ptree m_PtreeOfRequireds;
+  pt::ptree m_PtreeOfRequired;
   pt::ptree m_PtreeOfDefaultValues;
   po::variables_map m_Vm;
   po::options_description m_Description;
@@ -228,12 +231,9 @@ protected:
   template <typename T>
   void Put(const std::string & str, const T & value, const bool & required = true)
   {
-    m_PtreeOfRequireds.put(str, required);
+    m_PtreeOfRequired.put(str, required);
     m_PtreeOfDefaultValues.put(str, value);
-    if (!required) {
-      m_ParsedPtree.put(Path(str), value);
-    }
-  };
+  }
 
   std::string Path(const std::string & str) const
   {
