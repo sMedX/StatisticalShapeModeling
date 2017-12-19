@@ -20,9 +20,9 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=
     std::string indent(3 * level, ' ');
 
     for (const auto & it : tree) {
-      std::string name = it.first;
-      name.resize(16);
-      os << indent << name << " ";
+      std::string path = it.first;
+      path.resize(16);
+      os << indent << path << " ";
 
       printTree(it.second, os, level + 1);
       os << std::endl;
@@ -34,7 +34,7 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=
   return;
 }
 
-void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & ptreeOfRequired, pt::ptree & parsedPtree, std::string & key, std::vector<std::string> & list)
+void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & ptreeOfRequired, pt::ptree & parsedPtree, std::string & path, std::vector<std::string> & list)
 {
   if (ptreeOfRequired.empty()) {
     return;
@@ -45,13 +45,13 @@ void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & p
     const auto &tree = it.second;
 
     if (!tree.empty()) {
-      key = key + "." + name;
-      checkParsedTree(ptreeOfDefaultValues.get_child(name), ptreeOfRequired.get_child(name), parsedPtree.get_child(name), key, list);
+      path = path + "." + name;
+      checkParsedTree(ptreeOfDefaultValues.get_child(name), ptreeOfRequired.get_child(name), parsedPtree.get_child(name), path, list);
       return;
     }
     if (parsedPtree.find(name) == parsedPtree.not_found()) {
       if (ptreeOfRequired.get<bool>(name)) {
-        list.push_back(key + "." + name);
+        list.push_back(path + "." + name);
       }
       else {
         const auto & it = ptreeOfDefaultValues.find(name);
@@ -253,10 +253,10 @@ protected:
   }
 
   template <typename T>
-  void Put(const std::string & str, const T & value, const bool & required = true)
+  void Put(const std::string & path, const T & value, const bool & required = true)
   {
-    m_PtreeOfRequired.put(str, required);
-    m_PtreeOfDefaultValues.put(str, value);
+    m_PtreeOfRequired.put(path, required);
+    m_PtreeOfDefaultValues.put(path, value);
   }
 
   std::string Path(const std::string & str) const
