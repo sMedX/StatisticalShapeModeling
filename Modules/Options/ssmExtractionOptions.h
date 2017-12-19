@@ -90,28 +90,26 @@ public:
     Put<std::string>("report", "");
 
     Put<double>("sigma", 0, 0);
-    Put<double>("factor", 0.2, 0);
     Put<size_t>("iterations", 100, 0);
     Put<size_t>("points", 0, 0);
 
     // initialize description
     po::options_description mandatoryOptions("Mandatory options");
     mandatoryOptions.add_options()
-      ("input,i", po::value<std::string>(&m_InputFileName), "The path to the input image file.")
-      ("output,o", po::value<std::string>(&m_OutputFileName), "The path for the output surface file.")
+      ("input,i", po::value<std::string>(&m_InputFileName), "Path to input image file.")
+      ("output,o", po::value<std::string>(&m_OutputFileName), "Path for output surface file.")
       ;
 
     po::options_description inputOptions("Optional input options");
     inputOptions.add_options()
-      ("sigma", po::value<double>()->default_value(this->GetDefaultValue<double>("sigma")), "The sigma of the Gaussian kernel measured in world coordinates.")
-      ("factor", po::value<double>()->default_value(this->GetDefaultValue<double>("factor")), "The relaxation factor for Laplacian smoothing.")
-      ("iterations", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("iterations")), "The number of iterations.")
-      ("points", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("points")), "The number of points in output surface.")
+      ("sigma", po::value<double>()->default_value(this->GetDefaultValue<double>("sigma")), "Sigma of the Gaussian kernel for RecursiveGaussianImageFilter to smooth input image")
+      ("iterations", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("iterations")), "Number of iterations to adjust point positions for output surface")
+      ("points", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("points")), "The number of points in output decimated surface (default value 0, i.e. no decimation)")
       ;
 
     po::options_description reportOptions("Optional report options");
     reportOptions.add_options()
-      ("report,r", po::value<std::string>(), "The path for the file to print report.")
+      ("report,r", po::value<std::string>(), "Output report file")
       ;
 
     this->AddToDescription(mandatoryOptions);

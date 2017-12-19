@@ -82,7 +82,6 @@ bool extractSurface(const ssm::ExtractionOptions & options )
   try {
     binaryMaskToSurface->SetSigma(options.GetSigma());
     binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
-    binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
     binaryMaskToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
   }
   catch (...) {
