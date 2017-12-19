@@ -124,13 +124,14 @@ public:
     }
 
     m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
+    PrintConfig();
 
     // check parsed ptree
     std::vector<std::string> listOfKeys;
     checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, m_NameOfGroup, listOfKeys);
 
     if (listOfKeys.size() > 0) {
-      std::cerr << "The keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
+      std::cerr << "The required keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
       for (const auto & str : listOfKeys) {
         std::cout << AddQuotes(str) << std::endl;
       }
