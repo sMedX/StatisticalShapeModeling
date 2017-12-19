@@ -49,9 +49,11 @@ int main(int argc, char** argv)
     options.SetInputFileName(inputFile);
     options.SetOutputFileName(options.FormatOutput(inputFile));
 
-    if (extractSurface(options)) {
-      listOfOutputFiles.push_back(options.GetOutputFileName());
+    if(!extractSurface(options)) {
+      return EXIT_FAILURE;
     }
+
+    listOfOutputFiles.push_back(options.GetOutputFileName());
   }
 
   // write list of files
@@ -78,10 +80,16 @@ bool extractSurface(const ssm::ExtractionOptions & options )
   typedef ssm::Image3DMeshSource<BinaryImageType, vtkPolyData> Image3DMeshSourceType;
   auto binaryMaskToSurface = Image3DMeshSourceType::New();
   binaryMaskToSurface->SetInput(image);
-  binaryMaskToSurface->SetSigma(options.GetSigma());
-  binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
-  binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
-  binaryMaskToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
+  try {
+    binaryMaskToSurface->SetSigma(options.GetSigma());
+    binaryMaskToSurface->SetNumberOfIterations(options.GetNumberOfIterations());
+    binaryMaskToSurface->SetRelaxationFactor(options.GetFactor());
+    binaryMaskToSurface->SetNumberOfPoints(options.GetNumberOfPoints());
+  }
+  catch (...) {
+    return false;
+  }
+
   try {
     binaryMaskToSurface->Update();
   }

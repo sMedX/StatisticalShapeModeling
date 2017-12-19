@@ -150,22 +150,34 @@ public:
     std::cout << "Config data for group " << AddQuotes(m_NameOfGroup) << std::endl;
     printTree(m_ParsedPtree, std::cout, 0);
     std::cout << std::endl;
-  };
+  }
 
   template <typename T>
   T GetDefaultValue(const std::string & str) const
   {
     return m_PtreeOfDefaultValues.get<T>(str);
-  };
+  }
 
   template <typename T>
   T Get(const std::string & name) const
   {
-    if (m_ConfigIsEnabled)
-      return m_ParsedPtree.get<T>(name);
-    else
+    if (m_ConfigIsEnabled) {
+      try {
+        return m_ParsedPtree.get<T>(name);
+      }
+      catch (const pt::ptree_error &e) {
+        const auto & it = m_ParsedPtree.find(name);
+
+        std::cerr << e.what() << std::endl;
+        std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
+        throw;
+      }
+
+    }
+    else {
       return m_Vm[name].as<T>();
-  };
+    }
+  }
 
   template<typename T>
   bool GetAsVector(const std::string & key, std::vector<T> & v)
