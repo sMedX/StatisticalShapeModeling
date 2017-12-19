@@ -162,22 +162,26 @@ public:
   template <typename T>
   T Get(const std::string & name) const
   {
+    T value;
+
     if (m_ConfigIsEnabled) {
       try {
-        return m_ParsedPtree.get<T>(name);
+        value = m_ParsedPtree.get<T>(name);
       }
       catch (const pt::ptree_error &e) {
-        const auto & it = m_ParsedPtree.find(name);
-
         std::cerr << e.what() << std::endl;
-        std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
-        throw;
+        if (m_ParsedPtree.find(name) == m_ParsedPtree.not_found()) {
+          const auto & it = m_ParsedPtree.find(name);
+          std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
+          throw;
+        }
       }
-
     }
     else {
-      return m_Vm[name].as<T>();
+      value = m_Vm[name].as<T>();
     }
+
+    return value;
   }
 
   template<typename T>
