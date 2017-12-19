@@ -22,7 +22,9 @@ int main(int argc, char** argv)
   }
 
   if ( !options.ConfigIsEnabled() ) {
-    extractSurface(options);
+    if (!extractSurface(options)) {
+      return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
   }
 
@@ -40,6 +42,14 @@ int main(int argc, char** argv)
     std::cout << e.what() << std::endl;
     return EXIT_FAILURE;
   }
+
+  // create report file
+  std::ofstream file(options.GetReportFile(), std::ofstream::out);
+  if (!file.is_open()) {
+    std::cerr << "Failed to create report file " << options.GetReportFile() << std::endl;
+    return EXIT_FAILURE;
+  }
+  file.close();
 
   // extract surfaces
   StringVector listOfOutputFiles;
