@@ -28,36 +28,34 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=
       os << std::endl;
     }
   }
-  else {
-    std::cout << " " << tree.data();
-  }
+
+  std::cout << " " << tree.data();
+
   return;
 }
 
-void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree, std::string & key, std::vector<std::string> & list)
+void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & ptreeOfRequired, pt::ptree & parsedPtree, std::string & key, std::vector<std::string> & list)
 {
-  if (ptreeOfRequireds.empty()) {
+  if (ptreeOfRequired.empty()) {
     return;
   }
 
-  for (const auto & it : ptreeOfRequireds) {
+  for (const auto & it : ptreeOfRequired) {
     const auto &name = it.first;
     const auto &tree = it.second;
 
     if (!tree.empty()) {
       key = key + "." + name;
-      checkParsedTree(ptreeOfDefaultValues.get_child(name), ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key, list);
+      checkParsedTree(ptreeOfDefaultValues.get_child(name), ptreeOfRequired.get_child(name), parsedPtree.get_child(name), key, list);
       return;
     }
-    else {
-      if (parsedPtree.find(name) == parsedPtree.not_found()) {
-        if (ptreeOfRequireds.get<bool>(name)) {
-          list.push_back(key + "." + name);
-        }
-        else {
-          const auto & it = ptreeOfDefaultValues.find(name);
-          parsedPtree.put(name, it->second.data());
-        }
+    if (parsedPtree.find(name) == parsedPtree.not_found()) {
+      if (ptreeOfRequired.get<bool>(name)) {
+        list.push_back(key + "." + name);
+      }
+      else {
+        const auto & it = ptreeOfDefaultValues.find(name);
+        parsedPtree.put(name, it->second.data());
       }
     }
   }
@@ -124,11 +122,12 @@ public:
     }
 
     m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
-    PrintConfig();
 
     // check parsed ptree
     std::vector<std::string> listOfKeys;
     checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, m_NameOfGroup, listOfKeys);
+
+    PrintConfig();
 
     if (listOfKeys.size() > 0) {
       std::cerr << "The required keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
@@ -137,7 +136,6 @@ public:
       }
       return false;
     }
-
 
     // clear map of variables from command line
     m_Vm.clear();
@@ -169,12 +167,15 @@ public:
         value = m_ParsedPtree.get<T>(name);
       }
       catch (const pt::ptree_error &e) {
+        std::cerr << "An exception occurred while getting value from ptree." << std::endl;
         std::cerr << e.what() << std::endl;
-        if (m_ParsedPtree.find(name) == m_ParsedPtree.not_found()) {
-          const auto & it = m_ParsedPtree.find(name);
+
+        const auto & it = m_ParsedPtree.find(name);
+        if (it != m_ParsedPtree.not_found()) {
           std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
-          throw;
         }
+
+        throw;
       }
     }
     else {
