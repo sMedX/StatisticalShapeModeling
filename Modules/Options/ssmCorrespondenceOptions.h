@@ -85,12 +85,12 @@ public:
       return false;
     }
 
-    if (!this->GetAsVector<double>("regularization", m_Regularization)) {
-      return false;
+    try {
+      m_Regularization = this->GetAsVector<double>("regularization");
+      m_Parameters = this->GetAsVector<double>("parameters");
+      m_Components = this->GetAsVector<size_t>("components");
     }
-
-    if (!this->GetAsVector<double>("parameters", m_Parameters) ||
-        !this->GetAsVector<size_t>("components", m_Components) ) {
+    catch(...) {
       return false;
     }
 

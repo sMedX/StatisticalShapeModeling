@@ -186,23 +186,31 @@ public:
   }
 
   template<typename T>
-  bool GetAsVector(const std::string & key, std::vector<T> & v)
+  std::vector<T> GetAsVector(const std::string & key)
   {
     std::stringstream stream(Get<std::string>(key));
     std::string item;
 
+    std::vector<T> vector;
+
     while (std::getline(stream, item, m_Dlm)) {
       try {
-        v.push_back(std::stod(item));
+        vector.push_back(std::stod(item));
       }
-      catch (...) {
-        std::cerr << "Error while parsing string in the method GetAsVector." << std::endl;
-        std::cout << "string: " << AddQuotes(Get<std::string>(key)) << std::endl;
-        return false;
+      catch (const std::invalid_argument &e) {
+        std::cerr << "An exception occurred while getting vector from ptree." << std::endl;
+        std::cerr << e.what() << std::endl;
+
+        const auto & it = m_ParsedPtree.find(key);
+        if (it != m_ParsedPtree.not_found()) {
+          std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
+        }
+
+        throw;
       }
     }
 
-    return true;
+    return vector;
   }
 
 
