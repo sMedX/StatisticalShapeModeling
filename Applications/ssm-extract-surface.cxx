@@ -46,7 +46,7 @@ int main(int argc, char** argv)
   // create report file
   std::ofstream file(options.GetReportFile(), std::ofstream::out);
   if (!file.is_open()) {
-    std::cerr << "Failed to create report file " << options.GetReportFile() << std::endl;
+    std::cout << "Failed to create report file " << options.GetReportFile() << std::endl;
     return EXIT_FAILURE;
   }
   file.close();
@@ -54,9 +54,9 @@ int main(int argc, char** argv)
   // extract surfaces
   StringVector listOfOutputFiles;
 
-  for (const auto & inputFile : listOfInputFiles) {
-    options.SetInputFileName(inputFile);
-    options.SetOutputFileName(options.FormatOutput(inputFile));
+  for (const auto & fileName : listOfInputFiles) {
+    options.SetInputFileName(fileName);
+    options.SetOutputFileName(options.FormatOutput(fileName));
 
     if(!extractSurface(options)) {
       return EXIT_FAILURE;
