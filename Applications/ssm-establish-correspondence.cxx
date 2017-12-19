@@ -28,7 +28,6 @@ int main(int argc, char** argv)
   if (!options.ParseConfigFile()) {
     return EXIT_FAILURE;
   }
-  options.PrintConfig();
 
   //----------------------------------------------------------------------------
   // read the reference surface
