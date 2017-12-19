@@ -124,15 +124,15 @@ public:
     m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
 
     // check parsed ptree
-    std::vector<std::string> listOfKeys;
-    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, m_NameOfGroup, listOfKeys);
+    std::vector<std::string> list;
+    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, m_NameOfGroup, list);
 
     PrintConfig();
 
-    if (listOfKeys.size() > 0) {
+    if (list.size() > 0) {
       std::cerr << "The required keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
-      for (const auto & str : listOfKeys) {
-        std::cout << AddQuotes(str) << std::endl;
+      for (const auto & path : list) {
+        std::cout << AddQuotes(path) << std::endl;
       }
       return false;
     }
@@ -259,9 +259,9 @@ protected:
     m_PtreeOfDefaultValues.put(path, value);
   }
 
-  std::string Path(const std::string & str) const
+  std::string Path(const std::string & path) const
   {
-    return m_NameOfGroup + "." + str;
+    return m_NameOfGroup + "." + path;
   }
 };
 }
