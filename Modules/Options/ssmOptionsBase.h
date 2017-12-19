@@ -202,9 +202,7 @@ public:
         std::cerr << e.what() << std::endl;
 
         const auto & it = m_ParsedPtree.find(key);
-        if (it != m_ParsedPtree.not_found()) {
-          std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
-        }
+        std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
 
         throw;
       }
