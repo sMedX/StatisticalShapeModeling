@@ -43,13 +43,10 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  // create report file
-  std::ofstream file(options.GetReportFile(), std::ofstream::out);
-  if (!file.is_open()) {
-    std::cout << "Failed to create report file " << options.GetReportFile() << std::endl;
+  // check file name to write report
+  if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }
-  file.close();
 
   // extract surfaces
   StringVector listOfOutputFiles;
@@ -145,10 +142,10 @@ bool extractSurface(const ssm::ExtractionOptions & options )
   metrics->PrintReport();
 
   // write report to *.csv file
-  std::cout << "print report to the file: " << options.GetReportFile() << std::endl;
+  std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
   std::cout << std::endl;
 
-  metrics->PrintReportToFile(options.GetReportFile(), getBaseNameFromPath(options.GetOutputFileName()));
+  metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(options.GetOutputFileName()));
 
   return true;
 }

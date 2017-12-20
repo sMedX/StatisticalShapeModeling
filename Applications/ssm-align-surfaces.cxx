@@ -38,6 +38,11 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
+  // check file name to write report
+  if (!checkFileName(options.GetReportFileName())) {
+    return EXIT_FAILURE;
+  }
+
   MeshVectorType vectorOfSurfaces;
   std::vector<std::string> vectorOfFiles;
 
@@ -51,8 +56,6 @@ int main(int argc, char** argv) {
     vectorOfFiles.push_back(fileName);
 
     printMeshInfo<MeshType>(surface, fileName);
-
-    std::cout << std::endl;
   }
 
   std::cout << "number of surfaces " << vectorOfSurfaces.size() << std::endl;
@@ -234,10 +237,10 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  if (!writeImage<FloatImageType>(levelSetImage, options.GetReferenceFileName())) {
+  if (!writeImage<FloatImageType>(levelSetImage, options.GetLevelSetFileName())) {
     return EXIT_FAILURE;
   }
-  printImageInfo<FloatImageType>(levelSetImage, options.GetReferenceFileName());
+  printImageInfo<FloatImageType>(levelSetImage, options.GetLevelSetFileName());
 
   //----------------------------------------------------------------------------
   // write aligned surfaces
@@ -268,10 +271,10 @@ int main(int argc, char** argv) {
     metrics->PrintReport();
 
     // print report to *.csv file
-    std::cout << "print report to the file: " << options.GetReportFile() << std::endl;
+    std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
     std::cout << std::endl;
 
-    metrics->PrintReportToFile(options.GetReportFile(), getBaseNameFromPath(fileName));
+    metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(fileName));
   }
 
   // write list of files
