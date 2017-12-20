@@ -251,3 +251,17 @@ void writeListToFile(const std::string & fileName, const StringVector & list)
 
   return;
 }
+
+bool checkFileName(const std::string & fileName)
+{
+  std::ofstream file(fileName, std::ofstream::out);
+  if (!file.is_open()) {
+    std::cerr << "Failed to open file " << fileName << std::endl;
+    return false;
+  }
+
+  file.close();
+  boost::filesystem::remove(fileName);
+
+  return true;
+}
