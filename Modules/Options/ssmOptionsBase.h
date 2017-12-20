@@ -13,7 +13,7 @@ namespace ssm
 //=========================================================================
 // Some basic functions
 //=========================================================================
-void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=0*/)
+void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level = 0)
 {
   if (!tree.empty()) {
     os << std::endl;
@@ -47,8 +47,8 @@ void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & p
     if (!tree.empty()) {
       path = path + "." + name;
       checkParsedTree(ptreeOfDefaultValues.get_child(name), ptreeOfRequired.get_child(name), parsedPtree.get_child(name), path, list);
-      return;
     }
+
     if (parsedPtree.find(name) == parsedPtree.not_found()) {
       if (ptreeOfRequired.get<bool>(name)) {
         list.push_back(path + "." + name);
@@ -123,10 +123,17 @@ public:
 
     m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
 
+    pt::ptree tree;
+    for (const auto & it : m_ParsedPtree) {
+      tree.put(it.first, (it.second).data());
+    }
+    m_ParsedPtree.swap(tree);
+
     // check parsed ptree
     std::vector<std::string> list;
     checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, m_NameOfGroup, list);
 
+    // print parsed tree
     PrintConfig();
 
     if (list.size() > 0) {
@@ -147,7 +154,7 @@ public:
   {
     std::cout << std::endl;
     std::cout << "Config data for group " << AddQuotes(m_NameOfGroup) << std::endl;
-    printTree(m_ParsedPtree, std::cout, 0);
+    printTree(m_ParsedPtree, std::cout);
     std::cout << std::endl;
   }
 
@@ -158,19 +165,19 @@ public:
   }
 
   template <typename T>
-  T Get(const std::string & name) const
+  T Get(const std::string & path) const
   {
     T value;
 
     if (m_ConfigIsEnabled) {
       try {
-        value = m_ParsedPtree.get<T>(name);
+        value = m_ParsedPtree.get<T>(path);
       }
       catch (const pt::ptree_error &e) {
         std::cerr << "An exception occurred while getting value from ptree." << std::endl;
         std::cerr << e.what() << std::endl;
 
-        const auto & it = m_ParsedPtree.find(name);
+        const auto & it = m_ParsedPtree.find(path);
         if (it != m_ParsedPtree.not_found()) {
           std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
         }
@@ -179,29 +186,34 @@ public:
       }
     }
     else {
-      value = m_Vm[name].as<T>();
+      value = m_Vm[path].as<T>();
     }
 
     return value;
   }
 
   template<typename T>
-  std::vector<T> GetAsVector(const std::string & key)
+  std::vector<T> GetAsVector(const std::string & path)
   {
-    std::stringstream stream(Get<std::string>(key));
+    std::stringstream stream(Get<std::string>(path));
     std::string item;
 
     std::vector<T> vector;
 
     while (std::getline(stream, item, m_Dlm)) {
+      // skip empty spaces ''
+      if (item == "")
+        continue;
+
+      // get value
       try {
         vector.push_back(std::stod(item));
       }
       catch (const std::invalid_argument &e) {
         std::cerr << "An exception occurred while getting vector from ptree." << std::endl;
-        std::cerr << e.what() << std::endl;
+        std::cerr << e.what() << " " << AddQuotes(item) << std::endl;
 
-        const auto & it = m_ParsedPtree.find(key);
+        const auto & it = m_ParsedPtree.find(path);
         std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
 
         throw;
