@@ -21,14 +21,14 @@ public:
     return this->Get<std::string>("outlist");
   }
 
-  std::string GetReportFile() const
+  std::string GetReportFileName() const
   {
     return this->Get<std::string>("report");
   }
 
-  std::string GetReferenceFileName() const
+  std::string GetLevelSetFileName() const
   {
-    return this->Get<std::string>("reference");
+    return this->Get<std::string>("levelset");
   }
 
   size_t GetNumberOfStages() const
@@ -68,11 +68,11 @@ public:
     Put<std::string>("outlist", "");
     Put<std::string>("output", "");
     Put<std::string>("report", "");
-    Put<std::string>("reference", "");
+    Put<std::string>("levelset", "");
 
-    Put<size_t>("transform", 2);
-    Put<size_t>("stages", 3);
-    Put<size_t>("iterations", 500);
+    Put<size_t>("transform", 2, false);
+    Put<size_t>("stages", 3, false);
+    Put<size_t>("iterations", 1000, false);
   };
 
 private:

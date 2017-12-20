@@ -41,7 +41,7 @@ public:
     return this->Get<std::string>("outlist");
   }
 
-  std::string GetReportFile() const
+  std::string GetReportFileName() const
   {
     return this->Get<std::string>("report");
   }
