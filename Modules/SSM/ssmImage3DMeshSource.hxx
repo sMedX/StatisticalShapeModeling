@@ -125,34 +125,36 @@ void Image3DMeshSource< TInputImage, TOutputMesh >::SurfaceDecimation()
     return;
   }
 
-  m_Reduction = (m_Output->GetNumberOfPoints() - m_NumberOfPoints) / (double)m_Output->GetNumberOfPoints();
+  while (m_Output->GetNumberOfPoints() != m_NumberOfPoints) {
+    m_Reduction = (m_Output->GetNumberOfPoints() - m_NumberOfPoints) / (double)m_Output->GetNumberOfPoints();
 
-  switch (m_Decimation) {
-  case Decimation::QuadricDecimation: {
-    typedef vtkSmartPointer<vtkQuadricDecimation> Decimation;
-    auto decimate = Decimation::New();
-    decimate->SetInputData(m_Output);
-    decimate->SetTargetReduction(m_Reduction);
-    decimate->Update();
-    m_Output = decimate->GetOutput();
-    break;
-  }
-  case Decimation::DecimatePro: {
-    typedef vtkSmartPointer<vtkDecimatePro> Decimate;
-    auto decimate = Decimate::New();
-    decimate->SetInputData(m_Output);
-    decimate->SetSplitting(false);
-    decimate->SetErrorIsAbsolute(5);
-    decimate->SetFeatureAngle(m_FeatureAngle);
-    decimate->SetPreserveTopology(true);
-    decimate->SetBoundaryVertexDeletion(false);
-    decimate->SetDegree(10); // std-value is 25!
-    decimate->SetTargetReduction(m_Reduction);
-    decimate->SetMaximumError(0.002);
-    decimate->Update();
-    m_Output = decimate->GetOutput();
-    break;
-  }
+    switch (m_Decimation) {
+    case Decimation::QuadricDecimation: {
+      typedef vtkSmartPointer<vtkQuadricDecimation> Decimation;
+      auto decimate = Decimation::New();
+      decimate->SetInputData(m_Output);
+      decimate->SetTargetReduction(m_Reduction);
+      decimate->Update();
+      m_Output = decimate->GetOutput();
+      break;
+    }
+    case Decimation::DecimatePro: {
+      typedef vtkSmartPointer<vtkDecimatePro> Decimate;
+      auto decimate = Decimate::New();
+      decimate->SetInputData(m_Output);
+      decimate->SetSplitting(false);
+      decimate->SetErrorIsAbsolute(5);
+      decimate->SetFeatureAngle(m_FeatureAngle);
+      decimate->SetPreserveTopology(true);
+      decimate->SetBoundaryVertexDeletion(false);
+      decimate->SetDegree(10); // std-value is 25!
+      decimate->SetTargetReduction(m_Reduction);
+      decimate->SetMaximumError(0.002);
+      decimate->Update();
+      m_Output = decimate->GetOutput();
+      break;
+    }
+    }
   }
 }
 
