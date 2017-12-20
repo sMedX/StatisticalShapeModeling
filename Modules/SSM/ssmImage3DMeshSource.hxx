@@ -125,7 +125,7 @@ void Image3DMeshSource< TInputImage, TOutputMesh >::SurfaceDecimation()
     return;
   }
 
-  while (m_Output->GetNumberOfPoints() != m_NumberOfPoints) {
+  while (m_Output->GetNumberOfPoints() > m_NumberOfPoints) {
     m_Reduction = (m_Output->GetNumberOfPoints() - m_NumberOfPoints) / (double)m_Output->GetNumberOfPoints();
 
     switch (m_Decimation) {
