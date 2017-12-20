@@ -26,9 +26,9 @@ public:
     return this->Get<std::string>("report");
   }
 
-  std::string GetLevelSetFileName() const
+  std::string GetReferenceFileName() const
   {
-    return this->Get<std::string>("levelset");
+    return this->Get<std::string>("reference");
   }
 
   size_t GetNumberOfStages() const
@@ -68,7 +68,7 @@ public:
     Put<std::string>("outlist", "");
     Put<std::string>("output", "");
     Put<std::string>("report", "");
-    Put<std::string>("levelset", "");
+    Put<std::string>("reference", "");
 
     Put<size_t>("transform", 2, false);
     Put<size_t>("stages", 3, false);

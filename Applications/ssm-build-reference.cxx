@@ -27,6 +27,11 @@ int main(int argc, char** argv)
     }
   }
 
+  // check file name to write report
+  if (!checkFileName(options.GetReportFileName())) {
+    return EXIT_FAILURE;
+  }
+
   // read image
   auto image = FloatImageType::New();
   if (!readImage<FloatImageType>(image, options.GetInputFileName())) {

@@ -237,10 +237,10 @@ int main(int argc, char** argv) {
 
   //----------------------------------------------------------------------------
   // write reference level set image
-  if (!writeImage<FloatImageType>(levelSetImage, options.GetLevelSetFileName())) {
+  if (!writeImage<FloatImageType>(levelSetImage, options.GetReferenceFileName())) {
     return EXIT_FAILURE;
   }
-  printImageInfo<FloatImageType>(levelSetImage, options.GetLevelSetFileName());
+  printImageInfo<FloatImageType>(levelSetImage, options.GetReferenceFileName());
 
   //----------------------------------------------------------------------------
   // write aligned surfaces

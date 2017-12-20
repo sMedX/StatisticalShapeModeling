@@ -91,10 +91,10 @@ public:
     inputOptions.add_options()
       ("sigma", po::value<double>()->default_value(this->GetDefaultValue<double>("sigma")), "The sigma of the Gaussian kernel measured in world coordinates.")
       ("level", po::value<double>()->default_value(this->GetDefaultValue<double>("level")), "The level value to extract surface from input level set image.")
-      ("smoothing", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("smoothing")), "The method of surface smoothing \n 0 --- None \n 1 --- vtkWindowedSincPolyDataFilter \n 2 --- vtkSmoothPolyDataFilter.")
+      ("smoothing", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("smoothing")), "The method for surface smoothing \n 0 --- None \n 1 --- vtkWindowedSincPolyDataFilter \n 2 --- vtkSmoothPolyDataFilter.")
       ("factor", po::value<double>()->default_value(this->GetDefaultValue<double>("factor")), "The relaxation factor for Laplacian smoothing.")
       ("iterations", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("iterations")), "The number of iterations.")
-      ("decimation", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("decimation")), "The method of surface decimation \n 0 --- None \n 1 --- vtkQuadricDecimation \n 2 --- vtkDecimatePro.")
+      ("decimation", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("decimation")), "The method for surface decimation \n 0 --- None \n 1 --- vtkQuadricDecimation \n 2 --- vtkDecimatePro.")
       ("points", po::value<size_t>()->default_value(this->GetDefaultValue<size_t>("points")), "The number of points in output surface.")
       ;
 
