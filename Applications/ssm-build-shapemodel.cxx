@@ -16,7 +16,8 @@
 #include "ssmUtils.h"
 #include "ssmModelBuildingOptions.h"
 
-void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBuildingOptions & options);
+typedef itk::StatisticalModel<MeshType> ShapeModelType;
+ShapeModelType* shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options);
 
 int main(int argc, char** argv)
 {
@@ -32,9 +33,9 @@ int main(int argc, char** argv)
 
   //----------------------------------------------------------------------------
   // read list of files
-  StringVector listOfFiles;
+  StringVector list;
   try {
-    listOfFiles = readListFromFile(options.GetInputList());
+    list = readListFromFile(options.GetInputList());
   }
   catch (std::ifstream::failure & e) {
     std::cerr << e.what() << std::endl;
@@ -44,10 +45,16 @@ int main(int argc, char** argv)
   //----------------------------------------------------------------------------
   // build shape model
   try {
-    buildAndSaveShapeModel(listOfFiles, options);
+    auto model = shapeModelBuilder(list, options);
+
+    std::cout << "shape model saved to the file " << options.GetOutputFileName() << std::endl;
+    std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
+    std::cout << "number of cells      " << model->GetRepresenter()->GetReference()->GetNumberOfCells() << std::endl;
+    std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
+    model->Save(options.GetOutputFileName().c_str());
   }
   catch (itk::ExceptionObject & e) {
-    std::cerr << "Could not build the model:" << std::endl;
+    std::cerr << "Could not build or save the shape model." << std::endl;
     std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
   }
@@ -55,7 +62,7 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBuildingOptions & options)
+ShapeModelType* shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options)
 {
   const unsigned Dimensions = 3;
 
@@ -70,7 +77,7 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
   typedef std::vector<MeshReaderType::Pointer> MeshReaderVector;
   MeshReaderVector meshes;
 
-  for (const auto & fileName : listOfFiles) {
+  for (const auto & fileName : list) {
     auto reader = MeshReaderType::New();
     reader->SetFileName(fileName);
     reader->Update();
@@ -90,12 +97,11 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
   }
   else {
     std::vector<MeshType::Pointer> originalMeshes;
-
     for (const auto &reader : meshes) {
       originalMeshes.push_back(reader->GetOutput());
     }
 
-    const size_t numberOfGPAIterations = 100;
+    const size_t numberOfIterations = 100;
     const size_t numberOfPoints = 1000;
     const double breakIfChangeBelow = 0.001;
 
@@ -103,25 +109,19 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
     typedef itk::Image<float, Dimensions> ImageType;
     typedef itk::LandmarkBasedTransformInitializer<Rigid3DTransformType, ImageType, ImageType> LandmarkBasedTransformInitializerType;
     typedef itk::TransformMeshFilter< MeshType, MeshType, Rigid3DTransformType > FilterType;
-    auto reference = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, FilterType>(originalMeshes, numberOfGPAIterations, numberOfPoints, breakIfChangeBelow);
+    auto reference = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, FilterType>(originalMeshes, numberOfIterations, numberOfPoints, breakIfChangeBelow);
     representer->SetReference(reference);
   }
 
   dataManager->SetRepresenter(representer);
 
-  for (MeshReaderVector::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
-    auto reader = *it;
+  for (const auto &reader : meshes) {
     dataManager->AddDataset(reader->GetOutput(), reader->GetFileName());
   }
 
   typedef itk::PCAModelBuilder<MeshType> ModelBuilderType;
-  auto pcaModelBuilder = ModelBuilderType::New();
-  auto model = pcaModelBuilder->BuildNewModel(dataManager->GetData(), options.GetNoise());
+  auto modelBuilder = ModelBuilderType::New();
+  auto model = modelBuilder->BuildNewModel(dataManager->GetData(), options.GetNoise());
 
-  std::cout << "shape model saved to the file " << options.GetOutputFileName() << std::endl;
-  std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
-  std::cout << "number of cells      " << model->GetRepresenter()->GetReference()->GetNumberOfCells() << std::endl;
-  std::cout << "number of points     " << model->GetRepresenter()->GetReference()->GetNumberOfPoints() << std::endl;
-
-  model->Save(options.GetOutputFileName().c_str());
+  return model;
 }
