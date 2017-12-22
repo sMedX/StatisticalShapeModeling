@@ -16,8 +16,11 @@
 #include "ssmUtils.h"
 #include "ssmModelBuildingOptions.h"
 
+const unsigned Dimensions = 3;
+typedef itk::Mesh<float, Dimensions> MeshType;
 typedef itk::StatisticalModel<MeshType> ShapeModelType;
-ShapeModelType* shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options);
+
+ShapeModelType::Pointer shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options);
 
 int main(int argc, char** argv)
 {
@@ -62,14 +65,11 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-ShapeModelType* shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options)
+ShapeModelType::Pointer shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options)
 {
-  const unsigned Dimensions = 3;
-
   typedef itk::StandardMeshRepresenter<float, Dimensions> RepresenterType;
   auto representer = RepresenterType::New();
 
-  typedef itk::Mesh<float, Dimensions> MeshType;
   typedef itk::DataManager<MeshType> DataManagerType;
   auto dataManager = DataManagerType::New();
 
@@ -88,7 +88,7 @@ ShapeModelType* shapeModelBuilder(const StringVector & list, const ssm::ModelBui
     itkGenericExceptionMacro(<< "The specified list of surfaces is empty.");
   }
 
-  if (options.GetAlignmentMode() == "reference") {
+  if (options.GetMode() == "reference") {
     typedef itk::MeshFileReader<MeshType> MeshReaderType;
     auto reader = MeshReaderType::New();
     reader->SetFileName(options.GetReferenceFileName());
