@@ -37,7 +37,7 @@ int main(int argc, char** argv)
     listOfFiles = readListFromFile(options.GetInputList());
   }
   catch (std::ifstream::failure & e) {
-    std::cout << e.what() << std::endl;
+    std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
   }
   catch (itk::ExceptionObject & e) {
     std::cerr << "Could not build the model:" << std::endl;
-    std::cout << e.what() << std::endl;
+    std::cerr << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 
@@ -60,18 +60,18 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
   const unsigned Dimensions = 3;
 
   typedef itk::StandardMeshRepresenter<float, Dimensions> RepresenterType;
-  RepresenterType::Pointer representer = RepresenterType::New();
+  auto representer = RepresenterType::New();
 
   typedef itk::Mesh<float, Dimensions> MeshType;
   typedef itk::DataManager<MeshType> DataManagerType;
-  DataManagerType::Pointer dataManager = DataManagerType::New();
+  auto dataManager = DataManagerType::New();
 
   typedef itk::MeshFileReader<MeshType> MeshReaderType;
   typedef std::vector<MeshReaderType::Pointer> MeshReaderVector;
   MeshReaderVector meshes;
 
   for (const auto & fileName : listOfFiles) {
-    MeshReaderType::Pointer reader = MeshReaderType::New();
+    auto reader = MeshReaderType::New();
     reader->SetFileName(fileName);
     reader->Update();
     meshes.push_back(reader);
@@ -83,7 +83,7 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
 
   if (options.GetAlignmentMode() == "reference") {
     typedef itk::MeshFileReader<MeshType> MeshReaderType;
-    MeshReaderType::Pointer reader = MeshReaderType::New();
+    auto reader = MeshReaderType::New();
     reader->SetFileName(options.GetReferenceFileName());
     reader->Update();
     representer->SetReference(reader->GetOutput());
@@ -91,8 +91,7 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
   else {
     std::vector<MeshType::Pointer> originalMeshes;
 
-    for (MeshReaderVector::iterator it = meshes.begin(); it != meshes.end(); ++it) {
-      MeshReaderType::Pointer reader = *it;
+    for (const auto &reader : meshes) {
       originalMeshes.push_back(reader->GetOutput());
     }
 
@@ -104,22 +103,20 @@ void buildAndSaveShapeModel(const StringVector & listOfFiles, const ssm::ModelBu
     typedef itk::Image<float, Dimensions> ImageType;
     typedef itk::LandmarkBasedTransformInitializer<Rigid3DTransformType, ImageType, ImageType> LandmarkBasedTransformInitializerType;
     typedef itk::TransformMeshFilter< MeshType, MeshType, Rigid3DTransformType > FilterType;
-    MeshType::Pointer reference = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, FilterType>(originalMeshes, numberOfGPAIterations, numberOfPoints, breakIfChangeBelow);
+    auto reference = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, FilterType>(originalMeshes, numberOfGPAIterations, numberOfPoints, breakIfChangeBelow);
     representer->SetReference(reference);
   }
 
   dataManager->SetRepresenter(representer);
 
   for (MeshReaderVector::const_iterator it = meshes.begin(); it != meshes.end(); ++it) {
-    MeshReaderType::Pointer reader = *it;
+    auto reader = *it;
     dataManager->AddDataset(reader->GetOutput(), reader->GetFileName());
   }
 
-  typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-  StatisticalModelType::Pointer model;
-  typedef itk::PCAModelBuilder<MeshType> PCAModelBuilder;
-  PCAModelBuilder::Pointer pcaModelBuilder = PCAModelBuilder::New();
-  model = pcaModelBuilder->BuildNewModel(dataManager->GetData(), options.GetNoise());
+  typedef itk::PCAModelBuilder<MeshType> ModelBuilderType;
+  auto pcaModelBuilder = ModelBuilderType::New();
+  auto model = pcaModelBuilder->BuildNewModel(dataManager->GetData(), options.GetNoise());
 
   std::cout << "shape model saved to the file " << options.GetOutputFileName() << std::endl;
   std::cout << "number of components " << model->GetNumberOfPrincipalComponents() << std::endl;
