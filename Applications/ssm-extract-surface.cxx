@@ -28,11 +28,7 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
-  // read options from config file
-  if (!options.ParseConfigFile()) {
-    return EXIT_FAILURE;
-  }
-
+  //----------------------------------------------------------------------------
   // read list of files
   StringVector listOfInputFiles;
   try {
@@ -140,11 +136,6 @@ bool extractSurface(const ssm::ExtractionOptions & options )
   }
 
   metrics->PrintReport();
-
-  // write report to *.csv file
-  std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
-  std::cout << std::endl;
-
   metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(options.GetOutputFileName()));
 
   return true;

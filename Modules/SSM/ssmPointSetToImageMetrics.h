@@ -115,9 +115,12 @@ namespace ssm
     void PrintReportToFile(const std::string & fileName, const std::string & datasetURI) const
     {
       // print report to *.csv file
-      if (fileName.size() > 0) {
+      if (!fileName.size()) {
         return;
       }
+
+      std::cout << "print report to the file " << fileName << std::endl;
+      std::cout << std::endl;
 
       std::string dlm = ";";
 
@@ -149,9 +152,6 @@ namespace ssm
       if (!file.is_open()) {
         throw std::ofstream::failure("Failed to write report to the file " + fileName);
       }
-
-      std::cout << "print report to the file " << fileName << std::endl;
-      std::cout << std::endl;
 
       if (!exist) {
         file << header << std::endl;
