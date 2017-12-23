@@ -55,7 +55,11 @@ public:
       return false;
     }
 
-    return checkFileName(GetReportFileName());
+    if (ConfigIsEnabled()) {
+      return checkFileName(GetReportFileName());
+    }
+
+    return true;
   }
 
   std::string FormatOutput(const std::string & fileName)
