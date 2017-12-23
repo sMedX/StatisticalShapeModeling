@@ -102,7 +102,7 @@ public:
       return false;
     }
 
-    // parse config ini file
+    // parse config *.ini file
     m_ConfigIsEnabled = !m_Vm["config"].empty();
     if (m_ConfigIsEnabled) {
       return ParseConfigFile();
@@ -118,7 +118,7 @@ public:
     }
     catch (const pt::ptree_error &e) {
       std::cerr << "An exception occurred while parsing the config file: " << AddQuotes(m_Config) << std::endl;
-      std::cout << e.what() << endl;
+      std::cerr << e.what() << std::endl;
       return false;
     }
 

@@ -5,7 +5,7 @@
 namespace ssm
 {
 //=========================================================================
-// Surface extraction options
+// Establish correspondence options
 //=========================================================================
 class CorrespondenceOptions : public OptionsBase
 {
