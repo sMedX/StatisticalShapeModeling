@@ -11,7 +11,7 @@ class ModelSpecificityOptions : public OptionsBase
 {
 public:
   std::string GetInputList() { return this->Get<std::string>("inplist"); }
-  std::string GetModelFileName()  {return this->Get<std::string>("specificity.model");}
+  std::string GetModelFileName()  {return this->Get<std::string>("model");}
   std::string GetReportFileName()  {return this->Get<std::string>("specificity.report");}
   size_t GetNumberOfSamples()  {return this->Get<size_t>("specificity.samples");}
 
@@ -21,7 +21,7 @@ public:
 
     // initialize ptree
     this->Put<std::string>("inplist","");
-    this->Put<std::string>("specificity.model", "");
+    this->Put<std::string>("model", "");
     this->Put<std::string>("specificity.report", "", 0);
     this->Put<size_t>("specificity.samples", 1000, 0);
 

@@ -137,7 +137,8 @@ public:
 
     // check parsed ptree
     std::vector<std::string> list;
-    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, m_NameOfGroup, list);
+    std::string path = m_NameOfGroup;
+    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, path, list);
 
     // print parsed tree
     PrintConfig();
