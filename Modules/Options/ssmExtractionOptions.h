@@ -49,8 +49,12 @@ public:
     this->AddToDescription(reportOptions);
   }
 
-  bool CheckOptions()
+  bool ParseOptions(int argc, char** argv)
   {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
+
     return checkFileName(GetReportFileName());
   }
 
