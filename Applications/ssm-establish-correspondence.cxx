@@ -23,10 +23,6 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  if (!options.CheckOptions()) {
-    return EXIT_FAILURE;
-  }
-
   //----------------------------------------------------------------------------
   // read the reference surface
   auto reference = MeshType::New();

@@ -79,6 +79,19 @@ public:
     }
   }
 
+  bool ParseOptions(int argc, char** argv)
+  {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
+
+    if (!CheckOptions()) {
+      return false;
+    }
+
+    return true;
+  }
+
   bool CheckOptions()
   {
     try {
