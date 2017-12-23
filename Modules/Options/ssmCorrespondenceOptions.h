@@ -11,17 +11,26 @@ class CorrespondenceOptions : public OptionsBase
 {
 public:
 
-  std::string GetInputList() const {return this->Get<std::string>("inplist");}
-  std::string GetOutputList() const {return this->Get<std::string>("outlist");}
-  std::string GetReportFileName() const {return this->Get<std::string>("report");}
-  std::string GetReferenceFileName() const {return this->Get<std::string>("reference");}
-  size_t GetNumberOfStages() const {return this->Get<size_t>("stages");}
-  size_t GetNumberOfIterations() const {return this->Get<size_t>("iterations");}
-  size_t GetTransform() const {return this->Get<size_t>("transform");}
-  double GetGPModelScale() const {return this->Get<double>("gpmodel.scale");}
-  std::vector<double> GetGPModelParameters() const {return m_Parameters;}
-  std::vector<size_t> GetGPModelNumberOfComponents() const {return m_Components;}
-  std::vector<double> GetGPModelRegularization() const {return m_Regularization;}
+  CorrespondenceOptions()
+  {
+    SetNameOfGroup("CORRESPONDENCE");
+
+    // initialize ptree
+    Put<std::string>("inplist", "");
+    Put<std::string>("outlist", "");
+    Put<std::string>("output", "");
+    Put<std::string>("report", "");
+    Put<std::string>("reference", "");
+
+    Put<size_t>("transform", 3);
+    Put<size_t>("stages", 1);
+    Put<size_t>("iterations", 1000);
+
+    Put<double>("gpmodel.scale", 50);
+    Put<double>("gpmodel.parameters", 50);
+    Put<size_t>("gpmodel.components", 100);
+    Put<double>("gpmodel.regularization", 0.10);
+  }
 
   std::string FormatOutput(const std::string & fileName)
   {
@@ -78,27 +87,17 @@ public:
     return checkFileName(GetReportFileName());
   }
 
-
-  CorrespondenceOptions()
-  {
-    SetNameOfGroup("CORRESPONDENCE");
-
-    // initialize ptree
-    Put<std::string>("inplist", "");
-    Put<std::string>("outlist", "");
-    Put<std::string>("output", "");
-    Put<std::string>("report", "");
-    Put<std::string>("reference", "");
-
-    Put<size_t>("transform", 3);
-    Put<size_t>("stages", 1);
-    Put<size_t>("iterations", 1000);
-
-    Put<double>("gpmodel.scale", 50);
-    Put<double>("gpmodel.parameters", 50);
-    Put<size_t>("gpmodel.components", 100);
-    Put<double>("gpmodel.regularization", 0.10);
-  };
+  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
+  std::string GetOutputList() const { return this->Get<std::string>("outlist"); }
+  std::string GetReportFileName() const { return this->Get<std::string>("report"); }
+  std::string GetReferenceFileName() const { return this->Get<std::string>("reference"); }
+  size_t GetNumberOfStages() const { return this->Get<size_t>("stages"); }
+  size_t GetNumberOfIterations() const { return this->Get<size_t>("iterations"); }
+  size_t GetTransform() const { return this->Get<size_t>("transform"); }
+  double GetGPModelScale() const { return this->Get<double>("gpmodel.scale"); }
+  std::vector<double> GetGPModelParameters() const { return m_Parameters; }
+  std::vector<size_t> GetGPModelNumberOfComponents() const { return m_Components; }
+  std::vector<double> GetGPModelRegularization() const { return m_Regularization; }
 
 private:
   std::string m_InputFileName;

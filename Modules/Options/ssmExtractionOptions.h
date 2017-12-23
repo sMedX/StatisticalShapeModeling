@@ -11,48 +11,6 @@ class ExtractionOptions : public OptionsBase
 {
 public:
 
-  const std::string & GetInputFileName() const { return m_InputFileName; }
-  const std::string & GetOutputFileName() const { return m_OutputFileName; }
-  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
-  std::string GetOutputList() const { return this->Get<std::string>("outlist"); }
-  std::string GetReportFileName() const { return this->Get<std::string>("report"); }
-  double GetSigma() const { return this->Get<double>("sigma"); }
-  double GetFactor() const { return this->Get<double>("factor"); }
-  size_t GetNumberOfPoints() const { return this->Get<size_t>("points"); }
-  size_t GetNumberOfIterations() const { return this->Get<size_t>("iterations"); }
-
-  void SetInputFileName(const std::string & str)
-  {
-    m_InputFileName = str;
-  }
-
-  void SetOutputFileName(const std::string & str) 
-  { 
-    m_OutputFileName = str;
-  }
-
-  std::string FormatOutput(const std::string & fileName)
-  {
-    const auto & format = this->Get<std::string>("output");
-    try {
-      return (boost::format(format) % getBaseNameFromPath(fileName)).str();
-    }
-    catch (const boost::io::format_error &e) {
-      std::cerr << "Could not format string with format " << format << std::endl;
-      std::cout << e.what() << std::endl;
-      throw;
-    }
-  }
-
-  bool ParseOptions(int argc, char** argv)
-  {
-    if (!OptionsBase::ParseOptions(argc, argv)) {
-      return false;
-    }
-
-    return checkFileName(GetReportFileName());
-  }
-
   ExtractionOptions()
   {
     SetNameOfGroup("EXTRACTION");
@@ -89,10 +47,53 @@ public:
     this->AddToDescription(mandatoryOptions);
     this->AddToDescription(inputOptions);
     this->AddToDescription(reportOptions);
-  };
+  }
+
+  bool ParseOptions(int argc, char** argv)
+  {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
+
+    return checkFileName(GetReportFileName());
+  }
+
+  void SetInputFileName(const std::string & str)
+  {
+    m_InputFileName = str;
+  }
+
+  void SetOutputFileName(const std::string & str)
+  {
+    m_OutputFileName = str;
+  }
+
+  std::string FormatOutput(const std::string & fileName)
+  {
+    const auto & format = this->Get<std::string>("output");
+    try {
+      return (boost::format(format) % getBaseNameFromPath(fileName)).str();
+    }
+    catch (const boost::io::format_error &e) {
+      std::cerr << "Could not format string with format " << format << std::endl;
+      std::cout << e.what() << std::endl;
+      throw;
+    }
+  }
+
+  const std::string & GetInputFileName() const { return m_InputFileName; }
+  const std::string & GetOutputFileName() const { return m_OutputFileName; }
+  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
+  std::string GetOutputList() const { return this->Get<std::string>("outlist"); }
+  std::string GetReportFileName() const { return this->Get<std::string>("report"); }
+  double GetSigma() const { return this->Get<double>("sigma"); }
+  double GetFactor() const { return this->Get<double>("factor"); }
+  size_t GetNumberOfPoints() const { return this->Get<size_t>("points"); }
+  size_t GetNumberOfIterations() const { return this->Get<size_t>("iterations"); }
 
 private:
   std::string m_InputFileName;
   std::string m_OutputFileName;
+
 };
 }

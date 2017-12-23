@@ -10,19 +10,6 @@ namespace ssm
 class ModelCrossValidationOptions : public OptionsBase
 {
 public:
-  std::string GetInputList() const {return this->Get<std::string>("inplist");}
-  std::string GetReportFileName()const {return this->Get<std::string>("cvtest.report");}
-  int GetNumberOfComponents() const {return this->Get<int>("cvtest.components");}
-  bool GetWrite() const {return this->Get<bool>("cvtest.write");}
-  
-  bool ParseOptions(int argc, char** argv)
-  {
-    if (!OptionsBase::ParseOptions(argc, argv)) {
-      return false;
-    }
-
-    return checkFileName(GetReportFileName());
-  }
 
   ModelCrossValidationOptions()
   {
@@ -50,5 +37,19 @@ public:
     this->AddToDescription(mandatoryOptions);
     this->AddToDescription(inputOptions);
   }
+
+  bool ParseOptions(int argc, char** argv)
+  {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
+
+    return checkFileName(GetReportFileName());
+  }
+
+  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
+  std::string GetReportFileName()const { return this->Get<std::string>("cvtest.report"); }
+  int GetNumberOfComponents() const { return this->Get<int>("cvtest.components"); }
+  bool GetWrite() const { return this->Get<bool>("cvtest.write"); }
 };
 }

@@ -10,26 +10,13 @@ namespace ssm
 class ModelSpecificityOptions : public OptionsBase
 {
 public:
-  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
-  std::string GetModelFileName() const {return this->Get<std::string>("model");}
-  std::string GetReportFileName() const {return this->Get<std::string>("specificity.report");}
-  size_t GetNumberOfSamples() const {return this->Get<size_t>("specificity.samples");}
-
-  bool ParseOptions(int argc, char** argv)
-  {
-    if (!OptionsBase::ParseOptions(argc, argv)) {
-      return false;
-    }
-
-    return checkFileName(GetReportFileName());
-  }
 
   ModelSpecificityOptions()
   {
     this->SetNameOfGroup("MODELQUALITY");
 
     // initialize ptree
-    this->Put<std::string>("inplist","");
+    this->Put<std::string>("inplist", "");
     this->Put<std::string>("model", "");
     this->Put<std::string>("specificity.report", "", 0);
     this->Put<size_t>("specificity.samples", 1000, 0);
@@ -51,7 +38,18 @@ public:
     this->AddToDescription(inputOptions);
   }
 
-private:
+  bool ParseOptions(int argc, char** argv)
+  {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
 
+    return checkFileName(GetReportFileName());
+  }
+
+  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
+  std::string GetModelFileName() const { return this->Get<std::string>("model"); }
+  std::string GetReportFileName() const { return this->Get<std::string>("specificity.report"); }
+  size_t GetNumberOfSamples() const { return this->Get<size_t>("specificity.samples"); }
 };
 }
