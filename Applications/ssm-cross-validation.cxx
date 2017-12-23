@@ -9,23 +9,18 @@
 #include "ssmTypes.h"
 #include "ssmUtils.h"
 #include "ssmPointSetToPointSetMetrics.h"
-#include "ssmModelQualityOptions.h"
+#include "ssmModelCrossValidationOptions.h"
 
-typedef MeshType::PointType PointType;
 typedef statismo::DataManager<MeshType> DataManagerType;
-typedef itk::StandardMeshRepresenter<float, Dimension> RepresenterType;
-typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-
 typedef itk::PCAModelBuilder<MeshType> ModelBuilderType;
 typedef itk::ReducedVarianceModelBuilder<MeshType> ReducedVarianceModelBuilderType;
-typedef statismo::VectorType VectorType;
 typedef DataManagerType::CrossValidationFoldListType CVFoldListType;
 typedef DataManagerType::DataItemListType DataItemListType;
 
 int main(int argc, char** argv)
 {
-  // read options from config file
-  ssm::ModelQualityOptions options;
+  // parse options
+  ssm::ModelCrossValidationOptions options;
 
   if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
@@ -102,7 +97,6 @@ int main(int argc, char** argv)
         typedef std::pair<std::string, std::string> PairType;
         std::vector<PairType> info;
         info.push_back(PairType("components", std::to_string(model->GetNumberOfPrincipalComponents())));
-        info.push_back(PairType("probability", std::to_string(model->ComputeProbabilityOfDataset(testSample))));
 
         // compute metrics
         typedef itk::PointSet<MeshType::PointType, MeshType::PointDimension> PointSetType;

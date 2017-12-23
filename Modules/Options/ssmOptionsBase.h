@@ -192,7 +192,12 @@ public:
       }
     }
     else {
-      value = m_Vm[path].as<T>();
+      auto pos = path.find_last_of('.');
+
+      if (pos < path.size())
+        value = m_Vm[path.substr(pos + 1)].as<T>();
+      else
+        value = m_Vm[path].as<T>();
     }
 
     return value;
