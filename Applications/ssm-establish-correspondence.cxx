@@ -1,6 +1,4 @@
-﻿#include <boost/lexical_cast.hpp>
-
-#include <itkImageMomentsCalculator.h>
+﻿#include <itkImageMomentsCalculator.h>
 #include <itkLowRankGPModelBuilder.h>
 #include <itkStandardMeshRepresenter.h>
 #include <statismo-build-gp-model-kernels.h>
@@ -13,19 +11,14 @@
 #include "ssmInitializeSpatialTransform.h"
 #include "ssmCorrespondenceOptions.h"
 
-typedef itk::StatisticalModel<MeshType> StatisticalModelType;
-StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions);
-MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer model, const ssm::CorrespondenceOptions & options);
+ShapeModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions);
+MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, ShapeModelType::Pointer model, const ssm::CorrespondenceOptions & options);
 
 int main(int argc, char** argv)
 {
   ssm::CorrespondenceOptions options;
-  if (!options.ParseCommandLine(argc, argv)) {
-    return EXIT_FAILURE;
-  }
 
-  // read options from config file
-  if (!options.ParseConfigFile()) {
+  if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
   }
 
@@ -162,7 +155,7 @@ int main(int argc, char** argv)
 }
 //==============================================================================
 // Shape model to surface registration
-MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, StatisticalModelType::Pointer initialModel, const ssm::CorrespondenceOptions & options)
+MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, ShapeModelType::Pointer initialModel, const ssm::CorrespondenceOptions & options)
 {
   // compute level set image
   typedef ssm::MeshToLevelSetImageFilter<MeshType, FloatImageType> MeshToLevelSetImageFilter;
@@ -242,7 +235,7 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
     initializer->PrintReport();
 
     // perform registration
-    typedef ssm::ShapeModelToImageRegistrationMethod<StatisticalModelType, FloatImageType, MeshType> ShapeModelRegistrationMethod;
+    typedef ssm::ShapeModelToImageRegistrationMethod<ShapeModelType, FloatImageType, MeshType> ShapeModelRegistrationMethod;
     auto shapeModelToSurfaceRegistration = ShapeModelRegistrationMethod::New();
     shapeModelToSurfaceRegistration->SetShapeModel(model);
     shapeModelToSurfaceRegistration->SetImage(levelset->GetOutput());
@@ -269,14 +262,12 @@ MeshType::Pointer shapeModelToSurfaceRegistration(MeshType::Pointer surface, Sta
 
 //==============================================================================
 // Build Gaussian process model
-StatisticalModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions)
+ShapeModelType::Pointer buildGPModel(MeshType::Pointer surface, double parameters, double scale, size_t numberOfBasisFunctions)
 {
   itk::TimeProbe tp;
   tp.Start();
 
   // create kernel
-  typedef DataTypeShape::PointType PointType;
-
   typedef std::shared_ptr<const statismo::ScalarValuedKernel<PointType>> MatrixPointerType;
   MatrixPointerType kernel(new GaussianKernel<PointType>(parameters));
 

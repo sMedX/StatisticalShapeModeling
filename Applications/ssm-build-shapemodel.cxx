@@ -16,21 +16,13 @@
 #include "ssmUtils.h"
 #include "ssmModelBuildingOptions.h"
 
-const unsigned Dimensions = 3;
-typedef itk::Mesh<float, Dimensions> MeshType;
-typedef itk::StatisticalModel<MeshType> ShapeModelType;
-
 ShapeModelType::Pointer shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options);
 
 int main(int argc, char** argv)
 {
-  // read options from config file
   ssm::ModelBuildingOptions options;
-  if (!options.ParseCommandLine(argc, argv)) {
-    return EXIT_FAILURE;
-  }
 
-  if (!options.ParseConfigFile()) {
+  if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
   }
 
@@ -67,7 +59,6 @@ int main(int argc, char** argv)
 
 ShapeModelType::Pointer shapeModelBuilder(const StringVector & list, const ssm::ModelBuildingOptions & options)
 {
-  typedef itk::StandardMeshRepresenter<float, Dimensions> RepresenterType;
   auto representer = RepresenterType::New();
 
   typedef itk::DataManager<MeshType> DataManagerType;
@@ -106,10 +97,9 @@ ShapeModelType::Pointer shapeModelBuilder(const StringVector & list, const ssm::
     const double breakIfChangeBelow = 0.001;
 
     typedef itk::VersorRigid3DTransform< float > Rigid3DTransformType;
-    typedef itk::Image<float, Dimensions> ImageType;
-    typedef itk::LandmarkBasedTransformInitializer<Rigid3DTransformType, ImageType, ImageType> LandmarkBasedTransformInitializerType;
-    typedef itk::TransformMeshFilter< MeshType, MeshType, Rigid3DTransformType > FilterType;
-    auto reference = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, FilterType>(originalMeshes, numberOfIterations, numberOfPoints, breakIfChangeBelow);
+    typedef itk::LandmarkBasedTransformInitializer<Rigid3DTransformType> LandmarkBasedTransformInitializerType;
+    typedef itk::TransformMeshFilter< MeshType, MeshType, Rigid3DTransformType > TransformFilterType;
+    auto reference = calculateProcrustesMeanMesh<MeshType, LandmarkBasedTransformInitializerType, Rigid3DTransformType, TransformFilterType>(originalMeshes, numberOfIterations, numberOfPoints, breakIfChangeBelow);
     representer->SetReference(reference);
   }
 

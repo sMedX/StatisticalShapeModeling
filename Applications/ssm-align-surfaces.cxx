@@ -19,6 +19,7 @@ typedef boost::filesystem::path fp;
 int main(int argc, char** argv) {
 
   ssm::AlignmentOptions options;
+
   if (!options.ParseCommandLine(argc, argv)) {
     return EXIT_FAILURE;
   }

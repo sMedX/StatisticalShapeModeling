@@ -20,18 +20,12 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  // if config is enabled read options from config file
-  if ( options.ConfigIsEnabled() ) {
-    if (!options.ParseConfigFile()) {
-      return EXIT_FAILURE;
-    }
-  }
-
   // check file name to write report
   if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }
 
+  //----------------------------------------------------------------------------
   // read image
   auto image = FloatImageType::New();
   if (!readImage<FloatImageType>(image, options.GetInputFileName())) {
