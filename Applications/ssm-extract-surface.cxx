@@ -28,6 +28,11 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
+  // check file name to write report
+  if (!checkFileName(options.GetReportFileName())) {
+    return EXIT_FAILURE;
+  }
+
   //----------------------------------------------------------------------------
   // read list of files
   StringVector listOfInputFiles;
@@ -36,11 +41,6 @@ int main(int argc, char** argv)
   }
   catch (std::ifstream::failure & e) {
     std::cout << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  // check file name to write report
-  if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }
 

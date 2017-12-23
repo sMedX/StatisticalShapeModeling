@@ -23,11 +23,12 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  // read options from config file
-  if (!options.ParseConfigFile()) {
+  // check file name to write report
+  if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }
 
+  //----------------------------------------------------------------------------
   // read list of files
   StringVector listOfInputFiles;
   try {
@@ -35,11 +36,6 @@ int main(int argc, char** argv) {
   }
   catch (std::ifstream::failure & e) {
     std::cout << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  // check file name to write report
-  if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }
 
@@ -268,12 +264,8 @@ int main(int argc, char** argv) {
       std::cerr << excep << std::endl;
       return EXIT_FAILURE;
     }
+
     metrics->PrintReport();
-
-    // print report to *.csv file
-    std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
-    std::cout << std::endl;
-
     metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(fileName));
   }
 
