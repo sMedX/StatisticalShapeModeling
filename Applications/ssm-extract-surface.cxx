@@ -15,9 +15,10 @@ bool extractSurface(const ssm::ExtractionOptions & options);
 
 int main(int argc, char** argv)
 {
+  // parse options
   ssm::ExtractionOptions options;
 
-  if (!options.ParseCommandLine(argc, argv)) {
+  if (!options.ParseOptions(argc, argv)) {
     return EXIT_FAILURE;
   }
 
@@ -28,7 +29,6 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
-  // check file name to write report
   if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }

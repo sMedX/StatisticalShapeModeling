@@ -83,7 +83,7 @@ public:
     m_Config = fileName;
   }
 
-  bool ParseCommandLine(int argc, char** argv)
+  bool ParseOptions(int argc, char** argv)
   {
     // parse command line options
     try {

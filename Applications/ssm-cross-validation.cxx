@@ -22,11 +22,10 @@ int main(int argc, char** argv)
   // parse options
   ssm::ModelCrossValidationOptions options;
 
-  if (!options.ParseCommandLine(argc, argv)) {
+  if (!options.ParseOptions(argc, argv)) {
     return EXIT_FAILURE;
   }
 
-  // check file name to write report
   if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }

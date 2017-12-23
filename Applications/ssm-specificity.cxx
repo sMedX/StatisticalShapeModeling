@@ -7,14 +7,13 @@ double computeSpecificity(ShapeModelType::Pointer model, const MeshVectorType & 
 
 int main(int argc, char** argv)
 {
-  // read options from config file
+  // parse options
   ssm::ModelSpecificityOptions options;
 
-  if (!options.ParseCommandLine(argc, argv)) {
+  if (!options.ParseOptions(argc, argv)) {
     return EXIT_FAILURE;
   }
 
-  // check file name to write report
   if (!checkFileName(options.GetReportFileName())) {
     return EXIT_FAILURE;
   }

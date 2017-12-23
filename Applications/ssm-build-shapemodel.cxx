@@ -20,9 +20,10 @@ ShapeModelType::Pointer shapeModelBuilder(const StringVector & list, const ssm::
 
 int main(int argc, char** argv)
 {
+  // parse options
   ssm::ModelBuildingOptions options;
 
-  if (!options.ParseCommandLine(argc, argv)) {
+  if (!options.ParseOptions(argc, argv)) {
     return EXIT_FAILURE;
   }
 
