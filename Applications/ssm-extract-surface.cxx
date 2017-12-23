@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
-  if (!checkFileName(options.GetReportFileName())) {
+  if (!options.CheckOptions()) {
     return EXIT_FAILURE;
   }
 

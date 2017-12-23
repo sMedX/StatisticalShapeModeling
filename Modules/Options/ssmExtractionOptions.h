@@ -49,6 +49,11 @@ public:
     this->AddToDescription(reportOptions);
   }
 
+  bool CheckOptions()
+  {
+    return checkFileName(GetReportFileName());
+  }
+
   std::string FormatOutput(const std::string & fileName)
   {
     const auto & format = this->Get<std::string>("output");
