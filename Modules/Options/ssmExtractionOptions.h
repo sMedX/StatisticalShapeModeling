@@ -28,8 +28,8 @@ public:
     // initialize description
     po::options_description mandatoryOptions("Mandatory options");
     mandatoryOptions.add_options()
-      ("input,i", po::value<std::string>(&m_InputFileName), "Path to input image file.")
-      ("output,o", po::value<std::string>(&m_OutputFileName), "Path for output surface file.")
+      ("input,i", po::value<std::string>(), "Path to input image file.")
+      ("output,o", po::value<std::string>(), "Path for output surface file.")
       ;
 
     po::options_description inputOptions("Optional input options");
@@ -49,25 +49,6 @@ public:
     this->AddToDescription(reportOptions);
   }
 
-  bool ParseOptions(int argc, char** argv)
-  {
-    if (!OptionsBase::ParseOptions(argc, argv)) {
-      return false;
-    }
-
-    return checkFileName(GetReportFileName());
-  }
-
-  void SetInputFileName(const std::string & str)
-  {
-    m_InputFileName = str;
-  }
-
-  void SetOutputFileName(const std::string & str)
-  {
-    m_OutputFileName = str;
-  }
-
   std::string FormatOutput(const std::string & fileName)
   {
     const auto & format = this->Get<std::string>("output");
@@ -81,8 +62,8 @@ public:
     }
   }
 
-  const std::string & GetInputFileName() const { return m_InputFileName; }
-  const std::string & GetOutputFileName() const { return m_OutputFileName; }
+  const std::string & GetInputFileName() const { return this->Get<std::string>("input"); }
+  const std::string & GetOutputFileName() const { return this->Get<std::string>("output"); }
   std::string GetInputList() const { return this->Get<std::string>("inplist"); }
   std::string GetOutputList() const { return this->Get<std::string>("outlist"); }
   std::string GetReportFileName() const { return this->Get<std::string>("report"); }
@@ -90,10 +71,6 @@ public:
   double GetFactor() const { return this->Get<double>("factor"); }
   size_t GetNumberOfPoints() const { return this->Get<size_t>("points"); }
   size_t GetNumberOfIterations() const { return this->Get<size_t>("iterations"); }
-
-private:
-  std::string m_InputFileName;
-  std::string m_OutputFileName;
 
 };
 }

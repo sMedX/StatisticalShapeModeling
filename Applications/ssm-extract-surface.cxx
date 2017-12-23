@@ -11,7 +11,7 @@
 
 double averageLengthOfEdges(vtkPolyData* poly);
 double averageAreaOfCells(vtkPolyData* poly);
-bool extractSurface(const ssm::ExtractionOptions & options);
+bool extractSurface(const std::string & inputFileName, const std::string & outputFileName, const ssm::ExtractionOptions & options);
 
 int main(int argc, char** argv)
 {
@@ -23,10 +23,14 @@ int main(int argc, char** argv)
   }
 
   if ( !options.ConfigIsEnabled() ) {
-    if (!extractSurface(options)) {
+    if (!extractSurface(options.GetInputFileName(), options.GetOutputFileName(), options)) {
       return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
+  }
+
+  if (!checkFileName(options.GetReportFileName())) {
+    return EXIT_FAILURE;
   }
 
   //----------------------------------------------------------------------------
@@ -43,15 +47,14 @@ int main(int argc, char** argv)
   // extract surfaces
   StringVector listOfOutputFiles;
 
-  for (const auto & fileName : listOfInputFiles) {
-    options.SetInputFileName(fileName);
-    options.SetOutputFileName(options.FormatOutput(fileName));
+  for (const auto & inputFileName : listOfInputFiles) {
+    std::string outputFileName = options.FormatOutput(inputFileName);
 
-    if(!extractSurface(options)) {
+    if(!extractSurface(inputFileName, outputFileName, options)) {
       return EXIT_FAILURE;
     }
 
-    listOfOutputFiles.push_back(options.GetOutputFileName());
+    listOfOutputFiles.push_back(outputFileName);
   }
 
   // write list of files
@@ -66,14 +69,14 @@ int main(int argc, char** argv)
   return EXIT_SUCCESS;
 }
 
-bool extractSurface(const ssm::ExtractionOptions & options )
+bool extractSurface(const std::string & inputFileName, const std::string & outputFileName, const ssm::ExtractionOptions & options )
 {
   // read image
   auto image = BinaryImageType::New();
-  if (!readImage<BinaryImageType>(image, options.GetInputFileName())) {
+  if (!readImage<BinaryImageType>(image, inputFileName)) {
     return false;
   }
-  printImageInfo<BinaryImageType>(image, options.GetInputFileName());
+  printImageInfo<BinaryImageType>(image, inputFileName);
 
   typedef ssm::Image3DMeshSource<BinaryImageType, vtkPolyData> Image3DMeshSourceType;
   auto binaryMaskToSurface = Image3DMeshSourceType::New();
@@ -97,7 +100,7 @@ bool extractSurface(const ssm::ExtractionOptions & options )
   auto surface = binaryMaskToSurface->GetOutput();
 
   // write polydata to the file
-  if (!writeVTKPolydata(surface, options.GetOutputFileName())) {
+  if (!writeVTKPolydata(surface, outputFileName)) {
     return false;
   }
 
