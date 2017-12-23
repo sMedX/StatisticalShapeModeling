@@ -10,10 +10,19 @@ namespace ssm
 class ModelSpecificityOptions : public OptionsBase
 {
 public:
-  std::string GetInputList() { return this->Get<std::string>("inplist"); }
-  std::string GetModelFileName()  {return this->Get<std::string>("model");}
-  std::string GetReportFileName()  {return this->Get<std::string>("specificity.report");}
-  size_t GetNumberOfSamples()  {return this->Get<size_t>("specificity.samples");}
+  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
+  std::string GetModelFileName() const {return this->Get<std::string>("model");}
+  std::string GetReportFileName() const {return this->Get<std::string>("specificity.report");}
+  size_t GetNumberOfSamples() const {return this->Get<size_t>("specificity.samples");}
+
+  bool ParseOptions(int argc, char** argv)
+  {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
+
+    return checkFileName(GetReportFileName());
+  }
 
   ModelSpecificityOptions()
   {

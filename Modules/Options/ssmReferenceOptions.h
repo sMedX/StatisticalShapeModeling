@@ -61,6 +61,15 @@ public:
     return this->Get<size_t>("iterations");
   }
 
+  bool ParseOptions(int argc, char** argv)
+  {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
+
+    return checkFileName(GetReportFileName());
+  }
+
   ReferenceOptions()
   {
     SetNameOfGroup("REFERENCE");

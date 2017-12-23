@@ -14,10 +14,6 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  if (!checkFileName(options.GetReportFileName())) {
-    return EXIT_FAILURE;
-  }
-
   //----------------------------------------------------------------------------
   // read statistical shape model
   typedef itk::StatisticalModel<MeshType> StatisticalModelType;

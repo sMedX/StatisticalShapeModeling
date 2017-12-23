@@ -31,7 +31,6 @@ int main(int argc, char** argv)
   }
   printMeshInfo<MeshType>(reference, options.GetReferenceFileName());
 
-  //----------------------------------------------------------------------------
   // read list of files
   StringVector listOfInputFiles;
   try {

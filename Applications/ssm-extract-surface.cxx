@@ -29,10 +29,6 @@ int main(int argc, char** argv)
     return EXIT_SUCCESS;
   }
 
-  if (!checkFileName(options.GetReportFileName())) {
-    return EXIT_FAILURE;
-  }
-
   //----------------------------------------------------------------------------
   // read list of files
   StringVector listOfInputFiles;

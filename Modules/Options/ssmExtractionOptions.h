@@ -77,7 +77,16 @@ public:
       std::cout << e.what() << std::endl;
       throw;
     }
-  };
+  }
+
+  bool ParseOptions(int argc, char** argv)
+  {
+    if (!OptionsBase::ParseOptions(argc, argv)) {
+      return false;
+    }
+
+    return checkFileName(GetReportFileName());
+  }
 
   ExtractionOptions()
   {
