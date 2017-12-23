@@ -85,6 +85,7 @@ public:
 
   bool ParseCommandLine(int argc, char** argv)
   {
+    // parse command line options
     try {
       po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(m_Description).run();
       po::store(parsedOptions, m_Vm);
@@ -101,7 +102,12 @@ public:
       return false;
     }
 
+    // parse config ini file
     m_ConfigIsEnabled = !m_Vm["config"].empty();
+    if (m_ConfigIsEnabled) {
+      return ParseConfigFile();
+    }
+
     return true;
   }
 
