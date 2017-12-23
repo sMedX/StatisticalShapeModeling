@@ -77,39 +77,37 @@ public:
       std::cout << e.what() << std::endl;
       throw;
     }
-  };
+  }
 
-  bool ParseConfigFile()
+  bool CheckOptions()
   {
-    if (!OptionsBase::ParseConfigFile()) {
-      return false;
-    }
-
     try {
       m_Parameters = this->GetAsVector<double>("gpmodel.parameters");
       m_Components = this->GetAsVector<size_t>("gpmodel.components");
       m_Regularization = this->GetAsVector<double>("gpmodel.regularization");
     }
-    catch(...) {
+    catch (...) {
       return false;
     }
 
-    if (m_Parameters.size() == 0 || m_Components.size() == 0 || m_Regularization.size() == 0) {
-      std::cout << "parameters, components and regularization factors must be specified" << std::endl;
-      return EXIT_FAILURE;
+    size_t numberOfStages = m_Parameters.size();
+
+    if (numberOfStages == 0 || m_Components.size() == 0 || m_Regularization.size() == 0) {
+      std::cerr << "parameters, components and regularization factors must be specified" << std::endl;
+      return false;
     }
 
-    for (size_t n = m_Components.size(); n < m_Parameters.size(); ++n) {
+    for (size_t n = m_Components.size(); n < numberOfStages; ++n) {
       m_Components.push_back(m_Components.back());
     }
 
-    for (size_t n = m_Regularization.size(); n < m_Parameters.size(); ++n) {
+    for (size_t n = m_Regularization.size(); n < numberOfStages; ++n) {
       m_Regularization.push_back(m_Regularization.back());
     }
 
-
-    return true;
+    return checkFileName(GetReportFileName());
   }
+
 
   CorrespondenceOptions()
   {
@@ -137,7 +135,6 @@ private:
   std::string m_OutputFileName;
 
   std::vector<double> m_Regularization;
-
   std::vector<double> m_Parameters;
   std::vector<size_t> m_Components;
 };

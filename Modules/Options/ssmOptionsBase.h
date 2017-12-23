@@ -78,11 +78,6 @@ public:
     return m_ConfigIsEnabled;
   }
 
-  void SetConfigFileName(const std::string & fileName)
-  {
-    m_Config = fileName;
-  }
-
   bool ParseOptions(int argc, char** argv)
   {
     // parse command line options
@@ -111,52 +106,6 @@ public:
     return true;
   }
 
-  bool ParseConfigFile()
-  {
-    try {
-      pt::ini_parser::read_ini(m_Config, m_ParsedPtree);
-    }
-    catch (const pt::ptree_error &e) {
-      std::cerr << "An exception occurred while parsing the config file: " << AddQuotes(m_Config) << std::endl;
-      std::cerr << e.what() << std::endl;
-      return false;
-    }
-
-    if (m_ParsedPtree.find(m_NameOfGroup) == m_ParsedPtree.not_found()) {
-      std::cerr << "The group " << AddQuotes(m_NameOfGroup) << " is not found in the config file: " << AddQuotes(m_Config) << std::endl;
-      return false;
-    }
-
-    m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
-
-    pt::ptree tree;
-    for (const auto & it : m_ParsedPtree) {
-      tree.put(it.first, (it.second).data());
-    }
-    m_ParsedPtree.swap(tree);
-
-    // check parsed ptree
-    std::vector<std::string> list;
-    std::string path = m_NameOfGroup;
-    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, path, list);
-
-    // print parsed tree
-    PrintConfig();
-
-    if (list.size() > 0) {
-      std::cerr << "The required keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
-      for (const auto & path : list) {
-        std::cout << AddQuotes(path) << std::endl;
-      }
-      return false;
-    }
-
-    // clear map of variables from command line
-    m_Vm.clear();
-
-    return true;
-  }
-
   void PrintConfig()
   {
     std::cout << std::endl;
@@ -164,77 +113,6 @@ public:
     printTree(m_ParsedPtree, std::cout);
     std::cout << std::endl;
   }
-
-  template <typename T>
-  T GetDefaultValue(const std::string & str) const
-  {
-    return m_PtreeOfDefaultValues.get<T>(str);
-  }
-
-  template <typename T>
-  T Get(const std::string & path) const
-  {
-    T value;
-
-    if (m_ConfigIsEnabled) {
-      try {
-        value = m_ParsedPtree.get<T>(path);
-      }
-      catch (const pt::ptree_error &e) {
-        std::cerr << "An exception occurred while getting value from ptree." << std::endl;
-        std::cerr << e.what() << std::endl;
-
-        const auto & it = m_ParsedPtree.find(path);
-        if (it != m_ParsedPtree.not_found()) {
-          std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
-        }
-
-        throw;
-      }
-    }
-    else {
-      auto pos = path.find_last_of('.');
-
-      if (pos < path.size())
-        value = m_Vm[path.substr(pos + 1)].as<T>();
-      else
-        value = m_Vm[path].as<T>();
-    }
-
-    return value;
-  }
-
-  template<typename T>
-  std::vector<T> GetAsVector(const std::string & path)
-  {
-    std::stringstream stream(Get<std::string>(path));
-    std::string item;
-
-    std::vector<T> vector;
-
-    while (std::getline(stream, item, m_Dlm)) {
-      // skip empty spaces ''
-      if (item == "")
-        continue;
-
-      // get value
-      try {
-        vector.push_back(std::stod(item));
-      }
-      catch (const std::invalid_argument &e) {
-        std::cerr << "An exception occurred while getting vector from ptree." << std::endl;
-        std::cerr << e.what() << " " << AddQuotes(item) << std::endl;
-
-        const auto & it = m_ParsedPtree.find(path);
-        std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
-
-        throw;
-      }
-    }
-
-    return vector;
-  }
-
 
 private:
 
@@ -287,5 +165,127 @@ protected:
   {
     return m_NameOfGroup + "." + path;
   }
+
+  void SetConfigFileName(const std::string & fileName)
+  {
+    m_Config = fileName;
+  }
+
+  bool ParseConfigFile()
+  {
+    try {
+      pt::ini_parser::read_ini(m_Config, m_ParsedPtree);
+    }
+    catch (const pt::ptree_error &e) {
+      std::cerr << "An exception occurred while parsing the config file: " << AddQuotes(m_Config) << std::endl;
+      std::cerr << e.what() << std::endl;
+      return false;
+    }
+
+    if (m_ParsedPtree.find(m_NameOfGroup) == m_ParsedPtree.not_found()) {
+      std::cerr << "The group " << AddQuotes(m_NameOfGroup) << " is not found in the config file: " << AddQuotes(m_Config) << std::endl;
+      return false;
+    }
+
+    m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
+
+    pt::ptree tree;
+    for (const auto & it : m_ParsedPtree) {
+      tree.put(it.first, (it.second).data());
+    }
+    m_ParsedPtree.swap(tree);
+
+    // check parsed ptree
+    std::vector<std::string> list;
+    std::string path = m_NameOfGroup;
+    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, path, list);
+
+    // print parsed tree
+    PrintConfig();
+
+    if (list.size() > 0) {
+      std::cerr << "The required keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
+      for (const auto & path : list) {
+        std::cout << AddQuotes(path) << std::endl;
+      }
+      return false;
+    }
+
+    // clear map of variables from command line
+    m_Vm.clear();
+
+    return true;
+  }
+
+  template <typename T>
+  T GetDefaultValue(const std::string & str) const
+  {
+    return m_PtreeOfDefaultValues.get<T>(str);
+  }
+
+  template <typename T>
+  T Get(const std::string & path) const
+  {
+    T value;
+
+    if (m_ConfigIsEnabled) {
+      try {
+        value = m_ParsedPtree.get<T>(path);
+      }
+      catch (const pt::ptree_error &e) {
+        std::cerr << "An exception occurred while getting value from ptree." << std::endl;
+        std::cerr << e.what() << std::endl;
+
+        const auto & it = m_ParsedPtree.find(path);
+        if (it != m_ParsedPtree.not_found()) {
+          std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
+        }
+
+        throw;
+      }
+    }
+    else {
+      auto pos = path.find_last_of('.');
+
+      if (pos < path.size())
+        value = m_Vm[path.substr(pos + 1)].as<T>();
+      else
+        value = m_Vm[path].as<T>();
+    }
+
+    return value;
+  }
+
+  template<typename T>
+  std::vector<T> GetAsVector(const std::string & path) const
+  {
+    std::stringstream stream(Get<std::string>(path));
+    std::string item;
+
+    std::vector<T> vector;
+
+    while (std::getline(stream, item, m_Dlm)) {
+      // skip empty spaces ''
+      if (item == "")
+        continue;
+
+      // get value
+      try {
+        vector.push_back(std::stod(item));
+      }
+      catch (const std::invalid_argument &e) {
+        std::cerr << "An exception occurred while getting vector from ptree." << std::endl;
+        std::cerr << e.what() << " " << AddQuotes(item) << std::endl;
+
+        const auto & it = m_ParsedPtree.find(path);
+        std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
+
+        throw;
+      }
+    }
+
+    return vector;
+  }
+
 };
 }
