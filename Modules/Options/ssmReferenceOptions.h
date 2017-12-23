@@ -11,55 +11,16 @@ class ReferenceOptions : public OptionsBase
 {
 public:
 
-  std::string GetInputFileName() const
-  {
-    return this->Get<std::string>("input");
-  }
-
-  std::string GetOutputFileName() const
-  {
-    return this->Get<std::string>("output");
-  }
-
-  std::string GetReportFileName() const
-  {
-    return this->Get<std::string>("report");
-  }
-
-  double GetSigma() const
-  {
-    return this->Get<double>("sigma");
-  }
-
-  double GetLevelValue() const
-  {
-    return this->Get<double>("level");
-  }
-
-  size_t GetNumberOfPoints() const
-  {
-    return this->Get<size_t>("points");
-  }
-
-  size_t GetDecimation() const
-  {
-    return this->Get<size_t>("decimation");
-  }
-
-  size_t GetSmoothing() const
-  {
-    return this->Get<size_t>("smoothing");
-  }
-
-  double GetRelaxationFactor() const
-  {
-    return this->Get<double>("factor");
-  }
-
-  size_t GetNumberOfIterations() const
-  {
-    return this->Get<size_t>("iterations");
-  }
+  std::string GetInputFileName() const  {return this->Get<std::string>("input");}
+  std::string GetOutputFileName() const {return this->Get<std::string>("output");}
+  std::string GetReportFileName() const {return this->Get<std::string>("report");}
+  double GetSigma() const {return this->Get<double>("sigma");}
+  double GetLevelValue() const {return this->Get<double>("level");}
+  size_t GetNumberOfPoints() const {return this->Get<size_t>("points");}
+  size_t GetDecimation() const {return this->Get<size_t>("decimation");}
+  size_t GetSmoothing() const {return this->Get<size_t>("smoothing");}
+  double GetRelaxationFactor() const {return this->Get<double>("factor");}
+  size_t GetNumberOfIterations() const {return this->Get<size_t>("iterations");}
 
   bool ParseOptions(int argc, char** argv)
   {

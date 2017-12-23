@@ -11,30 +11,11 @@ class ModelBuildingOptions : public OptionsBase
 {
 public:
 
-  std::string GetInputList() const
-  {
-    return this->Get<std::string>("inplist");
-  }
-
-  std::string GetOutputFileName() const
-  {
-    return this->Get<std::string>("output");
-  }
-
-  std::string GetReferenceFileName() const
-  {
-    return this->Get<std::string>("reference");
-  }
-
-  double GetNoise() const
-  {
-    return this->Get<double>("noise");
-  }
-
-  std::string GetMode() const
-  {
-    return this->Get<std::string>("mode");
-  }
+  std::string GetInputList() const {return this->Get<std::string>("inplist");}
+  std::string GetOutputFileName() const {return this->Get<std::string>("output");}
+  std::string GetReferenceFileName() const {return this->Get<std::string>("reference");}
+  double GetNoise() const {return this->Get<double>("noise");}
+  std::string GetMode() const {return this->Get<std::string>("mode");}
 
   ModelBuildingOptions()
   {

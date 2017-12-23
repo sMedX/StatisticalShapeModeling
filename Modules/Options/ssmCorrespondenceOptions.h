@@ -11,60 +11,17 @@ class CorrespondenceOptions : public OptionsBase
 {
 public:
 
-  std::string GetInputList() const
-  {
-    return this->Get<std::string>("inplist");
-  }
-
-  std::string GetOutputList() const
-  {
-    return this->Get<std::string>("outlist");
-  }
-
-  std::string GetReportFileName() const
-  {
-    return this->Get<std::string>("report");
-  }
-
-  std::string GetReferenceFileName() const
-  {
-    return this->Get<std::string>("reference");
-  }
-
-  size_t GetNumberOfStages() const
-  {
-    return this->Get<size_t>("stages");
-  }
-
-  size_t GetNumberOfIterations() const
-  {
-    return this->Get<size_t>("iterations");
-  }
-
-  size_t GetTransform() const
-  {
-    return this->Get<size_t>("transform");
-  }
-
-  double GetGPModelScale() const
-  {
-    return this->Get<double>("gpmodel.scale");
-  }
-
-  std::vector<double> GetGPModelParameters() const
-  {
-    return m_Parameters;
-  }
-
-  std::vector<size_t> GetGPModelNumberOfComponents() const
-  {
-    return m_Components;
-  }
-
-  std::vector<double> GetGPModelRegularization() const
-  {
-    return m_Regularization;
-  }
+  std::string GetInputList() const {return this->Get<std::string>("inplist");}
+  std::string GetOutputList() const {return this->Get<std::string>("outlist");}
+  std::string GetReportFileName() const {return this->Get<std::string>("report");}
+  std::string GetReferenceFileName() const {return this->Get<std::string>("reference");}
+  size_t GetNumberOfStages() const {return this->Get<size_t>("stages");}
+  size_t GetNumberOfIterations() const {return this->Get<size_t>("iterations");}
+  size_t GetTransform() const {return this->Get<size_t>("transform");}
+  double GetGPModelScale() const {return this->Get<double>("gpmodel.scale");}
+  std::vector<double> GetGPModelParameters() const {return m_Parameters;}
+  std::vector<size_t> GetGPModelNumberOfComponents() const {return m_Components;}
+  std::vector<double> GetGPModelRegularization() const {return m_Regularization;}
 
   std::string FormatOutput(const std::string & fileName)
   {

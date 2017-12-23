@@ -11,59 +11,24 @@ class ExtractionOptions : public OptionsBase
 {
 public:
 
+  const std::string & GetInputFileName() const { return m_InputFileName; }
+  const std::string & GetOutputFileName() const { return m_OutputFileName; }
+  std::string GetInputList() const { return this->Get<std::string>("inplist"); }
+  std::string GetOutputList() const { return this->Get<std::string>("outlist"); }
+  std::string GetReportFileName() const { return this->Get<std::string>("report"); }
+  double GetSigma() const { return this->Get<double>("sigma"); }
+  double GetFactor() const { return this->Get<double>("factor"); }
+  size_t GetNumberOfPoints() const { return this->Get<size_t>("points"); }
+  size_t GetNumberOfIterations() const { return this->Get<size_t>("iterations"); }
+
   void SetInputFileName(const std::string & str)
   {
     m_InputFileName = str;
   }
 
-  const std::string & GetInputFileName() const
-  {
-    return m_InputFileName;
-  }
-
-  void SetOutputFileName(const std::string & str)
-  {
+  void SetOutputFileName(const std::string & str) 
+  { 
     m_OutputFileName = str;
-  }
-
-  const std::string & GetOutputFileName() const
-  {
-    return m_OutputFileName;
-  }
-
-  std::string GetInputList() const
-  {
-    return this->Get<std::string>("inplist");
-  }
-
-  std::string GetOutputList() const
-  {
-    return this->Get<std::string>("outlist");
-  }
-
-  std::string GetReportFileName() const
-  {
-    return this->Get<std::string>("report");
-  }
-
-  double GetSigma() const
-  {
-    return this->Get<double>("sigma");
-  }
-
-  double GetFactor() const
-  {
-    return this->Get<double>("factor");
-  }
-
-  size_t GetNumberOfPoints() const
-  {
-    return this->Get<size_t>("points");
-  }
-
-  size_t GetNumberOfIterations() const
-  {
-    return this->Get<size_t>("iterations");
   }
 
   std::string FormatOutput(const std::string & fileName)
