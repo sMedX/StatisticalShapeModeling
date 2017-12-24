@@ -114,6 +114,14 @@ namespace ssm
 
     void PrintReportToFile(const std::string & fileName, const std::string & datasetURI) const
     {
+      // print report to *.csv file
+      if (!fileName.size()) {
+        return;
+      }
+
+      std::cout << "print report to the file " << fileName << std::endl;
+      std::cout << std::endl;
+
       std::string dlm = ";";
 
       std::string header = dlm;
@@ -142,7 +150,7 @@ namespace ssm
       bool exist = boost::filesystem::exists(fileName);
       std::ofstream file(fileName, std::ofstream::out | std::ofstream::app);
       if (!file.is_open()) {
-        throw std::ofstream::failure("Failed to write to the file : " + fileName);
+        throw std::ofstream::failure("Failed to write report to the file " + fileName);
       }
 
       if (!exist) {

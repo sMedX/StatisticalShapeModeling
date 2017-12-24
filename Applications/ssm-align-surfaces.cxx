@@ -18,17 +18,14 @@ typedef boost::filesystem::path fp;
 
 int main(int argc, char** argv) {
 
+  // parse options
   ssm::AlignmentOptions options;
-  if (!options.ParseCommandLine(argc, argv)) {
+
+  if (!options.ParseOptions(argc, argv)) {
     return EXIT_FAILURE;
   }
 
-  // read options from config file
-  if (!options.ParseConfigFile()) {
-    return EXIT_FAILURE;
-  }
-  options.PrintConfig();
-
+  //----------------------------------------------------------------------------
   // read list of files
   StringVector listOfInputFiles;
   try {
@@ -52,8 +49,6 @@ int main(int argc, char** argv) {
     vectorOfFiles.push_back(fileName);
 
     printMeshInfo<MeshType>(surface, fileName);
-
-    std::cout << std::endl;
   }
 
   std::cout << "number of surfaces " << vectorOfSurfaces.size() << std::endl;
@@ -266,13 +261,9 @@ int main(int argc, char** argv) {
       std::cerr << excep << std::endl;
       return EXIT_FAILURE;
     }
+
     metrics->PrintReport();
-
-    // print report to *.csv file
-    std::cout << "print report to the file: " << options.GetReportFile() << std::endl;
-    std::cout << std::endl;
-
-    metrics->PrintReportToFile(options.GetReportFile(), getBaseNameFromPath(fileName));
+    metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(fileName));
   }
 
   // write list of files

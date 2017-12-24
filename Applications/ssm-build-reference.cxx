@@ -14,20 +14,14 @@ double averageAreaOfCells(vtkPolyData* poly);
 
 int main(int argc, char** argv)
 {
+  // parse options
   ssm::ReferenceOptions options;
 
-  if (!options.ParseCommandLine(argc, argv)) {
+  if (!options.ParseOptions(argc, argv)) {
     return EXIT_FAILURE;
   }
 
-  // if config is enabled read options from config file
-  if ( options.ConfigIsEnabled() ) {
-    if (!options.ParseConfigFile()) {
-      return EXIT_FAILURE;
-    }
-    options.PrintConfig();
-  }
-
+  //----------------------------------------------------------------------------
   // read image
   auto image = FloatImageType::New();
   if (!readImage<FloatImageType>(image, options.GetInputFileName())) {
@@ -93,11 +87,6 @@ int main(int argc, char** argv)
   }
 
   metrics->PrintReport();
-
-  // write report to *.csv file
-  std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
-  std::cout << std::endl;
-
   metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(options.GetOutputFileName()));
 
   return EXIT_SUCCESS;

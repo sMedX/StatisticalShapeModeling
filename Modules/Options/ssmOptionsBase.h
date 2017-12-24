@@ -13,48 +13,45 @@ namespace ssm
 //=========================================================================
 // Some basic functions
 //=========================================================================
-void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level /*=0*/)
+void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level = 0)
 {
   if (!tree.empty()) {
     os << std::endl;
     std::string indent(3 * level, ' ');
 
     for (const auto & it : tree) {
-      std::string name = it.first;
-      name.resize(16);
-      os << indent << name << " ";
+      std::string path = it.first;
+      path.resize(16);
+      os << indent << path << " ";
 
       printTree(it.second, os, level + 1);
       os << std::endl;
     }
   }
-  else {
-    std::cout << " " << tree.data();
-  }
+
+  std::cout << " " << tree.data();
+
   return;
 }
 
-void checkParsedTree(const pt::ptree & ptreeOfRequireds, pt::ptree & parsedPtree, std::string & key, std::vector<std::string> & list)
+void checkParsedTree(const pt::ptree & ptreeOfRequired, pt::ptree & parsedPtree, std::string & path, std::vector<std::string> & list)
 {
-  if (ptreeOfRequireds.empty()) {
+  if (ptreeOfRequired.empty()) {
     return;
   }
 
-  for (const auto & it : ptreeOfRequireds) {
+  for (const auto & it : ptreeOfRequired) {
     const auto &name = it.first;
     const auto &tree = it.second;
 
     if (!tree.empty()) {
-      key = key + "." + name;
-      checkParsedTree(ptreeOfRequireds.get_child(name), parsedPtree.get_child(name), key, list);
-      return;
+      path = path + "." + name;
+      checkParsedTree(ptreeOfRequired.get_child(name), parsedPtree.get_child(name), path, list);
     }
-    else {
-      if (ptreeOfRequireds.get<bool>(name)) {
-        if (parsedPtree.find(name) == parsedPtree.not_found()) {
-          list.push_back(key + "." + name);
-          continue;
-        }
+
+    if (parsedPtree.find(name) == parsedPtree.not_found()) {
+      if (ptreeOfRequired.get<bool>(name)) {
+        list.push_back(path + "." + name);
       }
     }
   }
@@ -77,13 +74,9 @@ public:
     return m_ConfigIsEnabled;
   }
 
-  void SetConfigFileName(const std::string & fileName)
+  bool ParseOptions(int argc, char** argv)
   {
-    m_Config = fileName;
-  }
-
-  bool ParseCommandLine(int argc, char** argv)
-  {
+    // parse command line options
     try {
       po::parsed_options parsedOptions = po::command_line_parser(argc, argv).options(m_Description).run();
       po::store(parsedOptions, m_Vm);
@@ -100,43 +93,12 @@ public:
       return false;
     }
 
+    // parse config *.ini file
     m_ConfigIsEnabled = !m_Vm["config"].empty();
-    return true;
-  }
 
-  bool ParseConfigFile()
-  {
-    try {
-      pt::ini_parser::read_ini(m_Config, m_ParsedPtree);
+    if (m_ConfigIsEnabled) {
+      return ParseConfigFile();
     }
-    catch (const pt::ptree_error &e) {
-      std::cerr << "An exception occurred while parsing the config file: " << AddQuotes(m_Config) << std::endl;
-      std::cout << e.what() << endl;
-      return false;
-    }
-
-    if (m_ParsedPtree.find(m_NameOfGroup) == m_ParsedPtree.not_found()) {
-      std::cerr << "The group " << AddQuotes(m_NameOfGroup) << " is not found in the config file: " << AddQuotes(m_Config) << std::endl;
-      return false;
-    }
-
-    m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
-
-    // check parsed ptree
-    std::vector<std::string> listOfKeys;
-    checkParsedTree(m_PtreeOfRequireds, m_ParsedPtree, m_NameOfGroup, listOfKeys);
-
-    if (listOfKeys.size() > 0) {
-      std::cerr << "The keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
-      for (const auto & str : listOfKeys) {
-        std::cerr << AddQuotes(str) << std::endl;
-      }
-      return false;
-    }
-
-
-    // clear map of variables from command line
-    m_Vm.clear();
 
     return true;
   }
@@ -145,45 +107,9 @@ public:
   {
     std::cout << std::endl;
     std::cout << "Config data for group " << AddQuotes(m_NameOfGroup) << std::endl;
-    printTree(m_ParsedPtree, std::cout, 0);
+    printTree(m_ParsedPtree, std::cout);
     std::cout << std::endl;
-  };
-
-  template <typename T>
-  T GetDefaultValue(const std::string & str) const
-  {
-    return m_PtreeOfDefaultValues.get<T>(str);
-  };
-
-  template <typename T>
-  T Get(const std::string & name) const
-  {
-    if (m_ConfigIsEnabled)
-      return m_ParsedPtree.get<T>(name);
-    else
-      return m_Vm[name].as<T>();
-  };
-
-  template<typename T>
-  bool GetAsVector(const std::string & key, std::vector<T> & v)
-  {
-    std::stringstream stream(Get<std::string>(key));
-    std::string item;
-
-    while (std::getline(stream, item, m_Dlm)) {
-      try {
-        v.push_back(std::stod(item));
-      }
-      catch (...) {
-        std::cerr << "Error while parsing string in the method GetAsVector." << std::endl;
-        std::cout << "string: " << AddQuotes(Get<std::string>(key)) << std::endl;
-        return false;
-      }
-    }
-
-    return true;
   }
-
 
 private:
 
@@ -194,7 +120,7 @@ private:
   char m_Dlm;
 
   pt::ptree m_ParsedPtree;
-  pt::ptree m_PtreeOfRequireds;
+  pt::ptree m_PtreeOfRequired;
   pt::ptree m_PtreeOfDefaultValues;
   po::variables_map m_Vm;
   po::options_description m_Description;
@@ -226,18 +152,143 @@ protected:
   }
 
   template <typename T>
-  void Put(const std::string & str, const T & value, const bool & required = true)
+  void Put(const std::string & path, const T & value, const bool & required = true)
   {
-    m_PtreeOfRequireds.put(str, required);
-    m_PtreeOfDefaultValues.put(str, value);
-    if (!required) {
-      m_ParsedPtree.put(Path(str), value);
-    }
-  };
+    m_PtreeOfRequired.put(path, required);
 
-  std::string Path(const std::string & str) const
-  {
-    return m_NameOfGroup + "." + str;
+    if (!required) {
+      m_PtreeOfDefaultValues.put(path, value);
+    }
   }
+
+  std::string Path(const std::string & path) const
+  {
+    return m_NameOfGroup + "." + path;
+  }
+
+  void SetConfigFileName(const std::string & fileName)
+  {
+    m_Config = fileName;
+  }
+
+  bool ParseConfigFile()
+  {
+    try {
+      pt::ini_parser::read_ini(m_Config, m_ParsedPtree);
+    }
+    catch (const pt::ptree_error &e) {
+      std::cerr << "An exception occurred while parsing the config file: " << AddQuotes(m_Config) << std::endl;
+      std::cerr << e.what() << std::endl;
+      return false;
+    }
+
+    if (m_ParsedPtree.find(m_NameOfGroup) == m_ParsedPtree.not_found()) {
+      std::cerr << "The group " << AddQuotes(m_NameOfGroup) << " is not found in the config file: " << AddQuotes(m_Config) << std::endl;
+      return false;
+    }
+
+    m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
+
+    // add default values into parsed tree
+    pt::ptree ptree = m_PtreeOfDefaultValues;
+
+    for (const auto & it : m_ParsedPtree) {
+      ptree.put(it.first, (it.second).data());
+    }
+
+    m_ParsedPtree = ptree;
+
+    // check parsed ptree
+    std::vector<std::string> list;
+    std::string path = m_NameOfGroup;
+    checkParsedTree(m_PtreeOfRequired, m_ParsedPtree, path, list);
+
+    // print parsed tree
+    PrintConfig();
+
+    if (list.size() > 0) {
+      std::cerr << "The required keys are not found in the config file: " << AddQuotes(m_Config) << std::endl;
+      for (const auto & path : list) {
+        std::cout << AddQuotes(path) << std::endl;
+      }
+      return false;
+    }
+
+    // clear map of variables from command line
+    m_Vm.clear();
+
+    return true;
+  }
+
+  template <typename T>
+  T GetDefaultValue(const std::string & str) const
+  {
+    return m_PtreeOfDefaultValues.get<T>(str);
+  }
+
+  template <typename T>
+  T Get(const std::string & path) const
+  {
+    T value;
+
+    if (m_ConfigIsEnabled) {
+      try {
+        value = m_ParsedPtree.get<T>(path);
+      }
+      catch (const pt::ptree_error &e) {
+        std::cerr << "An exception occurred while getting value from ptree." << std::endl;
+        std::cerr << e.what() << std::endl;
+
+        const auto & it = m_ParsedPtree.find(path);
+        if (it != m_ParsedPtree.not_found()) {
+          std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
+        }
+
+        throw;
+      }
+    }
+    else {
+      auto pos = path.find_last_of('.');
+
+      if (pos < path.size())
+        value = m_Vm[path.substr(pos + 1)].as<T>();
+      else
+        value = m_Vm[path].as<T>();
+    }
+
+    return value;
+  }
+
+  template<typename T>
+  std::vector<T> GetAsVector(const std::string & path) const
+  {
+    std::stringstream stream(Get<std::string>(path));
+    std::string item;
+
+    std::vector<T> vector;
+
+    while (std::getline(stream, item, m_Dlm)) {
+      // skip empty spaces ''
+      if (item == "")
+        continue;
+
+      // get value
+      try {
+        vector.push_back(std::stod(item));
+      }
+      catch (const std::invalid_argument &e) {
+        std::cerr << "An exception occurred while getting vector from ptree." << std::endl;
+        std::cerr << e.what() << " " << AddQuotes(item) << std::endl;
+
+        const auto & it = m_ParsedPtree.find(path);
+        std::cerr << AddQuotes(it->first) << " " << it->second.data() << std::endl;
+
+        throw;
+      }
+    }
+
+    return vector;
+  }
+
 };
 }
