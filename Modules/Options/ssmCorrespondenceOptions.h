@@ -100,9 +100,6 @@ public:
   std::vector<double> GetGPModelRegularization() const { return m_Regularization; }
 
 private:
-  std::string m_InputFileName;
-  std::string m_OutputFileName;
-
   std::vector<double> m_Regularization;
   std::vector<double> m_Parameters;
   std::vector<size_t> m_Components;

@@ -111,11 +111,8 @@ int main(int argc, char** argv)
         metrics->SetPointSetAsMesh<MeshType>(output);
         metrics->SetImage(levelset->GetOutput());
         metrics->Compute();
-        metrics->PrintReport();
 
-        // print report to *.csv file
-        std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
-        std::cout << std::endl;
+        metrics->PrintReport();
         metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(listOfInputFiles[count]));
 
         // write output surface to file

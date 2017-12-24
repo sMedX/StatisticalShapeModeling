@@ -87,11 +87,6 @@ int main(int argc, char** argv)
   }
 
   metrics->PrintReport();
-
-  // write report to *.csv file
-  std::cout << "print report to the file: " << options.GetReportFileName() << std::endl;
-  std::cout << std::endl;
-
   metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(options.GetOutputFileName()));
 
   return EXIT_SUCCESS;

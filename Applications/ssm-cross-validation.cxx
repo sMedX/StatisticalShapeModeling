@@ -108,11 +108,9 @@ int main(int argc, char** argv)
         metrics->SetInfo(info);
         metrics->Compute();
         metrics->PrintReport(std::cout);
+        metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(surfaceFileName));
 
         generalizationAbility += metrics->GetRMSEValue();
-
-        // print report to *.csv file
-        metrics->PrintReportToFile(options.GetReportFileName(), getBaseNameFromPath(surfaceFileName));
 
         // write samples
         if (options.GetWrite()) {

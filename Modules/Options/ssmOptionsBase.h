@@ -34,7 +34,7 @@ void printTree(const pt::ptree & tree, std::ostream & os, unsigned int level = 0
   return;
 }
 
-void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & ptreeOfRequired, pt::ptree & parsedPtree, std::string & path, std::vector<std::string> & list)
+void checkParsedTree(const pt::ptree & ptreeOfRequired, pt::ptree & parsedPtree, std::string & path, std::vector<std::string> & list)
 {
   if (ptreeOfRequired.empty()) {
     return;
@@ -46,16 +46,12 @@ void checkParsedTree(const pt::ptree & ptreeOfDefaultValues, const pt::ptree & p
 
     if (!tree.empty()) {
       path = path + "." + name;
-      checkParsedTree(ptreeOfDefaultValues.get_child(name), ptreeOfRequired.get_child(name), parsedPtree.get_child(name), path, list);
+      checkParsedTree(ptreeOfRequired.get_child(name), parsedPtree.get_child(name), path, list);
     }
 
     if (parsedPtree.find(name) == parsedPtree.not_found()) {
       if (ptreeOfRequired.get<bool>(name)) {
         list.push_back(path + "." + name);
-      }
-      else {
-        const auto & it = ptreeOfDefaultValues.find(name);
-        parsedPtree.put(name, it->second.data());
       }
     }
   }
@@ -99,6 +95,7 @@ public:
 
     // parse config *.ini file
     m_ConfigIsEnabled = !m_Vm["config"].empty();
+
     if (m_ConfigIsEnabled) {
       return ParseConfigFile();
     }
@@ -158,7 +155,10 @@ protected:
   void Put(const std::string & path, const T & value, const bool & required = true)
   {
     m_PtreeOfRequired.put(path, required);
-    m_PtreeOfDefaultValues.put(path, value);
+
+    if (!required) {
+      m_PtreeOfDefaultValues.put(path, value);
+    }
   }
 
   std::string Path(const std::string & path) const
@@ -189,16 +189,19 @@ protected:
 
     m_ParsedPtree = m_ParsedPtree.get_child(m_NameOfGroup);
 
-    pt::ptree tree;
+    // add default values into parsed tree
+    pt::ptree ptree = m_PtreeOfDefaultValues;
+
     for (const auto & it : m_ParsedPtree) {
-      tree.put(it.first, (it.second).data());
+      ptree.put(it.first, (it.second).data());
     }
-    m_ParsedPtree.swap(tree);
+
+    m_ParsedPtree = ptree;
 
     // check parsed ptree
     std::vector<std::string> list;
     std::string path = m_NameOfGroup;
-    checkParsedTree(m_PtreeOfDefaultValues, m_PtreeOfRequired, m_ParsedPtree, path, list);
+    checkParsedTree(m_PtreeOfRequired, m_ParsedPtree, path, list);
 
     // print parsed tree
     PrintConfig();
