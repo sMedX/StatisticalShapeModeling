@@ -4,7 +4,7 @@
 
 Project for statistical shape modeling with [statismo](https://github.com/statismo/statismo).
 
-[Project Wiki](https://github.com/RuslanKosarev/StatisticalShapeModeling/wiki)
+[Project Wiki](https://github.com/sMedX/StatisticalShapeModeling/wiki)
 
 Corresponding author Ruslan N. Kosarev 
 
